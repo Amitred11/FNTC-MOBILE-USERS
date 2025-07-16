@@ -1,283 +1,147 @@
-import React, { useState, useEffect } from 'react';
+// screens/GetStartedScreen.js
+import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  Image,
-  StyleSheet,
-  TouchableOpacity,
-  Linking,
-  ActivityIndicator,
+  View, Text, Image, StyleSheet, TouchableOpacity,
+  ActivityIndicator, Modal, ScrollView, SafeAreaView, Platform
 } from 'react-native';
 import * as Animatable from 'react-native-animatable';
 import { useNavigation } from '@react-navigation/native';
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
-import { signInWithCredential, GoogleAuthProvider } from 'firebase/auth';
-import { auth } from '../config/firebaseConfig';
+import { lightTheme } from '../constants/colors';
+import { TERMS_AND_CONDITIONS_TEXT } from '../texts/Terms of Services';
+import { PRIVACY_POLICY_TEXT } from '../texts/Privacy Policy';
 
-WebBrowser.maybeCompleteAuthSession();
-
-
-const googleAuthConfig = {
-  // Use a "Web application" Client ID for Expo Go and Web builds.
-  // It's the same key for both.
-  expoClientId: '973096250612-l88fig5c0kv44avdsrpvrtae19bl44o8.apps.googleusercontent.com',
-  webClientId: '973096250612-l88fig5c0kv44avdsrpvrtae19bl44o8.apps.googleusercontent.com',
-
-  // Use an "Android" Client ID for standalone Android builds.
-  // This must have your package name and SHA-1 keys configured.
-  androidClientId: '973096250612-qiunj2qb2j8cbfr17uhnkfq4gdmv3bsa.apps.googleusercontent.com',
-  
-  // (Optional) Use an "iOS" Client ID for standalone iOS builds.
-  // iosClientId: 'YOUR-IOS-CLIENT-ID.apps.googleusercontent.com',
+// --- The modal now gets the theme passed as a prop ---
+const PolicyModal = ({ visible, title, content, onClose, theme }) => {
+    const styles = getStyles(theme);
+    return (
+        <Modal animationType="fade" transparent={true} visible={visible} onRequestClose={onClose}>
+            <View style={styles.policyModalOverlay}>
+                <View style={styles.policyModalView}>
+                    <Text style={styles.policyTitle}>{title}</Text>
+                    <ScrollView style={styles.policyScrollView} contentContainerStyle={{ paddingBottom: 20 }}>
+                        <Text style={styles.policyModalText}>{content}</Text>
+                    </ScrollView>
+                    <TouchableOpacity style={styles.policyCloseButton} onPress={onClose}>
+                        <Text style={styles.policyCloseButtonText}>Close</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </Modal>
+    );
 };
-
 
 export default function GetStartedScreen() {
   const navigation = useNavigation();
-  const [isLoading, setIsLoading] = useState(false);
+  const theme = lightTheme; 
+  const styles = getStyles(theme);
 
-  // The hook correctly uses the config. `expo-auth-session` automatically
-  // selects the right client ID based on the platform (web, Expo Go, standalone).
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest(
-    googleAuthConfig
-  );
+  const [isLoading] = useState(false);
+  const [isPolicyModalVisible, setPolicyModalVisible] = useState(false);
+  const [policyContent, setPolicyContent] = useState({ title: '', text: '' });
 
-  // REMOVED: The useEffect that logs the redirect URI is no longer relevant.
-  // useEffect(() => { ... });
-
-  useEffect(() => {
-    const handleResponse = async () => {
-      if (response?.type === 'success') {
-        setIsLoading(true);
-        const { id_token } = response.params;
-        const credential = GoogleAuthProvider.credential(id_token);
-        try {
-          await signInWithCredential(auth, credential);
-          console.log('Firebase Google Sign-In Success, navigating...');
-          navigation.navigate('HomeScreen');
-        } catch (error) {
-          console.error('Firebase sign-in error:', error);
-        } finally {
-          setIsLoading(false);
-        }
-      } else if (response?.type === 'error' || response?.type === 'cancel') {
-        console.log('Google Sign-in cancelled or failed:', response.params?.error);
-        setIsLoading(false);
+  const openPolicyModal = (type) => {
+      switch (type) {
+          case 'terms':
+              setPolicyContent({ title: 'Terms and Conditions', text: TERMS_AND_CONDITIONS_TEXT });
+              break;
+          case 'privacy':
+              setPolicyContent({ title: 'Privacy Policy', text: PRIVACY_POLICY_TEXT });
+              break;
+          default:
+              return;
       }
-    };
-
-    handleResponse();
-  }, [response]);
-
-  const handleGoogleSignIn = () => {
-    promptAsync();
+      setPolicyModalVisible(true);
   };
-
+  
   return (
-      // ... Your JSX remains exactly the same ...
-    <View style={{ flex: 1 }}>
-      <Image
-        source={require('../assets/images/logo.png')}
-        style={styles.logos}
-        resizeMode="contain"
-      />
-      <View style={styles.container}>
-        <Image
-          source={require('../assets/images/getstarted.jpg')}
-          style={styles.backgroundImage}
-        />
+    <SafeAreaView style={styles.container}>
+      <Image source={require('../assets/images/logo.png')} style={styles.logo} resizeMode="contain" />
+      <View style={styles.mainContent}>
+        <Image source={require('../assets/images/getstarted.jpg')} style={styles.backgroundImage} />
         <View style={styles.blueOverlay} />
-        <Animatable.View
-          animation="fadeInUp"
-          duration={800}
-          delay={100}
-          style={styles.overlayContainer}
-        >
+        
+        <Animatable.View animation="fadeInUp" duration={800} delay={100} style={styles.overlayContainer}>
           {isLoading ? (
             <View style={styles.loaderContainer}>
-              <ActivityIndicator size="large" color="#00BBD6" />
-              <Text style={styles.loaderText}>Signing In...</Text>
+              <ActivityIndicator size="large" color={theme.primary} />
             </View>
           ) : (
             <>
-              <Text style={styles.title}>
-                {"Welcome to FiBear Network Technologies Corp."}
-              </Text>
+              <Text style={styles.title}>{"Welcome to FiBear Network Technologies Corp."}</Text>
               <Text style={styles.subtitle}>
-                We are committed to keeping you connected. We provide fast, reliable,
-                and stable internet service designed to meet your daily needs. Our
-                staff is always ready to assist you.
+                We are committed to keeping you connected. We provide fast, reliable, and stable internet service designed to meet your daily needs.
               </Text>
-
-              <TouchableOpacity
-                style={styles.signUpBtn}
-                onPress={() => navigation.navigate('SignUpScreen')}
-              >
-                <Text style={styles.signUpText}>Sign Up</Text>
+              <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('SignUpScreen')}>
+                <Text style={styles.primaryButtonText}>Sign Up</Text>
               </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.loginBtn}
-                onPress={() => navigation.navigate('SignUpScreen', { screen: 'Login' })}
-              >
-                <Text style={styles.loginText}>Log In</Text>
+              <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate('SignUpScreen', { screen: 'Login' })}>
+                <Text style={styles.secondaryButtonText}>Log In</Text>
               </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.googleBtn}
-                disabled={!request}
-                onPress={handleGoogleSignIn}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Image
-                    source={{ uri: 'https://www.gstatic.com/images/branding/product/1x/googleg_48dp.png' }}
-                    style={{ width: 22, height: 22, marginRight: 9 }}
-                  />
-                  <Text style={styles.googleText}>Sign in with Google</Text>
-                </View>
-              </TouchableOpacity>
-              
               <View style={styles.footerLinks}>
-                <Text
-                  style={styles.link}
-                  onPress={() => Linking.openURL('https://yourprivacypolicy.url')}
-                >
-                  Privacy Policy
-                </Text>
+                 {/* --- FIX: Corrected the function call to be more explicit --- */}
+                <TouchableOpacity onPress={() => openPolicyModal('privacy')}><Text style={styles.link}>Privacy Policy</Text></TouchableOpacity>
                 <Text style={styles.separator}>|</Text>
-                <Text
-                  style={styles.link}
-                  onPress={() => Linking.openURL('https://yourtermsofservice.url')}
-                >
-                  Terms of Service
-                </Text>
+                <TouchableOpacity onPress={() => openPolicyModal('terms')}><Text style={styles.link}>Terms of Service</Text></TouchableOpacity>
               </View>
             </>
           )}
         </Animatable.View>
       </View>
-    </View>
+      <PolicyModal 
+        visible={isPolicyModalVisible} 
+        title={policyContent.title} 
+        content={policyContent.text} 
+        onClose={() => setPolicyModalVisible(false)}
+        theme={theme}
+      />
+    </SafeAreaView>
   );
 }
 
-// ... Your styles remain exactly the same ...
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        flexDirection: 'column',
-    },
-    backgroundImage: {
-        flex: 3.6,
-        width: '100%',
-        height: undefined,
-        resizeMode: 'cover',
-        zIndex: 1,
-    },
-    blueOverlay: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        backgroundColor: 'rgba(0, 65, 176, 0.39)',
-        zIndex: 2,
-    },
+// --- OPTIMIZATION: Styles are now a function that uses the theme object ---
+const getStyles = (theme) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: '#fff' },
+    logo: { position: 'absolute', top: Platform.OS === 'android' ? 20 : 60, left: 25, width: 90, height: 35, zIndex: 10 },
+    mainContent: { flex: 1 },
+    backgroundImage: { position: 'absolute', width: '100%', height: '70%', top: 0, resizeMode: 'cover' },
+    blueOverlay: { position: 'absolute', top: 0, left: 0, width: '100%', height: '70%', backgroundColor: 'rgba(0, 65, 176, 0.39)' },
     overlayContainer: {
-        flex: 3,
-        backgroundColor: 'rgba(255,255,255,0.92)',
-        marginTop: -120,
-        borderTopLeftRadius: 50,
-        borderTopRightRadius: 50,
-        padding: 20,
-        alignItems: 'center',
-        zIndex: 4,
-        justifyContent: 'center', // Added to center the loader
+        position: 'absolute', bottom: 0, left: 0, right: 0,
+        height: '55%', backgroundColor: theme.surface,
+        borderTopLeftRadius: 50, borderTopRightRadius: 50,
+        padding: 30, alignItems: 'center', justifyContent: 'center'
     },
-    loaderContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
+    loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    title: { fontWeight: '800', fontSize: 19, textAlign: 'center', marginBottom: 15, color: theme.text },
+    subtitle: { fontSize: 12, textAlign: 'center', marginBottom: 30, color: theme.textSecondary, lineHeight: 22 },
+    
+    baseButton: {
+        paddingVertical: 14, paddingHorizontal: 9, width: '80%', borderRadius: 12, marginBottom: 15,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.23,
+        shadowRadius: 2.62,
+        elevation: 4,
     },
-    loaderText: {
-        marginTop: 15,
-        fontSize: 16,
-        color: '#666',
+    primaryButton: {
+        backgroundColor: theme.primary, paddingVertical: 10, paddingHorizontal: 9, width: '70%', borderRadius: 10, marginBottom: 10, boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.6)',
     },
-    title: {
-        fontWeight: '800',
-        fontSize: 20,
-        textAlign: 'center',
-        marginTop: 20,
-        alignItems: 'center',
-        marginBottom: 30,
-        color: '#1A1A1A',
-        fontFamily: 'Roboto',
+    secondaryButton: {
+        borderColor: theme.primary, borderColor: '#00BBD6', borderWidth: 1.5, paddingVertical: 10, paddingHorizontal: 9, width: '70%', borderRadius: 10, marginBottom: 30, backgroundColor: theme.surface, boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.6)',
     },
-    subtitle: {
-        fontSize: 13,
-        textAlign: 'center',
-        marginBottom: 25,
-        color: '#666',
-    },
-    signUpBtn: {
-        backgroundColor: '#00BBD6',
-        paddingVertical: 10,
-        paddingHorizontal: 9,
-        width: '70%',
-        borderRadius: 10,
-        marginBottom: 10,
-        boxShadow: '0 4px 5px rgba(0, 0, 0, 0.6)',
-    },
-    signUpText: {
-        color: '#fff',
-        fontWeight: 'bold',
-        textAlign: 'center',
-    },
-    loginBtn: {
-        borderColor: '#00BBD6',
-        borderWidth: 1.5,
-        paddingVertical: 10,
-        paddingHorizontal: 9,
-        width: '70%',
-        borderRadius: 10,
-        marginBottom: 30,
-        boxShadow: '0 4px 5px rgba(0, 0, 0, 0.6)',
-    },
-    loginText: {
-        color: '#00BBD6',
-        fontWeight: 'bold',
-        textAlign: 'center',
-    },
-    googleBtn: {
-        marginBottom: 10,
-    },
-    googleText: {
-        color: '#555',
-        fontSize: 13,
-        marginBottom: 4,
-    },
-    footerLinks: {
-        flexDirection: 'row',
-        marginTop: 10,
-    },
-    link: {
-        color: '#999',
-        fontSize: 12,
-        marginHorizontal: 5,
-    },
-    separator: {
-        color: '#999',
-        fontSize: 12,
-    },
-    logos: {
-        position: 'absolute',
-        top: 60,
-        left: 25,
-        width: 60,
-        height: 30,
-        zIndex: 4,
-        resizeMode: 'contain',
-        transform: [{ translateY: -20 }],
-    },
+    primaryButtonText: { color: theme.textOnPrimary, fontWeight: 'bold', textAlign: 'center', fontSize: 16 },
+    secondaryButtonText: { color: theme.primary, fontWeight: 'bold', textAlign: 'center', fontSize: 16 },
+
+    footerLinks: { flexDirection: 'row', marginTop: 20 },
+    link: { color: theme.textSecondary, fontSize: 12, marginHorizontal: 8 },
+    separator: { color: theme.textSecondary, fontSize: 12 },
+    
+    // --- Modal Styles ---
+    policyModalOverlay: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: 'rgba(0, 0, 0, 0.6)' },
+    policyModalView: { backgroundColor: theme.surface, borderRadius: 20, padding: 25, alignItems: 'center', height: '80%', width: '90%' },
+    policyTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 15, color: theme.text },
+    policyScrollView: { width: '100%', marginVertical: 10 },
+    policyModalText: { fontSize: 14, color: theme.text, lineHeight: 22 },
+    policyCloseButton: { backgroundColor: theme.danger, borderRadius: 10, paddingVertical: 12, elevation: 2, width: '100%', marginTop: 15 },
+    policyCloseButtonText: { color: theme.textOnPrimary, fontWeight: "bold", textAlign: "center", fontSize: 16 },
 });

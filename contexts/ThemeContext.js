@@ -1,24 +1,27 @@
 // contexts/ThemeContext.js
-
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import { Appearance } from 'react-native';
 import { lightTheme, darkTheme } from '../constants/colors';
 
-// Create the context
 const ThemeContext = createContext();
 
-// Create a provider component
 export const ThemeProvider = ({ children }) => {
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  // Set initial state based on device's color scheme
+  const [isDarkMode, setIsDarkMode] = useState(Appearance.getColorScheme() === 'dark');
 
-  // Function to toggle between light and dark mode
+  useEffect(() => {
+    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
+      setIsDarkMode(colorScheme === 'dark');
+    });
+    return () => subscription.remove();
+  }, []);
+
   const toggleTheme = () => {
     setIsDarkMode(prevMode => !prevMode);
   };
 
-  // Select the theme object based on the state
   const theme = isDarkMode ? darkTheme : lightTheme;
 
-  // The value provided to consuming components
   const value = {
     isDarkMode,
     theme,
@@ -32,5 +35,11 @@ export const ThemeProvider = ({ children }) => {
   );
 };
 
-// Create a custom hook for easy access to the context
-export const useTheme = () => useContext(ThemeContext);
+export const useTheme = () => {
+    const context = useContext(ThemeContext);
+    if (context === undefined) {
+        throw new Error('useTheme must be used within a ThemeProvider');
+    }
+    // Return the whole context object
+    return context; 
+};

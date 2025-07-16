@@ -5,6 +5,7 @@
 
 export const faqData = [
   {
+    id: 1,
     question: 'How can I pay my bill?',
     answer: `You can pay your bill using two main options:
     
@@ -14,14 +15,10 @@ export const faqData = [
 3.  Select the "Internet" category and search for **"Fibear Network Tech"** or **"FNTC"**.
 4.  Enter your **FNTC Account Number** and the amount to pay.
 5.  Confirm the details and save a screenshot of your receipt.
-
-**Option 2: Credit/Debit Card**
-1.  Go to our official payment website: [FNTC Secure Payment Portal](https://pay.fntc-secure.com).
-2.  Enter your **FNTC Account Number** and the amount.
-3.  Follow the on-screen instructions to enter your card details securely.
 `
   },
   {
+    id: 2,
     question: 'What are your available internet plans?',
     answer: `We offer a variety of plans to suit your needs:
 
@@ -32,6 +29,7 @@ export const faqData = [
 -   **Plan Diamond:** ₱1500/month for up to 100 mbps`
   },
   {
+    id: 3,
     question: 'My internet is slow or not working. What should I do?',
     answer: `We're sorry to hear you're having trouble. Please try these initial troubleshooting steps:
 
@@ -42,12 +40,14 @@ export const faqData = [
 If the issue persists, please contact us: **0945 220 3371** for further assistance.`
   },
   {
+    id: 4,
     question: 'When is my bill due?',
     answer: `Your billing statement is generated on the **1st of every month**.
 
 The payment due date is on the **20th of the same month**.`
   },
   {
+    id: 5,
     question: 'How do I contact a human agent?',
     answer: `If you need to speak with a human support agent for complex issues, you can reach us through:
 

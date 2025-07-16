@@ -1,0 +1,51 @@
+{
+  "project_info": {
+    "project_number": "973096250612",
+    "firebase_url": "https://fibear-20101-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "fibear-20101",
+    "storage_bucket": "fibear-20101.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:973096250612:android:1dd326ebf2ed6d27ec02a1",
+        "android_client_info": {
+          "package_name": "com.user12312312312.fibear"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "973096250612-736dnhpmon9pd2di7vtcpb2rdooo1k0u.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.user12312312312.fibear",
+            "certificate_hash": "9cd22d480c438e1dcd61506477abbed5c4ff28ec"
+          }
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDEicqxkhNL1ClsiC6W5aOJPuOM1UEIIuY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "973096250612-jbaqc1dc8440q5s4n6knesovs5qe3s6a.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "973096250612-isdkn4k5tmr0sld69pmsg1d5uatco4hk.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.user12312312312.fibear"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

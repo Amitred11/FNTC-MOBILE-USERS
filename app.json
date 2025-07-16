@@ -1,28 +1,67 @@
 {
   "expo": {
-    "name": "copy",
-    "slug": "copy",
+    "name": "fibear",
+    "slug": "fibear",
+    "scheme": "fibear",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.user12312312312.fibear",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "The app needs access to your photos so you can select a proof of payment or update your profile picture.",
+        "NSCameraUsageDescription": "The app needs access to your camera to capture images for proof of payment or for your profile picture.",
+        "NSMicrophoneUsageDescription": "The app needs access to your microphone for video recording (if you also capture video)."
+      }
     },
     "android": {
+      "package": "com.user12312312312.fibear",
+      "googleServicesFile": "./google-services.json",
+      "newArchEnabled": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "permissions": [
+        "android.permission.READ_EXTERNAL_STORAGE", 
+        "android.permission.WRITE_EXTERNAL_STORAGE", 
+        "android.permission.READ_MEDIA_IMAGES", 
+        "android.permission.READ_MEDIA_VIDEO",  
+        "android.permission.CAMERA", 
+        "android.permission.RECORD_AUDIO" 
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "ca00445b-0508-46c4-bb74-05e2977fa248"
+      },
+      "webClientId": "973096250612-jbaqc1dc8440q5s4n6knesovs5qe3s6a.apps.googleusercontent.com", 
+      "iosClientId": "973096250612-isdkn4k5tmr0sld69pmsg1d5uatco4hk.apps.googleusercontent.com",
+      "androidClientId": "973096250612-736dnhpmon9pd2di7vtcpb2rdooo1k0u.apps.googleusercontent.com"
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app needs access to your photos so you can select a proof of payment or update your profile picture."
+        }
+        ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "The app needs access to your camera to capture images for proof of payment or for your profile picture."
+        }
+      ]
+    ]
   }
 }

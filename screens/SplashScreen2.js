@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React, { useRef, useCallback } from 'react';
 import {
   Text,
-  Image,
   StyleSheet,
   TouchableOpacity,
   Animated,
@@ -15,121 +14,245 @@ import { Easing } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 
+// Use Animated's components for animatable versions
+const AnimatedImageBackground = Animated.createAnimatedComponent(ImageBackground);
+
 export default function SplashScreen2() {
   const navigation = useNavigation();
-  const [showContent, setShowContent] = useState(false);
-  const opacity = React.useRef(new Animated.Value(0)).current;
-  const translateY = React.useRef(new Animated.Value(0)).current;
+  
+  // --- NEW Animated values for a more complex sequence ---
+  const backgroundScale = useRef(new Animated.Value(1.15)).current;
+  
+  const welcomeOpacity = useRef(new Animated.Value(0)).current;
+  const welcomeTranslateY = useRef(new Animated.Value(20)).current;
+
+  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const logoScale = useRef(new Animated.Value(0.8)).current;
+
+  const taglineOpacity = useRef(new Animated.Value(0)).current;
+  const taglineTranslateY = useRef(new Animated.Value(20)).current;
+
+  const buttonOpacity = useRef(new Animated.Value(0)).current;
+  const buttonTranslateY = useRef(new Animated.Value(50)).current;
+  
+  const containerTranslateY = useRef(new Animated.Value(0)).current;
 
   useFocusEffect(
-    React.useCallback(() => {
-      setShowContent(false);
-      opacity.setValue(0);
-      translateY.setValue(0);
+    useCallback(() => {
+      // Reset all animations every time the screen is focused
+      backgroundScale.setValue(1.15);
+      welcomeOpacity.setValue(0);
+      welcomeTranslateY.setValue(20);
+      logoOpacity.setValue(0);
+      logoScale.setValue(0.8);
+      taglineOpacity.setValue(0);
+      taglineTranslateY.setValue(20);
+      buttonTranslateY.setValue(50);
+      buttonOpacity.setValue(0);
+      containerTranslateY.setValue(0);
 
-      const timer = setTimeout(() => {
-        setShowContent(true);
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: true,
-          easing: Easing.ease,
-        }).start();
-      }, 500);
+      // --- NEW, more sophisticated animation sequence ---
 
-      return () => clearTimeout(timer);
+      // Background zoom runs independently for a slow, constant effect
+      const backgroundAnimation = Animated.timing(backgroundScale, {
+        toValue: 1,
+        duration: 5000, // A very long, subtle zoom
+        useNativeDriver: true,
+        easing: Easing.out(Easing.quad),
+      });
+
+      // The content animates in distinct, overlapping stages
+      const contentAnimation = Animated.sequence([
+        // Stage 1: "Welcome" text appears
+        Animated.delay(500),
+        Animated.parallel([
+            Animated.timing(welcomeOpacity, {
+                toValue: 1,
+                duration: 800,
+                easing: Easing.ease,
+                useNativeDriver: true,
+            }),
+            Animated.timing(welcomeTranslateY, {
+                toValue: 0,
+                duration: 800,
+                easing: Easing.out(Easing.cubic),
+                useNativeDriver: true,
+            }),
+        ]),
+
+        // Stage 2: "Welcome" text fades out, making way for the logo
+        Animated.delay(1200),
+        Animated.timing(welcomeOpacity, {
+            toValue: 0,
+            duration: 500,
+            easing: Easing.ease,
+            useNativeDriver: true,
+        }),
+        
+        // Stage 3: Logo appears
+        Animated.parallel([
+          Animated.timing(logoOpacity, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.spring(logoScale, {
+            toValue: 1,
+            friction: 4,
+            tension: 50,
+            useNativeDriver: true,
+          }),
+        ]),
+        
+        // Stage 4: Tagline and Button appear as the final call-to-action
+        Animated.delay(300),
+        Animated.parallel([
+          Animated.timing(taglineOpacity, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+           Animated.timing(taglineTranslateY, {
+            toValue: 0,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(buttonOpacity, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(buttonTranslateY, {
+            toValue: 0,
+            duration: 500,
+            useNativeDriver: true,
+            easing: Easing.out(Easing.ease),
+          }),
+        ]),
+      ]);
+
+      // Run animations
+      backgroundAnimation.start();
+      contentAnimation.start();
+
+      return () => {
+        backgroundAnimation.stop();
+        contentAnimation.stop();
+      };
     }, [])
   );
 
   const handleNext = () => {
-    Animated.timing(translateY, {
+    Animated.timing(containerTranslateY, {
       toValue: -height,
-      duration: 500,
+      duration: 600,
       useNativeDriver: true,
-      easing: Easing.easeOut,
+      easing: Easing.inOut(Easing.ease),
     }).start(() => {
       navigation.navigate('GetStarted');
     });
   };
 
-  const animatedContainStyle = {
-    ...styles.contain,
-    transform: [{ translateY: translateY }],
-    opacity: opacity,
-  };
+  // --- Animated Styles ---
+  const animatedContainerStyle = { transform: [{ translateY: containerTranslateY }] };
+  const animatedBackgroundStyle = { transform: [{ scale: backgroundScale }] };
+  const animatedWelcomeStyle = { opacity: welcomeOpacity, transform: [{ translateY: welcomeTranslateY }] };
+  const animatedLogoStyle = { opacity: logoOpacity, transform: [{ scale: logoScale }] };
+  const animatedTaglineStyle = { opacity: taglineOpacity, transform: [{ translateY: taglineTranslateY }] };
+  const animatedButtonStyle = { opacity: buttonOpacity, transform: [{ translateY: buttonTranslateY }] };
 
   return (
-    <>
-      <ImageBackground
+    <View style={styles.container}>
+      <AnimatedImageBackground
         source={require('../assets/images/bgimage.jpg')}
-        style={styles.background}
+        style={[styles.background, animatedBackgroundStyle]}
         resizeMode="cover"
       />
-      {showContent && (
-        <View style={styles.container}>
-          <Animated.View style={animatedContainStyle}>
-            <Image
-              source={require('../assets/images/logo.png')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-            <TouchableOpacity onPress={handleNext} style={styles.getStartedButton}>
-              <Text style={styles.getStartedText}>Get Started</Text>
-            </TouchableOpacity>
-          </Animated.View>
-        </View>
-      )}
-    </>
+      
+      {/* This view now acts as the container for all animated content */}
+      <Animated.View style={[styles.contentContainer, animatedContainerStyle]}>
+        
+        {/* Absolute position for the welcome text so it can overlap */}
+        <Animated.Text style={[styles.welcomeText, animatedWelcomeStyle]}>
+            Welcome
+        </Animated.Text>
+        
+        <Animated.Image
+          source={require('../assets/images/logo.png')}
+          style={[styles.logo, animatedLogoStyle]}
+          resizeMode="contain"
+        />
+
+        <Animated.Text style={[styles.taglineText, animatedTaglineStyle]}>
+            Your Connection, Your Speed
+        </Animated.Text>
+
+        <Animated.View style={animatedButtonStyle}>
+          <TouchableOpacity onPress={handleNext} style={styles.getStartedButton}>
+            <Text style={styles.getStartedText}>Get Started</Text>
+          </TouchableOpacity>
+        </Animated.View>
+
+      </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: '#000',
   },
-  contain: {
+  background: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  contentContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
     backgroundColor: 'transparent',
+  },
+  welcomeText: {
+    fontSize: width * 0.12,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    position: 'absolute', // Allows it to be centered independently of other elements
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 10,
   },
   logo: {
     width: width * 0.7,
     height: undefined,
     aspectRatio: 250 / 150,
-    marginBottom: height * 0.06,
   },
-  background: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-    zIndex: -1,
-    position: 'absolute',
-    top: 0,
-    left: 0,
+  taglineText: {
+    fontSize: width * 0.045,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginTop: -height * 0.02, // Negative margin to bring it closer to the logo
+    marginBottom: height * 0.04,
+    opacity: 0.9,
+    fontWeight: '500',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 5,
   },
   getStartedButton: {
     backgroundColor: '#007AFF',
     paddingVertical: height * 0.018,
     paddingHorizontal: width * 0.18,
-    borderRadius: 25,
+    borderRadius: 30,
     alignItems: 'center',
-    marginTop: height * 0.025,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 3, height: 6 },
-        shadowOpacity: 0.6,
-        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
       },
       android: {
-        elevation: 6,
+        elevation: 8,
       },
     }),
   },

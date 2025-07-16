@@ -1,98 +1,127 @@
+// App.js
 import React, { useEffect, useRef } from 'react';
+import 'expo-dev-client';
+import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { MessageProvider } from './contexts/MessageContext';
+import { AlertProvider } from './contexts/AlertContext';
 import { SubscriptionProvider } from './contexts/SubscriptionContext';
+import { ThemeProvider } from './contexts/ThemeContext'; 
+import LoadingScreen from './screens/LoadingScreen';
 import * as Notifications from 'expo-notifications';
+import {
+  setupNotificationHandler,
+  setupAndroidNotificationChannels
+} from './services/notificationService';
 
-// --- Screen Imports ---
+
+// Import all your screens
 import SplashScreen2 from './screens/SplashScreen2';
 import GetStartedScreen from './screens/GetStartedScreen';
 import SignUpScreen from './screens/SignUpScreen';
 import HomeScreen from './screens/HomeScreen';
-import Subscription from './screens/Subscription';
 import Profile from './screens/Profile';
-import Support from './screens/Support';
-import MyBills from './screens/MyBills';
-import Settings from './screens/Settings';
-import MySubscriptionScreen from './screens/MySubscriptionScreen';
-import PayBills from './screens/PayBills';
 import EditProfileScreen from './screens/EditProfileScreen';
-// Corrected to use the actual component name we created
-import Notif from './screens/Notif'; 
+import Subscription from './screens/Subscription';
+import MyBills from './screens/MyBills';
+import PayBills from './screens/PayBills';
+import Notif from './screens/Notif';
+import Settings from './screens/Settings';
+import ChangePasswordScreen from './screens/ChangePasswordScreen';
+import Support from './screens/Support';
 import CustomerFeedbackScreen from './screens/CustomerFeedbackScreen';
-import ChangePassword from './screens/ChangePasswordScreen';
-import { ThemeProvider } from './contexts/ThemeContext';
-
-
-// This must be set so that notifications are shown when the app is in the foreground
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true, // It's common to set the badge count
-  }),
-});
+import LiveChatScreen from './screens/LiveChatScreen';
 
 const Stack = createStackNavigator();
 
-// --- THE SINGLE ROOT APP COMPONENT ---
+// AppNavigator is now simpler. It only cares about which stack to show.
+const AppNavigator = () => {
+    const { user, authAction } = useAuth();
+
+    return (
+        <NavigationContainer>
+            <Stack.Navigator screenOptions={{ headerShown: false }}>
+                {user && !authAction ? (
+                    // --- User is logged in: Show the main app stack ---
+                    <>
+                        <Stack.Screen name="Home" component={HomeScreen} />
+                        <Stack.Screen name="Profile" component={Profile} />
+                        <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
+                        <Stack.Screen name="Subscription" component={Subscription} />
+                        <Stack.Screen name="MyBills" component={MyBills} />
+                        <Stack.Screen name="PayBills" component={PayBills} />
+                        <Stack.Screen name="Notif" component={Notif} />
+                        <Stack.Screen name="Settings" component={Settings} />
+                        <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+                        <Stack.Screen name="Support" component={Support} />
+                        <Stack.Screen name="CustomerFeedbackScreen" component={CustomerFeedbackScreen} />
+                        <Stack.Screen name="LiveChatScreen" component={LiveChatScreen} />
+                    </>
+                ) : (
+                    // --- User is not logged in: Show the auth stack ---
+                    <>
+                        <Stack.Screen name="SplashScreen2" component={SplashScreen2} />
+                        <Stack.Screen name="GetStarted" component={GetStartedScreen} />
+                        <Stack.Screen name="SignUpScreen" component={SignUpScreen} />
+                    </>
+                )}
+            </Stack.Navigator>
+        </NavigationContainer>
+    );
+};
+
+const AppContent = () => {
+    const { isLoading, user, api } = useAuth();
+
+    const notificationListener = useRef();
+    const responseListener = useRef();
+
+    useEffect(() => {
+        setupNotificationHandler();
+
+    
+        setupAndroidNotificationChannels();
+
+        notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+            console.log("Notification Received (Foreground):", notification);
+        });
+
+
+        responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+            console.log("Notification Tapped:", response);
+        });
+
+        return () => {
+            if (notificationListener.current) {
+                Notifications.removeNotificationSubscription(notificationListener.current);
+            }
+            if (responseListener.current) {
+                Notifications.removeNotificationSubscription(responseListener.current);
+            }
+        };
+    }, []); // Empty dependency array means this runs once on mount
+
+    if (isLoading) {
+        return <LoadingScreen />;
+    }
+
+    return <AppNavigator />;
+};
+
 export default function App() {
-  // A navigationRef allows us to access navigation methods from outside a screen component
-  const navigationRef = useNavigationContainerRef();
-  const notificationListener = useRef();
-  const responseListener = useRef();
-
-  useEffect(() => {
-    // This listener is fired whenever a notification is received while the app is foregrounded
-    notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
-      console.log('--- Notification Received While App is Open ---');
-      console.log(notification);
-    });
-
-    // This listener is fired whenever a user taps on or interacts with a notification
-    // (works when the app is foregrounded, backgrounded, or killed)
-    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-      console.log('--- Notification Tapped ---');
-      const data = response.notification.request.content.data;
-      
-      // Check if the navigation container is ready and if the notification has screen data
-      if (navigationRef.isReady() && data?.screen) {
-        console.log(`Navigating to screen: ${data.screen}`);
-        // Use the ref to navigate to the specified screen
-        navigationRef.navigate(data.screen, data.params || {});
-      }
-    });
-
-    // Clean up the listeners when the component unmounts
-    return () => {
-      Notifications.removeNotificationSubscription(notificationListener.current);
-      Notifications.removeNotificationSubscription(responseListener.current);
-    };
-  }, []); // The empty dependency array ensures this effect runs only once
-
-  return (
-    <ThemeProvider>
-    <SubscriptionProvider>
-      <NavigationContainer ref={navigationRef}>
-        <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Splash2">
-          <Stack.Screen name="Splash2" component={SplashScreen2} />
-          <Stack.Screen name="GetStarted" component={GetStartedScreen} />
-          <Stack.Screen name="SignUpScreen" component={SignUpScreen} />
-          <Stack.Screen name="Home" component={HomeScreen} />
-          <Stack.Screen name="Subscription" component={Subscription} options={{ unmountOnBlur: true }} />
-          <Stack.Screen name="Profile" component={Profile} options={{ unmountOnBlur: true }} />
-          <Stack.Screen name="Support" component={Support} options={{ unmountOnBlur: true }} />
-          <Stack.Screen name="MyBills" component={MyBills} options={{ unmountOnBlur: true }} />
-          <Stack.Screen name="Settings" component={Settings} options={{ unmountOnBlur: true }} />
-          <Stack.Screen name="MySubscriptionScreen" component={MySubscriptionScreen} options={{ unmountOnBlur: true }} />
-          <Stack.Screen name="PayBills" component={PayBills} options={{ unmountOnBlur: true }} />
-          <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} options={{ unmountOnBlur: true }} />
-          <Stack.Screen name="Notif" component={Notif} options={{ unmountOnBlur: true }} />
-          <Stack.Screen name="CustomerFeedbackScreen" component={CustomerFeedbackScreen} options={{ unmountOnBlur: true }} />
-          <Stack.Screen name="ChangePassword" component={ChangePassword} options={{ unmountOnBlur: true }} />
-        </Stack.Navigator>
-      </NavigationContainer>
-    </SubscriptionProvider>
-    </ThemeProvider>
-  );
+    return (
+        <ThemeProvider>
+          <AlertProvider>
+            <MessageProvider>
+              <AuthProvider>
+                    <SubscriptionProvider>
+                            {/* Instead of rendering AppNavigator directly, we render AppContent */}
+                            <AppContent />
+                    </SubscriptionProvider>
+              </AuthProvider>
+            </MessageProvider>
+          </AlertProvider>
+        </ThemeProvider>
+    );
 }
