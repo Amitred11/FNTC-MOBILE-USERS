@@ -1,147 +1,267 @@
-// screens/GetStartedScreen.js
-import React, { useState } from 'react';
+// screens/GetStartedScreen.js (Cleaned)
+
+import React, { useState, useCallback, useMemo } from 'react';
 import {
-  View, Text, Image, StyleSheet, TouchableOpacity,
-  ActivityIndicator, Modal, ScrollView, SafeAreaView, Platform
+  View,
+  Text,
+  Image,
+  StyleSheet,
+  TouchableOpacity,
+  Modal,
+  ScrollView,
+  SafeAreaView,
+  Platform,
+  Dimensions,
 } from 'react-native';
 import * as Animatable from 'react-native-animatable';
 import { useNavigation } from '@react-navigation/native';
-import { lightTheme } from '../constants/colors';
-import { TERMS_AND_CONDITIONS_TEXT } from '../texts/Terms of Services';
-import { PRIVACY_POLICY_TEXT } from '../texts/Privacy Policy';
+import { useTheme } from '../contexts'; // Use the context instead of hardcoding
+import TermsOfServiceText from '../texts/Terms of Services.js'; // Use named imports
+import PrivacyPolicyText from '../texts/Privacy Policy.js';
 
-// --- The modal now gets the theme passed as a prop ---
-const PolicyModal = ({ visible, title, content, onClose, theme }) => {
-    const styles = getStyles(theme);
-    return (
-        <Modal animationType="fade" transparent={true} visible={visible} onRequestClose={onClose}>
-            <View style={styles.policyModalOverlay}>
-                <View style={styles.policyModalView}>
-                    <Text style={styles.policyTitle}>{title}</Text>
-                    <ScrollView style={styles.policyScrollView} contentContainerStyle={{ paddingBottom: 20 }}>
-                        <Text style={styles.policyModalText}>{content}</Text>
-                    </ScrollView>
-                    <TouchableOpacity style={styles.policyCloseButton} onPress={onClose}>
-                        <Text style={styles.policyCloseButtonText}>Close</Text>
-                    </TouchableOpacity>
-                </View>
-            </View>
-        </Modal>
-    );
-};
+// --- Constants ---
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const COMPANY_NAME = 'FiBear Network Technologies Corp.';
+const SUBTITLE_TEXT = 'We are committed to keeping you connected. We provide fast, reliable, and stable internet service designed to meet your daily needs.';
 
-export default function GetStartedScreen() {
-  const navigation = useNavigation();
-  const theme = lightTheme; 
+
+// --- Sub-Components (Memoized for Performance) ---
+const PolicyModal = React.memo(({ visible, title, content, onClose }) => {
+  const { theme } = useTheme();
   const styles = getStyles(theme);
 
-  const [isLoading] = useState(false);
+  // Replace placeholder at render time
+  const formattedContent = useMemo(() => {
+    const formattedDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    return content.replace('{{LAST_UPDATED}}', formattedDate);
+  }, [content]);
+
+  return (
+    <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
+      <SafeAreaView style={styles.policyModalOverlay}>
+        <Animatable.View animation="fadeInUp" duration={400} style={styles.policyModalView}>
+          <Text style={styles.policyTitle}>{title}</Text>
+          <ScrollView style={styles.policyScrollView} contentContainerStyle={{ paddingBottom: 20 }}>
+            <Text style={styles.policyModalText}>{formattedContent}</Text>
+          </ScrollView>
+          <TouchableOpacity style={styles.policyCloseButton} onPress={onClose}>
+            <Text style={styles.policyCloseButtonText}>Close</Text>
+          </TouchableOpacity>
+        </Animatable.View>
+      </SafeAreaView>
+    </Modal>
+  );
+});
+
+
+// --- Main Screen Component ---
+export default function GetStartedScreen() {
+  const navigation = useNavigation();
+  const { theme } = useTheme(); // Use the theme from the context
+  const styles = getStyles(theme);
+
   const [isPolicyModalVisible, setPolicyModalVisible] = useState(false);
   const [policyContent, setPolicyContent] = useState({ title: '', text: '' });
 
-  const openPolicyModal = (type) => {
-      switch (type) {
-          case 'terms':
-              setPolicyContent({ title: 'Terms and Conditions', text: TERMS_AND_CONDITIONS_TEXT });
-              break;
-          case 'privacy':
-              setPolicyContent({ title: 'Privacy Policy', text: PRIVACY_POLICY_TEXT });
-              break;
-          default:
-              return;
-      }
-      setPolicyModalVisible(true);
-  };
+  const openPolicyModal = useCallback((type) => {
+    if (type === 'terms') {
+      setPolicyContent({ title: 'Terms and Conditions', text: TermsOfServiceText });
+    } else if (type === 'privacy') {
+      setPolicyContent({ title: 'Privacy Policy', text: PrivacyPolicyText });
+    }
+    setPolicyModalVisible(true);
+  }, []);
   
+  const navigateToSignUp = useCallback(() => navigation.navigate('SignUpScreen'), [navigation]);
+  const navigateToLogin = useCallback(() => navigation.navigate('SignUpScreen', { screen: 'Login' }), [navigation]);
+  const closePolicyModal = useCallback(() => setPolicyModalVisible(false), []);
+
   return (
     <SafeAreaView style={styles.container}>
-      <Image source={require('../assets/images/logo.png')} style={styles.logo} resizeMode="contain" />
+      <Image
+        source={require('../assets/images/logo.png')}
+        style={styles.logo}
+        resizeMode="contain"
+      />
       <View style={styles.mainContent}>
         <Image source={require('../assets/images/getstarted.jpg')} style={styles.backgroundImage} />
         <View style={styles.blueOverlay} />
-        
-        <Animatable.View animation="fadeInUp" duration={800} delay={100} style={styles.overlayContainer}>
-          {isLoading ? (
-            <View style={styles.loaderContainer}>
-              <ActivityIndicator size="large" color={theme.primary} />
-            </View>
-          ) : (
-            <>
-              <Text style={styles.title}>{"Welcome to FiBear Network Technologies Corp."}</Text>
-              <Text style={styles.subtitle}>
-                We are committed to keeping you connected. We provide fast, reliable, and stable internet service designed to meet your daily needs.
-              </Text>
-              <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('SignUpScreen')}>
+
+        <Animatable.View
+          animation="fadeInUp"
+          duration={800}
+          delay={100}
+          style={styles.overlayContainer}
+        >
+            <Text style={styles.title}>{COMPANY_NAME}</Text>
+            <Text style={styles.subtitle}>{SUBTITLE_TEXT}</Text>
+            
+            <TouchableOpacity style={styles.primaryButton} onPress={navigateToSignUp}>
                 <Text style={styles.primaryButtonText}>Sign Up</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate('SignUpScreen', { screen: 'Login' })}>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.secondaryButton} onPress={navigateToLogin}>
                 <Text style={styles.secondaryButtonText}>Log In</Text>
-              </TouchableOpacity>
-              <View style={styles.footerLinks}>
-                 {/* --- FIX: Corrected the function call to be more explicit --- */}
-                <TouchableOpacity onPress={() => openPolicyModal('privacy')}><Text style={styles.link}>Privacy Policy</Text></TouchableOpacity>
+            </TouchableOpacity>
+            
+            <View style={styles.footerLinks}>
+                <TouchableOpacity onPress={() => openPolicyModal('privacy')}>
+                    <Text style={styles.link}>Privacy Policy</Text>
+                </TouchableOpacity>
                 <Text style={styles.separator}>|</Text>
-                <TouchableOpacity onPress={() => openPolicyModal('terms')}><Text style={styles.link}>Terms of Service</Text></TouchableOpacity>
-              </View>
-            </>
-          )}
+                <TouchableOpacity onPress={() => openPolicyModal('terms')}>
+                    <Text style={styles.link}>Terms of Service</Text>
+                </TouchableOpacity>
+            </View>
         </Animatable.View>
       </View>
-      <PolicyModal 
-        visible={isPolicyModalVisible} 
-        title={policyContent.title} 
-        content={policyContent.text} 
-        onClose={() => setPolicyModalVisible(false)}
-        theme={theme}
+      <PolicyModal
+        visible={isPolicyModalVisible}
+        title={policyContent.title}
+        content={policyContent.text}
+        onClose={closePolicyModal}
       />
     </SafeAreaView>
   );
 }
 
 // --- OPTIMIZATION: Styles are now a function that uses the theme object ---
-const getStyles = (theme) => StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fff' },
-    logo: { position: 'absolute', top: Platform.OS === 'android' ? 20 : 60, left: 25, width: 90, height: 35, zIndex: 10 },
-    mainContent: { flex: 1 },
-    backgroundImage: { position: 'absolute', width: '100%', height: '70%', top: 0, resizeMode: 'cover' },
-    blueOverlay: { position: 'absolute', top: 0, left: 0, width: '100%', height: '70%', backgroundColor: 'rgba(0, 65, 176, 0.39)' },
-    overlayContainer: {
-        position: 'absolute', bottom: 0, left: 0, right: 0,
-        height: '55%', backgroundColor: theme.surface,
-        borderTopLeftRadius: 50, borderTopRightRadius: 50,
-        padding: 30, alignItems: 'center', justifyContent: 'center'
+const getStyles = (theme) =>
+  StyleSheet.create({
+    container: { backgroundColor: '#fff', flex: 1 },
+    logo: {
+      height: 35,
+      left: 25,
+      position: 'absolute',
+      top: Platform.OS === 'android' ? 20 : 60,
+      width: 90,
+      zIndex: 10,
     },
-    loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    title: { fontWeight: '800', fontSize: 19, textAlign: 'center', marginBottom: 15, color: theme.text },
-    subtitle: { fontSize: 12, textAlign: 'center', marginBottom: 30, color: theme.textSecondary, lineHeight: 22 },
-    
+    mainContent: { flex: 1 },
+    backgroundImage: {
+      height: '70%',
+      position: 'absolute',
+      resizeMode: 'cover',
+      top: 0,
+      width: '100%',
+    },
+    blueOverlay: {
+      backgroundColor: 'rgba(0, 65, 176, 0.39)',
+      height: '70%',
+      left: 0,
+      position: 'absolute',
+      top: 0,
+      width: '100%',
+    },
+    overlayContainer: {
+      alignItems: 'center',
+      backgroundColor: theme.surface,
+      borderTopLeftRadius: 50,
+      borderTopRightRadius: 50,
+      bottom: 0,
+      height: '55%',
+      justifyContent: 'center',
+      left: 0,
+      padding: 30,
+      position: 'absolute',
+      right: 0,
+    },
+    loaderContainer: { alignItems: 'center', flex: 1, justifyContent: 'center' },
+    title: {
+      color: theme.text,
+      fontSize: 19,
+      fontWeight: '800',
+      marginBottom: 15,
+      textAlign: 'center',
+    },
+    subtitle: {
+      color: theme.textSecondary,
+      fontSize: 12,
+      lineHeight: 22,
+      marginBottom: 30,
+      textAlign: 'center',
+    },
+
     baseButton: {
-        paddingVertical: 14, paddingHorizontal: 9, width: '80%', borderRadius: 12, marginBottom: 15,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.23,
-        shadowRadius: 2.62,
-        elevation: 4,
+      borderRadius: 12,
+      elevation: 4,
+      marginBottom: 15,
+      paddingHorizontal: 9,
+      paddingVertical: 14,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.23,
+      shadowRadius: 2.62,
+      width: '80%',
     },
     primaryButton: {
-        backgroundColor: theme.primary, paddingVertical: 10, paddingHorizontal: 9, width: '70%', borderRadius: 10, marginBottom: 10, boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.6)',
+      backgroundColor: theme.primary,
+      borderRadius: 10,
+      boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.6)',
+      marginBottom: 10,
+      paddingHorizontal: 9,
+      paddingVertical: 10,
+      width: '70%',
     },
     secondaryButton: {
-        borderColor: theme.primary, borderColor: '#00BBD6', borderWidth: 1.5, paddingVertical: 10, paddingHorizontal: 9, width: '70%', borderRadius: 10, marginBottom: 30, backgroundColor: theme.surface, boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.6)',
+      backgroundColor: theme.surface,
+      borderColor: theme.primary,
+      borderColor: '#00BBD6',
+      borderRadius: 10,
+      borderWidth: 1.5,
+      boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.6)',
+      marginBottom: 30,
+      paddingHorizontal: 9,
+      paddingVertical: 10,
+      width: '70%',
     },
-    primaryButtonText: { color: theme.textOnPrimary, fontWeight: 'bold', textAlign: 'center', fontSize: 16 },
-    secondaryButtonText: { color: theme.primary, fontWeight: 'bold', textAlign: 'center', fontSize: 16 },
+    primaryButtonText: {
+      color: theme.textOnPrimary,
+      fontSize: 16,
+      fontWeight: 'bold',
+      textAlign: 'center',
+    },
+    secondaryButtonText: {
+      color: theme.primary,
+      fontSize: 16,
+      fontWeight: 'bold',
+      textAlign: 'center',
+    },
 
     footerLinks: { flexDirection: 'row', marginTop: 20 },
     link: { color: theme.textSecondary, fontSize: 12, marginHorizontal: 8 },
     separator: { color: theme.textSecondary, fontSize: 12 },
-    
+
     // --- Modal Styles ---
-    policyModalOverlay: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: 'rgba(0, 0, 0, 0.6)' },
-    policyModalView: { backgroundColor: theme.surface, borderRadius: 20, padding: 25, alignItems: 'center', height: '80%', width: '90%' },
-    policyTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 15, color: theme.text },
-    policyScrollView: { width: '100%', marginVertical: 10 },
-    policyModalText: { fontSize: 14, color: theme.text, lineHeight: 22 },
-    policyCloseButton: { backgroundColor: theme.danger, borderRadius: 10, paddingVertical: 12, elevation: 2, width: '100%', marginTop: 15 },
-    policyCloseButtonText: { color: theme.textOnPrimary, fontWeight: "bold", textAlign: "center", fontSize: 16 },
-});
+    policyModalOverlay: {
+      alignItems: 'center',
+      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+      flex: 1,
+      justifyContent: 'center',
+    },
+    policyModalView: {
+      alignItems: 'center',
+      backgroundColor: theme.surface,
+      borderRadius: 20,
+      height: '80%',
+      padding: 25,
+      width: '90%',
+    },
+    policyTitle: { color: theme.text, fontSize: 22, fontWeight: 'bold', marginBottom: 15 },
+    policyScrollView: { marginVertical: 10, width: '100%' },
+    policyModalText: { color: theme.text, fontSize: 14, lineHeight: 22 },
+    policyCloseButton: {
+      backgroundColor: theme.danger,
+      borderRadius: 10,
+      elevation: 2,
+      marginTop: 15,
+      paddingVertical: 12,
+      width: '100%',
+    },
+    policyCloseButtonText: {
+      color: theme.textOnPrimary,
+      fontSize: 16,
+      fontWeight: 'bold',
+      textAlign: 'center',
+    },
+  });

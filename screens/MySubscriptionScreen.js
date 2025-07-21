@@ -1,396 +1,468 @@
-// screens/MySubscriptionScreen.js
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, SafeAreaView, ActivityIndicator } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+// screens/MySubscriptionScreen.js (Cleaned)
+
+import React, { useState, useCallback, useMemo } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  RefreshControl,
+  SafeAreaView,
+  ActivityIndicator,
+} from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSubscription, useTheme, useAlert, useMessage } from '../contexts';
 import { AnimatedCircularProgress } from 'react-native-circular-progress';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { formatDistanceToNowStrict } from 'date-fns';
+import * as Animatable from 'react-native-animatable';
 
+// --- Helpers & Constants ---
 const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  if (!dateString) return 'N/A';
+  return new Date(dateString).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 };
 
-const FeatureItem = ({ text, theme }) => {
-    const styles = getStyles(theme);
-    return (
-        <View style={styles.featureItem}>
-            <Ionicons name="checkmark-circle-outline" size={20} color={theme.success} style={styles.featureIcon} />
-            <Text style={styles.featureText}>{text}</Text>
-        </View>
-    );
-};
+// --- Sub-Components (Memoized for Performance) ---
 
+const FeatureItem = React.memo(({ text }) => {
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
+  return (
+    <View style={styles.featureItem}>
+      <Ionicons name="checkmark-circle-outline" size={20} color={theme.success} style={styles.featureIcon} />
+      <Text style={styles.featureText}>{text}</Text>
+    </View>
+  );
+});
+
+const CancellationInfoCard = React.memo(({ plan, effectiveDate, onReactivate }) => {
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
+  const timeRemaining = useMemo(() => formatDistanceToNowStrict(new Date(effectiveDate), { addSuffix: true }), [effectiveDate]);
+
+  return (
+    <Animatable.View animation="fadeIn" duration={500} style={styles.cancellationCard}>
+      <View style={styles.cancellationHeader}>
+        <Ionicons name="warning" size={24} color={theme.warning} />
+        <Text style={styles.cancellationTitle}>Subscription Ending Soon</Text>
+      </View>
+      <Text style={styles.cancellationPlanName}>{plan.name}</Text>
+      <Text style={styles.cancellationText}>
+        Your plan is scheduled to be cancelled{' '}
+        <Text style={{ fontWeight: 'bold' }}>{timeRemaining}</Text>. You will lose access on{' '}
+        {formatDate(effectiveDate)}. If you want a refund, please create a support ticket.
+      </Text>
+      <TouchableOpacity style={styles.keepPlanBigButton} onPress={onReactivate}>
+        <Ionicons name="heart-outline" size={20} color={theme.textOnPrimary} />
+        <Text style={styles.keepPlanButtonText}>Keep My Plan</Text>
+      </TouchableOpacity>
+    </Animatable.View>
+  );
+});
+
+const InfoNotice = React.memo(({ icon, color, title, onAction, actionText, children }) => {
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
+  return (
+    <Animatable.View animation="fadeInDown" duration={600} style={[styles.noticeCard, { borderLeftColor: color, backgroundColor: `${color}1A` }]}>
+      <Ionicons name={icon} size={24} color={color} style={styles.noticeIcon} />
+      <View style={styles.noticeTextContainer}>
+        <Text style={[styles.noticeTitle, { color }]}>{title}</Text>
+        <Text style={styles.noticeBody}>{children}</Text>
+      </View>
+      {onAction && actionText && (
+        <TouchableOpacity onPress={onAction} style={styles.reactivateButton}>
+          <Text style={styles.reactivateButtonText}>{actionText}</Text>
+        </TouchableOpacity>
+      )}
+    </Animatable.View>
+  );
+});
+
+// --- Main Screen Component ---
 export default function MySubscriptionScreen() {
-     const { 
-        activePlan, 
-        paymentHistory,
-        cancelSubscription, 
-        startDate,
-        renewalDate, 
-        isLoading,
-        refreshSubscription,
-        dataUsage 
-    } = useSubscription();
+  const { subscriptionData, paymentHistory, cancelSubscription, cancelPlanChange, reactivateSubscription, refreshSubscription, dataUsage, isLoading } = useSubscription();
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
+  const { showAlert } = useAlert();
+  const { showMessage } = useMessage();
+  const navigation = useNavigation();
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Destructure for easier access and null safety
+  const { activePlan, scheduledPlanChange, startDate, renewalDate, cancellationEffectiveDate } = useMemo(() => ({
+      activePlan: subscriptionData?.planId,
+      scheduledPlanChange: subscriptionData?.scheduledPlanChange,
+      startDate: subscriptionData?.startDate,
+      renewalDate: subscriptionData?.renewalDate,
+      cancellationEffectiveDate: subscriptionData?.cancellationEffectiveDate
+  }), [subscriptionData]);
+  
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refreshSubscription();
+    setRefreshing(false);
+  }, [refreshSubscription]);
+  
+  const handleActionWithConfirmation = useCallback((config) => {
+    showAlert(config.title, config.message, [
+        { text: config.cancelText || 'Go Back', style: 'cancel' },
+        { text: config.confirmText, style: config.confirmStyle || 'default', onPress: config.onConfirm }
+    ]);
+  }, [showAlert]);
+  
+  const handleCancelPlanChange = useCallback(() => {
+    handleActionWithConfirmation({
+        title: 'Cancel Plan Change',
+        message: 'Are you sure you want to withdraw your request to change plans? Your current plan will remain active.',
+        confirmText: 'Yes, Cancel Change',
+        confirmStyle: 'destructive',
+        onConfirm: async () => {
+            try { await cancelPlanChange(); showMessage('Request Cancelled'); } 
+            catch (e) { showAlert('Error', 'Could not cancel the request.'); }
+        }
+    });
+  }, [handleActionWithConfirmation, cancelPlanChange, showMessage, showAlert]);
+
+  const handleReactivate = useCallback(() => {
+    handleActionWithConfirmation({
+        title: 'Keep Subscription',
+        message: 'Are you sure you want to keep your plan? This will cancel your pending cancellation.',
+        confirmText: 'Yes, Keep Plan',
+        onConfirm: async () => {
+            try { await reactivateSubscription(); showMessage('Subscription Reactivated'); }
+            catch (e) { showAlert('Error', 'Could not reactivate.'); }
+        }
+    });
+  }, [handleActionWithConfirmation, reactivateSubscription, showMessage, showAlert]);
+
+  const handleCancel = useCallback(() => {
+    handleActionWithConfirmation({
+        title: 'Cancel Subscription',
+        message: 'Your plan will be cancelled at the end of your current billing period. You will retain access until then. Are you sure?',
+        cancelText: 'Keep Plan',
+        confirmText: 'Yes, Cancel',
+        confirmStyle: 'destructive',
+        onConfirm: async () => {
+            try { await cancelSubscription(); navigation.navigate('Support'); }
+            catch (e) { showAlert('Error', 'Could not schedule cancellation.'); }
+        }
+    });
+  }, [handleActionWithConfirmation, cancelSubscription, navigation, showAlert]);
+
+  const handleChangePlan = useCallback(() => {
+    handleActionWithConfirmation({
+        title: "Change Subscription Plan",
+        message: "You will be taken to the plan selection screen to choose a new plan.",
+        confirmText: "Proceed",
+        onConfirm: () => navigation.navigate('Subscription', { isChangingPlan: true })
+    });
+  }, [handleActionWithConfirmation, navigation]);
+
+
+  const { percentage, statusText } = useMemo(() => {
+    if (!startDate || !renewalDate) return { percentage: 0, statusText: 'N/A' };
     
-    const { theme } = useTheme();
-    const styles = getStyles(theme);
-    const { showAlert } = useAlert();
-    const { showMessage } = useMessage();
-    const navigation = useNavigation();
-    const [refreshing, setRefreshing] = useState(false);
-
-    const onRefresh = useCallback(async () => {
-        setRefreshing(true);
-        await refreshSubscription().finally(() => setRefreshing(false));
-    }, [refreshSubscription]);
-
-    const handleCancel = () => {
-        showAlert( "Cancel Subscription", "Are you sure you want to cancel your plan? This will take effect at the end of your current billing cycle.",
-            [
-                { text: 'Keep Plan', style: 'cancel' },
-                { text: 'Yes, Cancel', style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            await cancelSubscription();
-                            showMessage('Subscription Cancelled', 'Your plan has been scheduled for cancellation.');
-                        } catch (error) {
-                            showAlert('Error', 'Could not cancel subscription. Please try again.', [{ text: 'OK' }]);
-                        }
-                    }, 
-                }
-            ]
-        );
-    };
-    
-    // --- THIS IS THE FIX ---
-    const handleChangePlan = () => {
-        showAlert(
-            "Change Subscription Plan",
-            "You will be taken to the plan selection screen. After you confirm, your request will be submitted for approval and may take a few hours to reflect on your account.",
-            [
-                { text: "Cancel", style: "cancel" },
-                { 
-                    text: "Proceed",
-                    onPress: () => {
-                        // This navigation logic is correct. It takes the user to the start
-                        // of the change plan flow.
-                        navigation.navigate('Subscription', { isChangingPlan: true });
-                    }
-                }
-            ]
-        );
-    };
-
-
-    if (isLoading && !refreshing) {
-        return ( <SafeAreaView style={styles.container}><View style={styles.emptyStateContainer}><ActivityIndicator size="large" color={theme.primary} /></View></SafeAreaView> );
-    }
-
+    const pendingBill = paymentHistory.find(item => item.type === 'bill' && item.status === 'Pending Verification');
     const dueBill = paymentHistory.find(bill => bill.type === 'bill' && (bill.status === 'Due' || bill.status === 'Overdue'));
 
-    const getUsagePercentage = () => {
-    if (!startDate || !renewalDate) {
-          return { percentage: 0, statusText: 'N/A' };
-        }
-
-        // Apply the fix here as well
     const start = new Date(startDate);
     const renewal = new Date(renewalDate);
     const today = new Date();
-    const totalCycleDuration = renewal.getTime() - start.getTime();
+    const totalDuration = renewal.getTime() - start.getTime();
     const elapsedDuration = today.getTime() - start.getTime();
-    let percentage = totalCycleDuration > 0 ? (elapsedDuration / totalCycleDuration) * 100 : 100;
-    percentage = Math.max(0, Math.min(100, percentage));
-
-    let statusText = '';
-    if (dueBill) {
-      if (dueBill.status === 'Overdue') {
-        statusText = 'Overdue';
-      } else {
-        const dueDate = new Date(dueBill.dueDate);
-        const daysLeft = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-            // Handle case where due date is today or passed but not yet overdue (grace period)
-        statusText = daysLeft >= 0 ? `${daysLeft}d to Pay` : 'Grace Period';
-          }
-        } else {
-          statusText = 'All Paid';
-        }
-
-    return { 
-      percentage: Math.round(percentage), 
-      statusText 
-    };
-  };
-
-  const { percentage, statusText } = getUsagePercentage();
+    let calculatedPercentage = totalDuration > 0 ? (elapsedDuration / totalDuration) * 100 : 100;
+    calculatedPercentage = Math.max(0, Math.min(100, calculatedPercentage));
     
-    const dataUsagePercentage = dataUsage?.allowance > 0 ? (dataUsage.used / dataUsage.allowance) * 100 : 0;
-
-    if (!activePlan) {
-        return ( <ScrollView style={styles.container} contentContainerStyle={styles.emptyStateContainer} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} tintColor={theme.primary} />}> <Ionicons name="alert-circle-outline" size={60} color={theme.textSecondary} /> <Text style={styles.fallbackText}>No active subscription found.</Text> <Text style={styles.fallbackSubText}>Pull down to refresh.</Text> </ScrollView> );
+    let text = 'All Paid';
+    if (pendingBill) {
+        text = 'Verifying';
+    } else if (dueBill) {
+        if (dueBill.status === 'Overdue') text = 'Overdue';
+        else {
+            const dueDate = new Date(dueBill.dueDate);
+            const daysLeft = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
+            text = daysLeft >= 0 ? `${daysLeft}d to Pay` : 'Grace Period';
+        }
     }
+    return { percentage: Math.round(calculatedPercentage), statusText: text };
+  }, [startDate, renewalDate, paymentHistory]);
+  
+  const dataUsagePercentage = useMemo(() => (
+    dataUsage?.allowance > 0 ? (dataUsage.used / dataUsage.allowance) * 100 : 0
+  ), [dataUsage]);
 
+  if (isLoading && !refreshing) {
     return (
-        <SafeAreaView style={styles.container}>
-            <ScrollView 
-                contentContainerStyle={activePlan ? styles.scrollContent : styles.emptyStateContainer}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} tintColor={theme.primary} />}
-            >
-                {activePlan ? (
-                    <>
-                        <View style={styles.planCard}>
-                            <Text style={styles.planCardLabel}>CURRENT PLAN</Text>
-                            <Text style={styles.planName}>{activePlan.name}</Text>
-                            <Text style={styles.planPrice}>{activePlan.priceLabel}</Text>
-                        </View>
-
-                        <View style={styles.usageCard}>
-                            <Text style={styles.sectionTitle}>Billing Cycle</Text>
-                            <View style={styles.chartContainer}>
-                                <AnimatedCircularProgress size={160} width={16} fill={percentage} tintColor={theme.primary} backgroundColor={theme.border} rotation={0} lineCap="round" padding={10}>
-                                    {() => ( <View style={styles.chartTextContainer}><Text style={styles.daysLeft}>{statusText}</Text><Text style={styles.daysLeftLabel}>Payment Status</Text></View> )}
-                                </AnimatedCircularProgress>
-                            </View>
-                             <View style={styles.dateInfoContainer}>
-                                <View style={styles.dateInfo}><Text style={styles.dateLabel}>Start Date</Text><Text style={styles.dateValue}>{formatDate(startDate)}</Text></View>
-                                <View style={styles.dateInfo}><Text style={styles.dateLabel}>Next Renewal</Text><Text style={styles.dateValue}>{formatDate(renewalDate)}</Text></View>
-                            </View>
-                            
-                            {dataUsage && (
-                                <View style={styles.dataUsageContainer}>
-                                    <View style={styles.dataUsageHeader}><Text style={styles.dataUsageLabel}>Data Usage</Text><Text style={styles.dataUsageValue}>{`${dataUsage.used} / ${dataUsage.allowance} GB`}</Text></View>
-                                    <View style={styles.progressBarBackground}><View style={[styles.progressBarFill, { width: `${dataUsagePercentage}%` }]} /></View>
-                                </View>
-                            )}
-                        </View>
-                        
-                        <View style={styles.featuresCard}>
-                            <Text style={styles.sectionTitle}>Plan Inclusions</Text>
-                            <View style={styles.featuresList}>
-                                {activePlan.features?.map((feature, index) => (
-                                   <FeatureItem key={index} text={feature} theme={theme} />
-                                ))}
-                           </View>
-                        </View>
-
-                        <View style={styles.actionsContainer}>
-                            <TouchableOpacity style={styles.changePlanButton} onPress={handleChangePlan}>
-                               <Text style={styles.changePlanButtonText}>Change Plan</Text>
-                            </TouchableOpacity>
-                             <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
-                                <Text style={styles.cancelButtonText}>Cancel Subscription</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </>
-                ) : (
-                    // If NO plan exists, THEN we decide whether to show a loader or the "No Plan" message.
-                    <>
-                        {isLoading || refreshing ? (
-                            <ActivityIndicator size="large" color={theme.primary} />
-                        ) : (
-                            <>
-                                <Ionicons name="alert-circle-outline" size={60} color={theme.textSecondary} /> 
-                                <Text style={styles.fallbackText}>No active subscription found.</Text> 
-                                <Text style={styles.fallbackSubText}>Pull down to refresh or check your connection.</Text>
-                            </>
-                        )}
-                    </>
-                )}
-            </ScrollView>
-        </SafeAreaView>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.emptyStateContainer}><ActivityIndicator size="large" color={theme.primary} /></View>
+      </SafeAreaView>
     );
+  }
+
+  if (!activePlan) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ScrollView contentContainerStyle={styles.emptyStateContainer} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} tintColor={theme.primary} />}>
+            <Ionicons name="alert-circle-outline" size={60} color={theme.textSecondary} />
+            <Text style={styles.fallbackText}>No active subscription found.</Text>
+            <Text style={styles.fallbackSubText}>Pull down to refresh.</Text>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} tintColor={theme.primary} />} showsVerticalScrollIndicator={false}>
+        {scheduledPlanChange?.plan && !cancellationEffectiveDate && (
+          <InfoNotice icon="information-circle-outline" color={theme.primary} title="Plan Change Scheduled" actionText="Cancel Change" onAction={handleCancelPlanChange}>
+            Your plan will switch to <Text style={{ fontWeight: 'bold' }}>{scheduledPlanChange.plan.name}</Text> on {formatDate(scheduledPlanChange.effectiveDate)}.
+          </InfoNotice>
+        )}
+
+        {cancellationEffectiveDate ? (
+          <CancellationInfoCard plan={activePlan} effectiveDate={cancellationEffectiveDate} onReactivate={handleReactivate} />
+        ) : (
+          <View style={styles.planCard}>
+            <Text style={styles.planCardLabel}>CURRENT PLAN</Text>
+            <Text style={styles.planName}>{activePlan.name}</Text>
+            <Text style={styles.planPrice}>{activePlan.priceLabel}</Text>
+          </View>
+        )}
+
+        <View style={styles.usageCard}>
+          <Text style={styles.sectionTitle}>Billing Cycle</Text>
+          <View style={styles.chartContainer}>
+            <AnimatedCircularProgress size={160} width={16} fill={percentage} tintColor={theme.primary} backgroundColor={theme.border} rotation={0} lineCap="round" padding={10}>
+              {() => (
+                <View style={styles.chartTextContainer}>
+                  <Text style={styles.daysLeft}>{statusText}</Text>
+                  <Text style={styles.daysLeftLabel}>Payment Status</Text>
+                </View>
+              )}
+            </AnimatedCircularProgress>
+          </View>
+          <View style={styles.dateInfoContainer}>
+            <View style={styles.dateInfo}><Text style={styles.dateLabel}>Start Date</Text><Text style={styles.dateValue}>{formatDate(startDate)}</Text></View>
+            <View style={styles.dateInfo}><Text style={styles.dateLabel}>Next Renewal</Text><Text style={styles.dateValue}>{formatDate(renewalDate)}</Text></View>
+          </View>
+          {dataUsage && (
+            <View style={styles.dataUsageContainer}>
+              <View style={styles.dataUsageHeader}><Text style={styles.dataUsageLabel}>Data Usage</Text><Text style={styles.dataUsageValue}>{`${dataUsage.used} / ${dataUsage.allowance} GB`}</Text></View>
+              <View style={styles.progressBarBackground}><View style={[styles.progressBarFill, { width: `${dataUsagePercentage}%` }]} /></View>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.featuresCard}>
+          <Text style={styles.sectionTitle}>Plan Inclusions</Text>
+          <View style={styles.featuresList}>
+            {activePlan.features?.map((feature, index) => <FeatureItem key={index} text={feature} />)}
+          </View>
+        </View>
+
+        {!cancellationEffectiveDate && !scheduledPlanChange && (
+          <View style={styles.actionsContainer}>
+            <TouchableOpacity style={styles.changePlanButton} onPress={handleChangePlan}><Text style={styles.changePlanButtonText}>Change Plan</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}><Text style={styles.cancelButtonText}>Cancel Subscription</Text></TouchableOpacity>
+          </View>
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
 }
 
-const getStyles = (theme) => StyleSheet.create({
-    container: { 
-        flex: 1, 
-        backgroundColor: theme.background,
-    },
-    scrollContent: {
-        padding: 20,
-        paddingBottom: 120, 
-    },
+// --- Stylesheet ---
+const getStyles = (theme) =>
+  StyleSheet.create({
+    container: { backgroundColor: theme.background, flex: 1 },
+    scrollContent: { padding: 20, paddingBottom: 120 },
     fallbackText: {
-        marginTop: 15,
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: theme.text,
-        textAlign: 'center',
+      color: theme.text,
+      fontSize: 18,
+      fontWeight: 'bold',
+      marginTop: 15,
+      textAlign: 'center',
     },
     fallbackSubText: {
-        marginTop: 8,
-        fontSize: 14,
-        color: theme.textSecondary,
-        textAlign: 'center',
+      color: theme.textSecondary,
+      fontSize: 14,
+      marginTop: 8,
+      textAlign: 'center',
     },
-    planCard: { 
-        backgroundColor: theme.primary, 
-        padding: 25, 
-        borderRadius: 20, 
-        marginBottom: 20,
-        shadowColor: theme.primary,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 5,
-        elevation: 8,
+    emptyStateContainer: {
+      alignItems: 'center',
+      flex: 1,
+      justifyContent: 'center',
+      paddingHorizontal: 30,
+    },
+
+    // Standard Plan Card
+    planCard: {
+      backgroundColor: theme.primary,
+      borderRadius: 20,
+      elevation: 8,
+      marginBottom: 20,
+      padding: 25,
+      shadowColor: theme.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 5,
     },
     planCardLabel: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: 'rgba(255, 255, 255, 0.8)',
-        textTransform: 'uppercase',
+      color: 'rgba(255, 255, 255, 0.8)',
+      fontSize: 14,
+      fontWeight: '600',
+      textTransform: 'uppercase',
     },
-    planName: { 
-        fontSize: 28, 
-        fontWeight: 'bold', 
-        color: theme.textOnPrimary,
-        marginTop: 4,
+    planName: { color: theme.textOnPrimary, fontSize: 28, fontWeight: 'bold', marginTop: 4 },
+    planPrice: { color: 'rgba(255, 255, 255, 0.9)', fontSize: 18, fontWeight: '500', marginTop: 8 },
+
+    // Cancellation Info Card
+    cancellationCard: {
+      alignItems: 'center',
+      backgroundColor: `${theme.warning}20`,
+      borderColor: theme.warning,
+      borderRadius: 20,
+      borderWidth: 1,
+      marginBottom: 20,
+      padding: 25,
     },
-    planPrice: { 
-        fontSize: 18, 
-        color: 'rgba(255, 255, 255, 0.9)', 
-        marginTop: 8,
-        fontWeight: '500' 
+    cancellationHeader: { alignItems: 'center', flexDirection: 'row', marginBottom: 10 },
+    cancellationTitle: { color: theme.warning, fontSize: 18, fontWeight: 'bold', marginLeft: 10 },
+    cancellationPlanName: {
+      color: theme.text,
+      fontSize: 24,
+      fontWeight: 'bold',
+      marginVertical: 5,
     },
-    usageCard: { 
-        backgroundColor: theme.surface, 
-        padding: 20, 
-        borderRadius: 20, 
-        marginBottom: 20,
-        borderWidth: 1,
-        borderColor: theme.border,
+    cancellationText: {
+      color: theme.textSecondary,
+      fontSize: 15,
+      lineHeight: 22,
+      marginBottom: 20,
+      marginTop: 5,
+      textAlign: 'center',
     },
-    featuresCard: {
-        backgroundColor: theme.surface, 
-        padding: 20, 
-        borderRadius: 20, 
-        marginBottom: 20,
-        borderWidth: 1,
-        borderColor: theme.border,
+    keepPlanBigButton: {
+      alignItems: 'center',
+      backgroundColor: theme.success,
+      borderRadius: 14,
+      flexDirection: 'row',
+      gap: 10,
+      justifyContent: 'center',
+      padding: 16,
+      width: '100%',
     },
-    sectionTitle: { 
-        fontSize: 18, 
-        fontWeight: 'bold', 
-        color: theme.text, 
-        marginBottom: 20, 
+    keepPlanButtonText: { color: theme.textOnPrimary, fontSize: 16, fontWeight: 'bold' },
+
+    // Usage Card
+    usageCard: {
+      backgroundColor: theme.surface,
+      borderColor: theme.border,
+      borderRadius: 20,
+      borderWidth: 1,
+      marginBottom: 20,
+      padding: 20,
     },
-    chartContainer: { 
-        alignItems: 'center', 
-        marginBottom: 20,
-    },
-    chartTextContainer: { 
-        justifyContent: 'center', 
-        alignItems: 'center' 
-    },
-    daysLeft: { 
-        fontSize: 24,
-        fontWeight: 'bold', 
-        color: theme.primary,
-        textAlign: 'center',
-  },
-    daysLeftLabel: { 
-        fontSize: 12, 
-        color: theme.textSecondary, 
-        marginTop: -5 
-    },
+    sectionTitle: { color: theme.text, fontSize: 18, fontWeight: 'bold', marginBottom: 20 },
+    chartContainer: { alignItems: 'center', marginBottom: 20 },
+    chartTextContainer: { alignItems: 'center', justifyContent: 'center' },
+    daysLeft: { color: theme.primary, fontSize: 24, fontWeight: 'bold', textAlign: 'center' },
+    daysLeftLabel: { color: theme.textSecondary, fontSize: 12, marginTop: -5 },
     dateInfoContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginTop: 10,
-        paddingTop: 20,
-        borderTopWidth: 1,
-        borderTopColor: theme.border,
+      borderTopColor: theme.border,
+      borderTopWidth: 1,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 10,
+      paddingTop: 20,
     },
-    dateInfo: { 
-        alignItems: 'center',
-        flex: 1,
-    },
-    dateLabel: { 
-        fontSize: 13, 
-        color: theme.textSecondary, 
-        marginBottom: 4,
-    },
-    dateValue: { 
-        fontSize: 15, 
-        color: theme.text, 
-        fontWeight: '600' 
-    },
-    featuresList: { 
-        marginTop: 10,
-    },
-    featureItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 12,
-    },
-    featureIcon: {
-        marginRight: 12,
-    },
-    featureText: { 
-        fontSize: 15, 
-        color: theme.text, 
-        lineHeight: 22,
-        flex: 1,
-    },
-    actionsContainer: {
-        marginTop: 10,
-    },
-    changePlanButton: {
-        backgroundColor: theme.primary,
-        padding: 16, 
-        borderRadius: 14, 
-        alignItems: 'center', 
-        marginBottom: 15,
-    },
-    changePlanButtonText: {
-        color: theme.textOnPrimary,
-        fontSize: 16, 
-        fontWeight: 'bold',
-    },
-    cancelButton: { 
-        padding: 16, 
-        borderRadius: 14, 
-        alignItems: 'center',
-        backgroundColor: theme.danger
-    },
-    cancelButtonText: { 
-        color: theme.textOnPrimary, 
-        fontSize: 15, 
-        fontWeight: '600' 
-    },
-    emptyStateContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 30, backgroundColor: theme.background },
+    dateInfo: { alignItems: 'center', flex: 1 },
+    dateLabel: { color: theme.textSecondary, fontSize: 13, marginBottom: 4 },
+    dateValue: { color: theme.text, fontSize: 15, fontWeight: '600' },
     dataUsageContainer: {
-        marginTop: 20,
-        paddingTop: 20,
-        borderTopWidth: 1,
-        borderTopColor: theme.border,
+      borderTopColor: theme.border,
+      borderTopWidth: 1,
+      marginTop: 20,
+      paddingTop: 20,
     },
     dataUsageHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-end',
-        marginBottom: 8,
+      alignItems: 'flex-end',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 8,
     },
-    dataUsageLabel: {
-        fontSize: 14,
-        color: theme.textSecondary,
-    },
-    dataUsageValue: {
-        fontSize: 15,
-        fontWeight: '600',
-        color: theme.text,
-    },
+    dataUsageLabel: { color: theme.textSecondary, fontSize: 14 },
+    dataUsageValue: { color: theme.text, fontSize: 15, fontWeight: '600' },
     progressBarBackground: {
-        height: 8,
-        backgroundColor: theme.border,
-        borderRadius: 4,
-        overflow: 'hidden',
+      backgroundColor: theme.border,
+      borderRadius: 4,
+      height: 8,
+      overflow: 'hidden',
     },
     progressBarFill: {
-        height: '100%',
-        backgroundColor: theme.accent || theme.primary,
-        borderRadius: 4,
+      backgroundColor: theme.accent || theme.primary,
+      borderRadius: 4,
+      height: '100%',
     },
-    
-});
+
+    // Features Card
+    featuresCard: {
+      backgroundColor: theme.surface,
+      borderColor: theme.border,
+      borderRadius: 20,
+      borderWidth: 1,
+      marginBottom: 20,
+      padding: 20,
+    },
+    featuresList: { marginTop: 10 },
+    featureItem: { alignItems: 'center', flexDirection: 'row', marginBottom: 12 },
+    featureIcon: { marginRight: 12 },
+    featureText: { color: theme.text, flex: 1, fontSize: 15, lineHeight: 22 },
+
+    // Action Buttons
+    actionsContainer: { marginTop: 10 },
+    changePlanButton: {
+      alignItems: 'center',
+      backgroundColor: theme.primary,
+      borderRadius: 14,
+      marginBottom: 15,
+      padding: 16,
+    },
+    changePlanButtonText: { color: theme.textOnPrimary, fontSize: 16, fontWeight: 'bold' },
+    cancelButton: {
+      alignItems: 'center',
+      backgroundColor: theme.danger,
+      borderRadius: 14,
+      padding: 16,
+    },
+    cancelButtonText: { color: theme.textOnPrimary, fontSize: 15, fontWeight: '600' },
+
+    // Generic Notice Card
+    noticeCard: {
+      alignItems: 'center',
+      borderLeftWidth: 5,
+      borderRadius: 16,
+      flexDirection: 'row',
+      marginBottom: 20,
+      padding: 15,
+    },
+    noticeIcon: { marginRight: 15 },
+    noticeTextContainer: { flex: 1 },
+    noticeTitle: { fontSize: 16, fontWeight: 'bold' },
+    noticeBody: { color: theme.textSecondary, fontSize: 14, lineHeight: 20, marginTop: 4 },
+    reactivateButton: {
+      backgroundColor: theme.surface,
+      borderColor: theme.border,
+      borderRadius: 10,
+      borderWidth: 1,
+      marginLeft: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+    },
+    reactivateButtonText: { color: theme.primary, fontSize: 14, fontWeight: 'bold' },
+  });

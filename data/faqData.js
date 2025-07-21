@@ -15,7 +15,7 @@ export const faqData = [
 3.  Select the "Internet" category and search for **"Fibear Network Tech"** or **"FNTC"**.
 4.  Enter your **FNTC Account Number** and the amount to pay.
 5.  Confirm the details and save a screenshot of your receipt.
-`
+`,
   },
   {
     id: 2,
@@ -26,7 +26,7 @@ export const faqData = [
 -   **Plan Silver:** ₱800/month for up to 35 mbps
 -   **Plan Gold:** ₱1000/month for up to 50 mbps
 -   **Plan Platinum:** ₱1300/month for up to 75 mbps
--   **Plan Diamond:** ₱1500/month for up to 100 mbps`
+-   **Plan Diamond:** ₱1500/month for up to 100 mbps`,
   },
   {
     id: 3,
@@ -37,14 +37,14 @@ export const faqData = [
 2.  **Check Cables:** Ensure all cables connected to your router are plugged in securely.
 3.  **Check for Outages:** You can ask me "Is there a service outage in my area?" when you are back online.
 
-If the issue persists, please contact us: **0945 220 3371** for further assistance.`
+If the issue persists, please contact us: **GLOBE: 0926 031 4437** **SMART: 0968 408 8822** for further assistance.`,
   },
   {
     id: 4,
     question: 'When is my bill due?',
     answer: `Your billing statement is generated on the **1st of every month**.
 
-The payment due date is on the **20th of the same month**.`
+The payment due date is on the **20th of the same month**.`,
   },
   {
     id: 5,
@@ -53,6 +53,6 @@ The payment due date is on the **20th of the same month**.`
 
 -   **Phone:** Call our 24/7 hotline at **0945 220 3371**.
 -   **Email:** Send your detailed concern to **rparreno@fibearnetwork.com**.
--   **Facebook:** Visit us on [FiBear Network Technologies Corp. Montalban](https://www.facebook.com/FiBearNetworkTechnologiesCorpMontalban)`
+-   **Facebook:** Visit us on [FiBear Network Technologies Corp. Montalban](https://www.facebook.com/FiBearNetworkTechnologiesCorpMontalban)`,
   },
 ];

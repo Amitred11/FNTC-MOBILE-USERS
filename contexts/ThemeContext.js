@@ -7,19 +7,11 @@ const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
   // Set initial state based on device's color scheme
-  const [isDarkMode, setIsDarkMode] = useState(Appearance.getColorScheme() === 'dark');
-
-  useEffect(() => {
-    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
-      setIsDarkMode(colorScheme === 'dark');
-    });
-    return () => subscription.remove();
-  }, []);
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   const toggleTheme = () => {
-    setIsDarkMode(prevMode => !prevMode);
+    setIsDarkMode((prevMode) => !prevMode);
   };
-
   const theme = isDarkMode ? darkTheme : lightTheme;
 
   const value = {
@@ -28,18 +20,14 @@ export const ThemeProvider = ({ children }) => {
     toggleTheme,
   };
 
-  return (
-    <ThemeContext.Provider value={value}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 };
 
 export const useTheme = () => {
-    const context = useContext(ThemeContext);
-    if (context === undefined) {
-        throw new Error('useTheme must be used within a ThemeProvider');
-    }
-    // Return the whole context object
-    return context; 
+  const context = useContext(ThemeContext);
+  if (context === undefined) {
+    throw new Error('useTheme must be used within a ThemeProvider');
+  }
+  // Return the whole context object
+  return context;
 };

@@ -19,10 +19,10 @@ const AnimatedImageBackground = Animated.createAnimatedComponent(ImageBackground
 
 export default function SplashScreen2() {
   const navigation = useNavigation();
-  
+
   // --- NEW Animated values for a more complex sequence ---
   const backgroundScale = useRef(new Animated.Value(1.15)).current;
-  
+
   const welcomeOpacity = useRef(new Animated.Value(0)).current;
   const welcomeTranslateY = useRef(new Animated.Value(20)).current;
 
@@ -34,7 +34,7 @@ export default function SplashScreen2() {
 
   const buttonOpacity = useRef(new Animated.Value(0)).current;
   const buttonTranslateY = useRef(new Animated.Value(50)).current;
-  
+
   const containerTranslateY = useRef(new Animated.Value(0)).current;
 
   useFocusEffect(
@@ -66,29 +66,29 @@ export default function SplashScreen2() {
         // Stage 1: "Welcome" text appears
         Animated.delay(500),
         Animated.parallel([
-            Animated.timing(welcomeOpacity, {
-                toValue: 1,
-                duration: 800,
-                easing: Easing.ease,
-                useNativeDriver: true,
-            }),
-            Animated.timing(welcomeTranslateY, {
-                toValue: 0,
-                duration: 800,
-                easing: Easing.out(Easing.cubic),
-                useNativeDriver: true,
-            }),
+          Animated.timing(welcomeOpacity, {
+            toValue: 1,
+            duration: 800,
+            easing: Easing.ease,
+            useNativeDriver: true,
+          }),
+          Animated.timing(welcomeTranslateY, {
+            toValue: 0,
+            duration: 800,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
         ]),
 
         // Stage 2: "Welcome" text fades out, making way for the logo
         Animated.delay(1200),
         Animated.timing(welcomeOpacity, {
-            toValue: 0,
-            duration: 500,
-            easing: Easing.ease,
-            useNativeDriver: true,
+          toValue: 0,
+          duration: 500,
+          easing: Easing.ease,
+          useNativeDriver: true,
         }),
-        
+
         // Stage 3: Logo appears
         Animated.parallel([
           Animated.timing(logoOpacity, {
@@ -103,7 +103,7 @@ export default function SplashScreen2() {
             useNativeDriver: true,
           }),
         ]),
-        
+
         // Stage 4: Tagline and Button appear as the final call-to-action
         Animated.delay(300),
         Animated.parallel([
@@ -112,7 +112,7 @@ export default function SplashScreen2() {
             duration: 500,
             useNativeDriver: true,
           }),
-           Animated.timing(taglineTranslateY, {
+          Animated.timing(taglineTranslateY, {
             toValue: 0,
             duration: 500,
             useNativeDriver: true,
@@ -156,10 +156,19 @@ export default function SplashScreen2() {
   // --- Animated Styles ---
   const animatedContainerStyle = { transform: [{ translateY: containerTranslateY }] };
   const animatedBackgroundStyle = { transform: [{ scale: backgroundScale }] };
-  const animatedWelcomeStyle = { opacity: welcomeOpacity, transform: [{ translateY: welcomeTranslateY }] };
+  const animatedWelcomeStyle = {
+    opacity: welcomeOpacity,
+    transform: [{ translateY: welcomeTranslateY }],
+  };
   const animatedLogoStyle = { opacity: logoOpacity, transform: [{ scale: logoScale }] };
-  const animatedTaglineStyle = { opacity: taglineOpacity, transform: [{ translateY: taglineTranslateY }] };
-  const animatedButtonStyle = { opacity: buttonOpacity, transform: [{ translateY: buttonTranslateY }] };
+  const animatedTaglineStyle = {
+    opacity: taglineOpacity,
+    transform: [{ translateY: taglineTranslateY }],
+  };
+  const animatedButtonStyle = {
+    opacity: buttonOpacity,
+    transform: [{ translateY: buttonTranslateY }],
+  };
 
   return (
     <View style={styles.container}>
@@ -168,15 +177,12 @@ export default function SplashScreen2() {
         style={[styles.background, animatedBackgroundStyle]}
         resizeMode="cover"
       />
-      
+
       {/* This view now acts as the container for all animated content */}
       <Animated.View style={[styles.contentContainer, animatedContainerStyle]}>
-        
         {/* Absolute position for the welcome text so it can overlap */}
-        <Animated.Text style={[styles.welcomeText, animatedWelcomeStyle]}>
-            Welcome
-        </Animated.Text>
-        
+        <Animated.Text style={[styles.welcomeText, animatedWelcomeStyle]}>Welcome</Animated.Text>
+
         <Animated.Image
           source={require('../assets/images/logo.png')}
           style={[styles.logo, animatedLogoStyle]}
@@ -184,7 +190,7 @@ export default function SplashScreen2() {
         />
 
         <Animated.Text style={[styles.taglineText, animatedTaglineStyle]}>
-            Your Connection, Your Speed
+          Your Connection, Your Speed
         </Animated.Text>
 
         <Animated.View style={animatedButtonStyle}>
@@ -192,58 +198,31 @@ export default function SplashScreen2() {
             <Text style={styles.getStartedText}>Get Started</Text>
           </TouchableOpacity>
         </Animated.View>
-
       </Animated.View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
   background: {
     ...StyleSheet.absoluteFillObject,
   },
-  contentContainer: {
+  container: {
+    backgroundColor: '#000',
     flex: 1,
-    justifyContent: 'center',
+  },
+  contentContainer: {
     alignItems: 'center',
     backgroundColor: 'transparent',
-  },
-  welcomeText: {
-    fontSize: width * 0.12,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    position: 'absolute', // Allows it to be centered independently of other elements
-    textShadowColor: 'rgba(0, 0, 0, 0.4)',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 10,
-  },
-  logo: {
-    width: width * 0.7,
-    height: undefined,
-    aspectRatio: 250 / 150,
-  },
-  taglineText: {
-    fontSize: width * 0.045,
-    color: '#FFFFFF',
-    textAlign: 'center',
-    marginTop: -height * 0.02, // Negative margin to bring it closer to the logo
-    marginBottom: height * 0.04,
-    opacity: 0.9,
-    fontWeight: '500',
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 5,
+    flex: 1,
+    justifyContent: 'center',
   },
   getStartedButton: {
-    backgroundColor: '#007AFF',
-    paddingVertical: height * 0.018,
-    paddingHorizontal: width * 0.18,
-    borderRadius: 30,
     alignItems: 'center',
+    backgroundColor: '#007AFF',
+    borderRadius: 30,
+    paddingHorizontal: width * 0.18,
+    paddingVertical: height * 0.018,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -261,5 +240,31 @@ const styles = StyleSheet.create({
     fontSize: width * 0.045,
     fontWeight: 'bold',
     letterSpacing: 1,
+  },
+  logo: {
+    aspectRatio: 250 / 150,
+    height: undefined,
+    width: width * 0.7,
+  },
+  taglineText: {
+    fontSize: width * 0.045,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginTop: -height * 0.02, // Negative margin to bring it closer to the logo
+    marginBottom: height * 0.04,
+    opacity: 0.9,
+    fontWeight: '500',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 5,
+  },
+  welcomeText: {
+    fontSize: width * 0.12,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    position: 'absolute', // Allows it to be centered independently of other elements
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 10,
   },
 });

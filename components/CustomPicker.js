@@ -1,123 +1,218 @@
-import React from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, FlatList, SafeAreaView } from 'react-native';
+// components/CustomPicker.js (REDESIGNED)
+
+import React, { useState, useMemo, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Modal,
+  TouchableOpacity,
+  FlatList,
+  SafeAreaView,
+  TouchableWithoutFeedback,
+  Platform,
+} from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import * as Animatable from 'react-native-animatable';
 
-const CustomPicker = ({ label, items, selectedValue, onValueChange, placeholder }) => {
-    const { theme } = useTheme();
-    const styles = getStyles(theme);
-    const [modalVisible, setModalVisible] = React.useState(false);
+const CustomPicker = ({ label, items, selectedValue, onValueChange, placeholder, disabled = false }) => {
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
+  const [modalVisible, setModalVisible] = useState(false);
 
-    const selectedLabel = items.find(item => item.value === selectedValue)?.label || placeholder;
+  const selectedLabel = useMemo(
+    () => items.find((item) => item.value === selectedValue)?.label,
+    [items, selectedValue]
+  );
 
-    const renderItem = ({ item }) => (
-        <TouchableOpacity
-            style={styles.optionItem}
-            onPress={() => {
-                onValueChange(item.value);
-                setModalVisible(false);
-            }}
+  const handleSelect = useCallback(
+    (value) => {
+      onValueChange(value);
+      setModalVisible(false);
+    },
+    [onValueChange]
+  );
+
+  const renderItem = useCallback(
+    ({ item }) => {
+      const isSelected = selectedValue === item.value;
+      return (
+        <TouchableOpacity 
+          style={styles.optionItem} 
+          onPress={() => handleSelect(item.value)}
         >
-            <Text style={styles.optionText}>{item.label}</Text>
-            {selectedValue === item.value && (
-                <Ionicons name="checkmark-circle" size={24} color={theme.primary} />
-            )}
+          {item.icon && (
+            <Ionicons 
+              name={item.icon} 
+              size={22} 
+              color={isSelected ? theme.primary : theme.textSecondary} 
+              style={styles.optionIcon} 
+            />
+          )}
+          <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
+            {item.label}
+          </Text>
+          {isSelected && (
+            <Ionicons name="checkmark-circle" size={24} color={theme.primary} />
+          )}
         </TouchableOpacity>
-    );
+      );
+    },
+    [selectedValue, theme.primary, handleSelect]
+  );
 
-    return (
-        <>
-            <TouchableOpacity style={styles.pickerButton} onPress={() => setModalVisible(true)}>
-                <Text style={selectedValue ? styles.pickerButtonText : styles.pickerPlaceholder}>
-                    {selectedLabel}
-                </Text>
-                <Ionicons name="chevron-down" size={22} color={theme.textSecondary} />
-            </TouchableOpacity>
-            
-            <Modal
-                animationType="slide"
-                transparent={true}
-                visible={modalVisible}
-                onRequestClose={() => setModalVisible(false)}
+  return (
+    <>
+      <TouchableOpacity 
+        style={styles.pickerButton} 
+        onPress={() => setModalVisible(true)}
+        disabled={disabled}
+      >
+        <Text 
+          style={[
+              styles.pickerButtonText, 
+              !selectedLabel && styles.pickerPlaceholder,
+              disabled && styles.disabledText
+          ]}
+          numberOfLines={1}
+        >
+          {selectedLabel || placeholder}
+        </Text>
+        <Ionicons name="chevron-down" size={22} color={disabled ? theme.disabled : theme.textSecondary} />
+      </TouchableOpacity>
+
+      <Modal
+        animationType="fade" 
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        {/* Use TouchableWithoutFeedback for the overlay to allow dismissing the modal */}
+        <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
+          <SafeAreaView style={styles.modalOverlay}>
+            <Animatable.View 
+                animationType="fade" 
+                duration={400} 
+                // Prevent taps on the modal content from closing it
+                onStartShouldSetResponder={() => true} 
+                style={styles.modalContent}
             >
-                <SafeAreaView style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>{label}</Text>
-                            <TouchableOpacity onPress={() => setModalVisible(false)}>
-                                <Ionicons name="close" size={28} color={theme.text} />
-                            </TouchableOpacity>
-                        </View>
-                        <FlatList
-                            data={items}
-                            keyExtractor={(item) => item.value}
-                            renderItem={renderItem}
-                            ItemSeparatorComponent={() => <View style={styles.separator} />}
-                        />
-                    </View>
-                </SafeAreaView>
-            </Modal>
-        </>
-    );
+              <View style={styles.modalHandle} />
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>{label}</Text>
+                <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
+                  <Ionicons name="close" size={28} color={theme.textSecondary} />
+                </TouchableOpacity>
+              </View>
+              <FlatList
+                data={items}
+                keyExtractor={(item) => item.value.toString()}
+                renderItem={renderItem}
+                ItemSeparatorComponent={() => <View style={styles.separator} />}
+                style={styles.list}
+              />
+            </Animatable.View>
+          </SafeAreaView>
+        </TouchableWithoutFeedback>
+      </Modal>
+    </>
+  );
 };
 
-const getStyles = (theme) => StyleSheet.create({
+const getStyles = (theme) =>
+  StyleSheet.create({
+    // --- Picker Button styles to match TextInput ---
     pickerButton: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        width: '100%',
-        paddingVertical: 14, // Match your TextInput style
+      flex: 1, // Take up all available space in the FormInput
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      height: '100%', // Match parent height
+      paddingVertical: 14,
+      right: 9,
     },
     pickerButtonText: {
-        fontSize: 16,
-        color: theme.text,
+      color: theme.text,
+      fontSize: 16,
+      left: 15,
+      flex: 1, // Allow text to take space but not push icon out
     },
     pickerPlaceholder: {
-        fontSize: 16,
-        color: theme.textSecondary,
+      color: theme.textSecondary,
     },
+    disabledText: {
+        color: theme.disabled,
+    },
+
+    // --- Redesigned Modal Styles ---
     modalOverlay: {
-        flex: 1,
-        justifyContent: 'flex-end',
-        backgroundColor: 'rgba(0,0,0,0.5)',
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      flex: 1,
+      justifyContent: 'flex-end', // Aligns modal to the bottom
     },
     modalContent: {
-        backgroundColor: theme.surface,
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        maxHeight: '50%',
-        paddingBottom: 20,
+      backgroundColor: theme.surface,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      maxHeight: '60%', // Limit height
+      paddingBottom: Platform.OS === 'ios' ? 20 : 0, // Handle iOS bottom safe area
+    },
+    modalHandle: {
+        width: 40,
+        height: 5,
+        backgroundColor: theme.border,
+        borderRadius: 2.5,
+        alignSelf: 'center',
+        marginTop: 10,
+        marginBottom: 5,
     },
     modalHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: theme.border,
+      alignItems: 'center',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      paddingVertical: 15,
+      borderBottomColor: theme.border,
+      borderBottomWidth: 1,
     },
     modalTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: theme.text,
+      color: theme.text,
+      fontSize: 20,
+      fontWeight: 'bold',
     },
+    closeButton: {
+        padding: 5,
+    },
+    list: {
+        paddingHorizontal: 10,
+    },
+    optionIcon: {
+        marginRight: 15,
+        width: 24, 
+        textAlign: 'center',
+    },
+
     optionItem: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingVertical: 15,
-        paddingHorizontal: 20,
+      alignItems: 'center',
+      flexDirection: 'row',
+      paddingHorizontal: 20,
+      paddingVertical: 16,
     },
     optionText: {
-        fontSize: 17,
-        color: theme.text,
+      color: theme.text,
+      fontSize: 17,
+      flex: 1,
+    },
+    optionTextSelected: {
+        color: theme.primary,
+        fontWeight: '600',
     },
     separator: {
-        height: 1,
-        backgroundColor: theme.border,
-        marginLeft: 20,
-    }
-});
+      backgroundColor: theme.border,
+      height: 1,
+      marginLeft: 20,
+    },
+  });
 
-export default CustomPicker;
+export default React.memo(CustomPicker);
