@@ -42,6 +42,7 @@ export const AuthProvider = ({ children }) => {
   const [accessToken, setAccessToken] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [authAction, setAuthAction] = useState(null);
+  const [pendingRecoveryCode, setPendingRecoveryCode] = useState(null);
 
   const updateUserStateAndCache = useCallback(async (newUserData) => {
     setUser(newUserData);
@@ -100,10 +101,26 @@ export const AuthProvider = ({ children }) => {
     showMessage('Login Successful!');
   };
 
-  const register = async (displayName, email, password) => {
-    const { data } = await api.post('/auth/register', { displayName, email, password });
-    return data.message;
+  const register = async ({ displayName, email, password }) => {
+   const { data } = await api.post('/auth/register', { displayName, email, password });
+
+    const { accessToken: newAccessToken, refreshToken: newRefreshToken, user: backendUser, recoveryCode } = data;
+
+    if (recoveryCode) {
+      setPendingRecoveryCode(recoveryCode);
+    }
+    
+    await updateAccessToken(newAccessToken);
+    await updateUserStateAndCache(backendUser);
+    if (newRefreshToken) {
+      await AsyncStorage.setItem('refreshToken', newRefreshToken);
+    }
   };
+
+  const acknowledgeRecoveryCode = () => {
+    setPendingRecoveryCode(null);
+  };
+
 
   const updateProfile = async (newProfileData) => {
     try {
@@ -264,6 +281,8 @@ export const AuthProvider = ({ children }) => {
     authAction,
     setAuthAction: () => {},
     completeAuthAction: () => {},
+    pendingRecoveryCode,
+    acknowledgeRecoveryCode,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

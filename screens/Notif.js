@@ -12,12 +12,13 @@ import {
   ScrollView,
   BackHandler,
   TouchableWithoutFeedback,
+  Linking,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as Animatable from 'react-native-animatable';
 import { useTheme, useAlert, useAuth, useMessage } from '../contexts';
-import StatusDisplay from '../components/StatusDisplay';
+import StatusDisplay from '../components/StatusDisplay'; // Make sure this path is correct
 
 // --- Constants & Helpers ---
 const NOTIFICATIONS_PER_PAGE = 20;
@@ -48,10 +49,6 @@ const ICON_MAP = (theme) => ({
 });
 
 // --- Sub-Components (Memoized for Performance) ---
-
-// ---
-// NEW & IMPROVED NotificationItem with Card Design
-// ---
 const NotificationItem = React.memo(({ item, onPress, onLongPress, isSelectionMode, isSelected }) => {
     const { theme } = useTheme();
     const styles = getStyles(theme);
@@ -66,12 +63,9 @@ const NotificationItem = React.memo(({ item, onPress, onLongPress, isSelectionMo
                 activeOpacity={0.9}
             >
                 <View style={styles.cardContent}>
-                    {/* Icon */}
                     <View style={[styles.iconContainer, { backgroundColor: `${iconInfo.color}20` }]}>
                         <Ionicons name={iconInfo.name} size={22} color={iconInfo.color} />
                     </View>
-
-                    {/* Text Content */}
                     <View style={styles.textContainer}>
                         <View style={styles.titleRow}>
                             <View style={styles.titleWrapper}>
@@ -83,8 +77,6 @@ const NotificationItem = React.memo(({ item, onPress, onLongPress, isSelectionMo
                         <Text style={styles.message} numberOfLines={2}>{item.message}</Text>
                     </View>
                 </View>
-                
-                {/* Selection Checkbox Overlay */}
                 {isSelectionMode && (
                     <Animatable.View animation="zoomIn" duration={200} style={styles.checkboxContainer}>
                         <Ionicons name={isSelected ? 'checkmark-circle' : 'ellipse-outline'} size={26} color={isSelected ? theme.primary : theme.border} />
@@ -95,7 +87,6 @@ const NotificationItem = React.memo(({ item, onPress, onLongPress, isSelectionMo
     );
 });
 
-// The rest of the sub-components remain the same as they are already well-designed.
 const NotificationDetailModal = React.memo(({ notification, visible, onClose }) => {
     const { theme } = useTheme();
     const styles = getStyles(theme);
@@ -176,7 +167,7 @@ const Header = React.memo(({ isSelectionMode, onCancelSelection, selectedCount, 
                 ) : (
                     <Animatable.View animation="fadeIn" duration={300} style={styles.headerActions}>
                         <TouchableOpacity onPress={onToggleDnd} style={styles.headerIcon}>
-                            <Ionicons name={dndEnabled ? "notifications-off-outline" : "notifications-outline"} size={26} color={dndEnabled ? theme.primary : theme.text} />
+                            <Ionicons name={dndEnabled ? "notifications-outline" : "notifications-off-outline"} size={26} color={dndEnabled ? theme.primary : theme.text} />
                         </TouchableOpacity>
                         <TouchableOpacity onPress={onMarkAllRead} style={styles.headerIcon}>
                             <Ionicons name="mail-unread-outline" size={28} color={theme.text} />
@@ -208,7 +199,6 @@ export default function NotificationScreen() {
   const [isDetailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState(null);
 
-  // ... (rest of the main component logic remains unchanged)
   useEffect(() => { setDndEnabled(profile?.dndEnabled || false); }, [profile]);
 
   const fetchNotifications = useCallback(async (isInitial = true, isRefreshing = false) => {
@@ -233,9 +223,9 @@ export default function NotificationScreen() {
     } finally {
         setLoadingState({ initial: false, refreshing: false, loadingMore: false });
     }
-  }, [api, showAlert, loadingState, page, totalPages]);
+  }, [api, showAlert, loadingState.loadingMore, page, totalPages]);
   
-  useFocusEffect(useCallback(() => { fetchNotifications(true); }, []));
+  useFocusEffect(useCallback(() => { fetchNotifications(true); }, [fetchNotifications]));
 
   useEffect(() => {
     const backAction = () => {
@@ -265,11 +255,9 @@ export default function NotificationScreen() {
       try { await api.post('/notifications/mark-read', { ids: [item._id] }); } catch (e) { /* silent fail, UI already updated */ }
     }
 
-    switch (item.action?.type) {
-        case 'navigate': navigation.navigate(item.action.screen, item.action.params); break;
-        default: setSelectedNotification(item); setDetailModalVisible(true); break;
-    }
-  }, [isSelectionMode, api, navigation]);
+    setSelectedNotification(item);
+    setDetailModalVisible(true);
+  }, [isSelectionMode, api]);
   
   const handleItemLongPress = useCallback((item) => {
     setIsSelectionMode(true);
@@ -295,7 +283,7 @@ export default function NotificationScreen() {
                     await api.post('/notifications/delete', { ids: idsToDelete });
                 } catch (e) { 
                     showAlert('Error', 'Could not delete notifications. Restoring list.'); 
-                    fetchNotifications(true); // Re-fetch to restore state on error
+                    fetchNotifications(true);
                 }
             }
         }
@@ -359,7 +347,13 @@ export default function NotificationScreen() {
       
       {profile && !profile.pushToken ? (
         <View style={styles.statusDisplayWrapper}>
-            <StatusDisplay illustration={require('../assets/images/notifications_disabled.png')} title="Notifications Disabled" text="Enable push notifications in your device settings to receive important updates." buttonText="Go to App Settings" onButtonPress={() => { /* Function to open app settings */ }} />
+            <StatusDisplay 
+                illustration={require('../assets/images/notifications_disabled.png')} 
+                title="Notifications Disabled" 
+                text="Enable push notifications in your device settings to receive important updates." 
+                buttonText="Go to App Settings" 
+                onButtonPress={() => Linking.openSettings()} 
+            />
         </View>
       ) : (
         <SectionList
@@ -368,8 +362,7 @@ export default function NotificationScreen() {
           renderItem={({ item }) => <NotificationItem item={item} onPress={() => handleItemTap(item)} onLongPress={() => handleItemLongPress(item)} isSelectionMode={isSelectionMode} isSelected={selectedIds.has(item._id)} />}
           renderSectionHeader={({ section: { title } }) => <Text style={styles.sectionHeader}>{title}</Text>}
           ListEmptyComponent={<View style={styles.statusDisplayWrapper}><StatusDisplay illustration={require('../assets/images/no_notifications.png')} title="All Caught Up!" text="You have no new notifications right now." /></View>}
-          // ItemSeparatorComponent is removed to use margins on cards instead
-          contentContainerStyle={{ paddingVertical: 8 }} // Add vertical padding for the list
+          contentContainerStyle={{ paddingVertical: 8 }}
           stickySectionHeadersEnabled={false}
           onEndReached={() => { if (!loadingState.loadingMore && page < totalPages) fetchNotifications(false); }}
           onEndReachedThreshold={0.5}
@@ -389,7 +382,6 @@ const getStyles = (theme) =>
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     statusDisplayWrapper: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, marginTop: '20%' },
 
-    // Header
     header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 60, backgroundColor: theme.surface, borderBottomWidth: 1, borderBottomColor: theme.border },
     selectionHeader: { backgroundColor: theme.isDarkMode ? '#2c3e50' : '#eaf2f8' },
     headerLeft: { flex: 1, alignItems: 'flex-start' },
@@ -399,21 +391,23 @@ const getStyles = (theme) =>
     headerActions: { flexDirection: 'row', alignItems: 'center', gap: 16 },
     headerIcon: { padding: 4 },
     
-    // SectionList
     sectionHeader: { color: theme.textSecondary, fontSize: 13, fontWeight: 'bold', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
     
-    // --- NEW CARD STYLES ---
     cardContainer: {
         backgroundColor: theme.surface,
         borderRadius: 12,
         marginVertical: 6,
         marginHorizontal: 16,
-        boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.6)',
+        shadowColor: theme.shadow,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
         borderWidth: 1,
-        borderColor: 'transparent', // Default transparent border
+        borderColor: 'transparent',
     },
     selectedItem: {
-        borderColor: theme.primary, // Highlight with a border on selection
+        borderColor: theme.primary,
         borderWidth: 2,
     },
     cardContent: {
@@ -441,7 +435,7 @@ const getStyles = (theme) =>
     titleWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        flexShrink: 1, // Allow title to shrink if needed
+        flexShrink: 1,
         marginRight: 8,
     },
     unreadDot: {
@@ -469,7 +463,7 @@ const getStyles = (theme) =>
         fontSize: 12,
         color: theme.textSecondary,
         fontWeight: '400',
-        paddingTop: 2, // Align with title text
+        paddingTop: 2,
     },
     checkboxContainer: {
         position: 'absolute',
@@ -481,7 +475,6 @@ const getStyles = (theme) =>
         borderRadius: 13,
     },
     
-    // Detail Modal (Bottom Sheet Style) - Unchanged
     modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0, 0, 0, 0.6)' },
     modalContent: { backgroundColor: theme.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 16, maxHeight: '80%', elevation: 10 },
     gripper: { width: 40, height: 5, backgroundColor: theme.border, borderRadius: 2.5, alignSelf: 'center', marginBottom: 12 },

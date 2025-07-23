@@ -1,7 +1,6 @@
 import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { uriToBase64 } from '../utils/imageUtils'; // Import the new utility
 
 const SubscriptionContext = createContext();
 export const useSubscription = () => useContext(SubscriptionContext);
@@ -55,20 +54,25 @@ export const SubscriptionProvider = ({ children }) => {
     }
   }, [user, refreshSubscription]);
 
-  const subscribeToPlan = async (plan, paymentMethod, proofOfPaymentUri, installationAddress) => {
-    let base64Proof = null;
-    if (proofOfPaymentUri) {
-        base64Proof = await uriToBase64(proofOfPaymentUri);
-    }
-
+  const subscribeToPlan = async (plan, paymentMethod, proofOfPaymentBase64, installationAddress) => {
+    // The `proofOfPaymentBase64` argument is already the correct data URI or null.
+    // No more conversion is needed.
+    
     const payload = {
       plan,
       paymentMethod,
       installationAddress,
-      proofOfPayment: base64Proof, // Send Base64 string
+      proofOfPayment: proofOfPaymentBase64, // Pass the Base64 string directly.
     };
-    await api.post('/subscriptions/subscribe', payload);
-    await refreshSubscription();
+    
+    // Wrap in try...catch to handle potential API errors gracefully.
+    try {
+        await api.post('/subscriptions/subscribe', payload);
+        await refreshSubscription();
+    } catch (error) {
+        console.error("Failed to subscribe:", error.response?.data?.message || error.message);
+        throw error; // Re-throw the error so the calling component can catch it.
+    }
   };
 
   const changePlan = async (selectedPlan) => {
@@ -76,31 +80,21 @@ export const SubscriptionProvider = ({ children }) => {
     await refreshSubscription();
   };
 
-  const payBill = async (billId, proofOfPaymentUri) => {
-    let base64Proof = null;
-    if (proofOfPaymentUri) {
-        base64Proof = await uriToBase64(proofOfPaymentUri);
-    }
-
+  const payBill = async (billId, proofOfPaymentBase64) => {
     const { data } = await api.post('/billing/pay', {
       billId,
-      proofOfPayment: base64Proof, // Send Base64 string
+      proofOfPayment: proofOfPaymentBase64, // Pass Base64 string directly
     });
-    // The backend now returns subscriptionData even for pending verification
     if (data.subscriptionData) {
       setSubscriptionData(data.subscriptionData);
     } else {
-      // Fallback if backend does not return full subscription data (shouldn't happen with fixed backend)
       await refreshSubscription(); 
     }
   };
 
-  const submitProof = async (billId, proofOfPaymentUri) => {
-    let proofOfPaymentBase64 = null;
-    if (proofOfPaymentUri) {
-        proofOfPaymentBase64 = await uriToBase64(proofOfPaymentUri);
-    } else {
-        throw new Error("Proof of payment URI is required for submission.");
+  const submitProof = async (billId, proofOfPaymentBase64) => {
+    if (!proofOfPaymentBase64) {
+        throw new Error("Proof of payment is required for submission.");
     }
     await api.post('/billing/submit-proof', { billId, proofOfPaymentBase64 });
     await refreshSubscription();

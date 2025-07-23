@@ -1,4 +1,4 @@
-// screens/SettingsScreen.js (Cleaned)
+// screens/SettingsScreen.js
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -10,6 +10,8 @@ import {
   Switch,
   SafeAreaView,
   Linking,
+  Clipboard, // Import Clipboard for copying
+  Modal, // Import Modal for display
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
@@ -76,6 +78,40 @@ const SettingsSection = React.memo(({ title, children }) => {
     );
 });
 
+// --- RE-INTEGRATED Component: Recovery Code Display Modal ---
+const RecoveryCodeModal = ({ code, onClose, theme }) => {
+  const styles = getStyles(theme);
+
+  const handleCopy = useCallback(() => {
+    Clipboard.setString(code);
+    alert('Recovery code copied to clipboard!');
+  }, [code]);
+
+  return (
+    <Modal visible={true} transparent={true} animationType="fade">
+      <View style={styles.recoveryModalOverlay}>
+        <View style={styles.recoveryModalContent}>
+          <Ionicons name="key-outline" size={60} color={theme.warning} style={styles.recoveryIcon} />
+          <Text style={styles.recoveryTitle}>Your Recovery Code</Text>
+          <Text style={styles.recoverySubtitle}>
+            Please save this code in a safe place. You will need it to reset your password if you lose access to your email.
+            <Text style={{ fontWeight: 'bold' }}> This is the ONLY way to recover your account without calling support. Please save your new recovery code immediately. Your old code is now invalid.</Text>
+          </Text>
+          <View style={styles.recoveryCodeBox}>
+            <Text style={styles.recoveryCodeText}>{code}</Text>
+            <TouchableOpacity onPress={handleCopy} style={styles.copyButton}>
+              <Ionicons name="copy-outline" size={24} color={theme.textOnPrimary} />
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity style={styles.recoveryModalButton} onPress={onClose}>
+            <Text style={styles.recoveryModalButtonText}>I HAVE SAVED MY CODE</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
 
 // --- Main Screen Component ---
 export default function SettingsScreen() {
@@ -88,6 +124,10 @@ export default function SettingsScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(!!profile?.pushToken);
   const [isLoadingToggle, setIsLoadingToggle] = useState(false);
   const [isPolicyLoading, setIsPolicyLoading] = useState(false);
+
+  // --- NEW STATE for Recovery Code Regeneration ---
+  const [regeneratedRecoveryCode, setRegeneratedRecoveryCode] = useState(null);
+  const [isRegeneratingCode, setIsRegeneratingCode] = useState(false);
 
   useEffect(() => {
     if (!isLoadingToggle) {
@@ -106,7 +146,7 @@ export default function SettingsScreen() {
         } else {
             setNotificationsEnabled(false); 
         }
-      } else { 
+      } else {
         await unregisterForPushNotificationsAsync(api); 
         showMessage('Notifications have been disabled.');
       }
@@ -114,13 +154,13 @@ export default function SettingsScreen() {
       console.error('Failed to toggle notifications:', error.message);
       setNotificationsEnabled(prev => !prev); 
       if (!error.message?.toLowerCase().includes('permission')) {
-          showAlert('Error', 'Could not update notification settings. Please try again.');
+          showAlert('Error', 'Could not update notification settings.');
       }
     } finally {
       setIsLoadingToggle(false);
       refreshUser(); 
     }
-  }, [api, showMessage, showAlert, refreshUser]); 
+  }, [api, showMessage, showAlert, refreshUser]);
 
   const handleLogout = useCallback(() => {
     showAlert('Logging Out', 'Are you sure you want to log out?', [
@@ -128,6 +168,25 @@ export default function SettingsScreen() {
       { text: 'Log Out', style: 'destructive', onPress: signOut },
     ]);
   }, [showAlert, signOut]);
+
+  const handleRegenerateRecoveryCode = useCallback(() => {
+      showAlert('Regenerate Recovery Code', 'Are you sure you want to generate a new recovery code? Your old code will become invalid.', [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Generate', style: 'destructive', onPress: async () => {
+              setIsRegeneratingCode(true);
+              try {
+                  const response = await api.post('/users/recovery-code/generate');
+                  setRegeneratedRecoveryCode(response.data.recoveryCode);
+              } catch (error) {
+                  console.error('Error regenerating recovery code:', error.response?.data || error.message);
+                  showAlert('Error', error.response?.data?.message || 'Failed to generate new code. Try again.');
+              } finally {
+                  setIsRegeneratingCode(false);
+                  refreshUser(); // Refresh user to ensure context is updated
+              }
+          }}
+      ]);
+  }, [api, showAlert, refreshUser]);
 
   const openPolicy = useCallback(async (type) => {
     if (isPolicyLoading) return;
@@ -157,6 +216,14 @@ export default function SettingsScreen() {
       <ScrollView contentContainerStyle={getStyles(theme).scrollContainer} showsVerticalScrollIndicator={false}>
         <SettingsSection title="Account">
           <SettingItem icon="key-outline" name="Change Password" onPress={() => handleNavigate('ChangePassword')} />
+          <View style={getStyles(theme).separator} />
+          <SettingItem 
+              icon="shield-checkmark-outline" 
+              name="Regenerate Recovery Code" 
+              onPress={handleRegenerateRecoveryCode} 
+              disabled={isRegeneratingCode}
+              value={isRegeneratingCode} 
+          />
         </SettingsSection>
 
         <SettingsSection title="Preferences">
@@ -179,6 +246,14 @@ export default function SettingsScreen() {
           <SettingItem icon="log-out-outline" name="Log Out" isDestructive={true} onPress={handleLogout} />
         </SettingsSection>
       </ScrollView>
+
+      {regeneratedRecoveryCode && (
+        <RecoveryCodeModal 
+          code={regeneratedRecoveryCode} 
+          onClose={() => setRegeneratedRecoveryCode(null)} 
+          theme={theme}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -197,4 +272,78 @@ const getStyles = (theme) =>
     iconContainer: { width: 36, height: 36, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 16 },
     settingText: { flex: 1, fontSize: 16, fontWeight: '500' },
     separator: { height: 1, backgroundColor: theme.border, marginLeft: 68 },
+    // --- Recovery Code Modal Styles (re-used/adapted from SignUpScreen) ---
+    recoveryModalOverlay: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(0,0,0,0.7)',
+    },
+    recoveryModalContent: {
+      backgroundColor: theme.surface, // Use theme
+      borderRadius: 15,
+      padding: 30,
+      alignItems: 'center',
+      marginHorizontal: 20,
+      maxWidth: 350,
+      shadowColor: '#000', // Add shadow for modal elevation
+      shadowOffset: { width: 0, height: 5 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 10,
+    },
+    recoveryIcon: {
+      marginBottom: 20,
+      color: theme.warning, // Use theme color
+    },
+    recoveryTitle: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: theme.text, // Use theme color
+      marginBottom: 10,
+      textAlign: 'center',
+    },
+    recoverySubtitle: {
+      fontSize: 15,
+      color: theme.textSecondary, // Use theme color
+      lineHeight: 22,
+      marginBottom: 25,
+      textAlign: 'center',
+    },
+    recoveryCodeBox: {
+      backgroundColor: theme.background, // Use theme color
+      borderRadius: 8,
+      padding: 15,
+      width: '100%',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 30,
+      borderWidth: 1,
+      borderColor: theme.border, // Use theme color
+    },
+    recoveryCodeText: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: theme.primary, // Use theme color
+      flexShrink: 1,
+      marginRight: 10,
+    },
+    copyButton: {
+      backgroundColor: theme.primary, // Use theme color
+      borderRadius: 8,
+      padding: 10,
+    },
+    recoveryModalButton: {
+      backgroundColor: theme.primary, // Use theme color
+      borderRadius: 12,
+      padding: 16,
+      width: '90%',
+      alignItems: 'center',
+    },
+    recoveryModalButtonText: {
+      color: theme.textOnPrimary, // Use theme color
+      fontSize: 12,
+      fontWeight: 'bold',
+    },
   });

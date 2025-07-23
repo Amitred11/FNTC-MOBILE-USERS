@@ -36,17 +36,23 @@ import CustomerFeedbackScreen from './screens/CustomerFeedbackScreen';
 import LiveChatScreen from './screens/LiveChatScreen';
 import LegalDocumentScreen from './screens/LegalDocumentScreen';
 import MySubscriptionScreen from './screens/MySubscriptionScreen';
+import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
+import SupportHelpScreen from './screens/SupportHelpScreen';
+import DisplayRecoveryCodeScreen from './screens/DisplayRecoveryCodeScreen'; 
 
 const Stack = createStackNavigator();
 
 // AppNavigator is now simpler. It only cares about which stack to show.
 const AppNavigator = () => {
-  const { user, authAction } = useAuth();
+  const { user, authAction, pendingRecoveryCode } = useAuth();
 
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {user && !authAction ? (
+        {pendingRecoveryCode ? (
+            // --- Highest priority: Show recovery code screen if pending ---
+            <Stack.Screen name="DisplayRecoveryCode" component={DisplayRecoveryCodeScreen} />
+        ) : user && !authAction ? (
           // --- User is logged in: Show the main app stack ---
           <>
             <Stack.Screen name="Home" component={HomeScreen} />
@@ -73,6 +79,8 @@ const AppNavigator = () => {
             <Stack.Screen name="SplashScreen2" component={SplashScreen2} />
             <Stack.Screen name="GetStarted" component={GetStartedScreen} />
             <Stack.Screen name="SignUpScreen" component={SignUpScreen} />
+            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} /> 
+            <Stack.Screen name="SupportHelp" component={SupportHelpScreen} />
           </>
         )}
       </Stack.Navigator>

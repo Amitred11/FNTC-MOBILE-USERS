@@ -1,4 +1,4 @@
-//screens/SignUpScreen.js
+// screens/SignUpScreen.js
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
@@ -17,14 +17,15 @@ import {
   BackHandler,
   Alert,
   ActivityIndicator,
+  Clipboard,
 } from 'react-native';
 import { TextInput, Checkbox, Provider as PaperProvider } from 'react-native-paper';
-import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useRoute, useNavigation, useFocusEffect, CommonActions } from '@react-navigation/native';
 import { Easing } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useAuth, useMessage } from '../contexts';
+import { useAuth, useMessage, useAlert } from '../contexts';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 const IMAGE_HEIGHT = SCREEN_HEIGHT * 0.8;
@@ -48,7 +49,8 @@ const PolicyModal = ({ visible, title, content, onClose }) => (
 );
 
 export default function SignUpScreen() {
-  const { showMessage } = useMessage();
+  const { showMessage: originalShowMessage } = useMessage();
+  const { showAlert } = useAlert();
   const route = useRoute();
   const navigation = useNavigation();
   const animatedValue = useRef(new Animated.Value(0)).current;
@@ -64,7 +66,7 @@ export default function SignUpScreen() {
   const [checked, setChecked] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [email, setEmail] = useState(''); // FIX: Changed setemail to setEmail for consistency
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [Name, setName] = useState('');
@@ -77,6 +79,12 @@ export default function SignUpScreen() {
   const cardAnim = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(0)).current;
   const [isPolicyLoading, setIsPolicyLoading] = useState(false);
+
+  const showMessage = useCallback((msg, callback) => {
+    console.log('>>> showMessage called with:', msg);
+    originalShowMessage(msg, callback);
+  }, [originalShowMessage]);
+
 
   useFocusEffect(
     useCallback(() => {
@@ -112,7 +120,7 @@ export default function SignUpScreen() {
       keyboardDidShowListener.remove();
       keyboardDidHideListener.remove();
     };
-  }, []);
+  }, [setIsKeyboardVisible]);
 
   useEffect(() => {
     const opacityToValue = isKeyboardVisible ? 0 : 1;
@@ -121,7 +129,7 @@ export default function SignUpScreen() {
       Animated.timing(opacity, { toValue: opacityToValue, duration: 200, useNativeDriver: true }),
       Animated.spring(translateY, { toValue: translateToValue, useNativeDriver: true }),
     ]).start();
-  }, [isKeyboardVisible]);
+  }, [isKeyboardVisible, opacity, translateY]);
 
   useEffect(() => {
     if (isLogin) {
@@ -135,7 +143,6 @@ export default function SignUpScreen() {
             setPassword(savedPassword || '');
             setRememberMe(true);
           } else {
-            // Explicitly clear fields if not remembered
             setEmail('');
             setPassword('');
             setRememberMe(false);
@@ -146,7 +153,6 @@ export default function SignUpScreen() {
       };
       loadCredentials();
     } else {
-      // When switching to SIGN UP, clear all fields
       setName('');
       setEmail('');
       setPassword('');
@@ -155,19 +161,19 @@ export default function SignUpScreen() {
     }
   }, [isLogin]);
 
-  const toggleMode = () => {
+  const toggleMode = useCallback(() => {
     animatedValue.setValue(0);
-    setIsLogin(!isLogin);
+    setIsLogin(prevIsLogin => !prevIsLogin);
     Animated.timing(animatedValue, {
-      toValue: isLogin ? 1 : 0,
+      toValue: !isLogin ? 1 : 0,
       duration: 500,
       easing: Easing.out(Easing.exp),
       useNativeDriver: true,
     }).start();
-  };
+  }, [animatedValue, isLogin]);
 
-  const openPolicyModal = async (type) => {
-    // Prevent user from tapping again while loading
+
+  const openPolicyModal = useCallback(async (type) => {
     if (isPolicyLoading) return;
 
     setIsPolicyLoading(true);
@@ -194,73 +200,84 @@ export default function SignUpScreen() {
       console.error('Failed to load policy text:', error);
       showAlert('Error', 'Could not load the document. Please try again.');
     } finally {
-      // Ensure loading state is always reset
       setIsPolicyLoading(false);
     }
-  };
+  }, [isPolicyLoading, showAlert]);
+
 
   const handleSignUp = async () => {
+    setIsLoading(true);
+
+    console.log('--- handleSignUp triggered (Attempt) ---');
+    console.log('Name:', Name, 'Email:', email, 'Password length:', password.length, 'Confirm Password length:', confirmPassword.length);
+    console.log('Validation checks: !Name.trim()=', !Name.trim(), ' !email.trim()=', !email.trim(), ' !password=', !password);
+
+
     if (!Name.trim() || !email.trim() || !password) {
+      console.log('!!! VALIDATION FAILED: MISSING FIELDS !!!');
+      setIsLoading(false);
       return showMessage('PLEASE FILL IN ALL FIELDS.');
+    } else {
+        console.log('Client-side basic fields validation PASSED.');
     }
+
     if (password !== confirmPassword) {
+      console.log('!!! VALIDATION FAILED: PASSWORDS DO NOT MATCH !!!');
+      setIsLoading(false);
       return showMessage('PASSWORDS DO NOT MATCH.');
     }
     const passwordRegex =
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+{}\[\]:;<>,.?~\\/-]).{8,}$/;
     if (!passwordRegex.test(password)) {
+      console.log('!!! VALIDATION FAILED: PASSWORD COMPLEXITY !!!');
+      setIsLoading(false);
       return showMessage(
         'Password must be at least 8 characters and include an uppercase letter, a number, and a special character.'
       );
     }
     if (!checked) {
+      console.log('!!! VALIDATION FAILED: TERMS NOT AGREED !!!');
+      setIsLoading(false);
       return showMessage('PLEASE AGREE TO THE TERMS AND CONDITIONS.');
     }
 
-    setIsLoading(true);
+     setAuthAction('PENDING_SIGNUP_MESSAGE');
+
     try {
-      setAuthAction('PENDING_SIGNUP_MESSAGE');
-      // FIX: Used the correct state variable 'Name' instead of undefined 'name'
-      await api.post('/auth/register', { displayName: Name, email, password });
+        await register({ displayName: Name, email, password });
 
-      // This is good practice: clear form on success
-      setName('');
-      setEmail('');
-      setPassword('');
-      setConfirmPassword('');
-      setChecked(false);
 
-      showMessage('Sign-up successful! Please log in to continue.');
-      setIsLogin(true); // Switch to login view
-      completeAuthAction();
     } catch (error) {
-      const errorMsg = error.response?.data?.message || 'An unexpected error occurred.';
-      Alert.alert('Sign-Up Failed', errorMsg); // Using Alert for system errors is fine
-      completeAuthAction();
+        console.error('Sign-up API call failed:', error.response?.data?.message || error.message);
+        const errorMsg = error.response?.data?.message || 'An unexpected error occurred.';
+        showAlert('Sign-Up Failed', errorMsg);
+
+        if (completeAuthAction) { 
+            completeAuthAction();
+        }
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
-  };
+};
 
   const handleLogin = async () => {
+    setIsLoading(true);
+
     if (!email.trim() || !password) {
+      console.log('!!! VALIDATION FAILED: LOGIN MISSING FIELDS !!!');
+      setIsLoading(false);
       return showMessage('PLEASE ENTER BOTH EMAIL AND PASSWORD.');
     }
 
-    setIsLoading(true);
     try {
       setAuthAction('PENDING_LOGIN_MESSAGE');
-      // Call the sign-in function from the context
       await signIn(email, password, rememberMe);
 
-      // --- FIX: Logic for saving credentials now happens AFTER a successful signIn ---
       if (rememberMe) {
-        // Save the email and password the user just successfully logged in with
         await AsyncStorage.setItem('savedEmail', email);
         await AsyncStorage.setItem('savedPassword', password);
         await AsyncStorage.setItem('rememberCredentials', 'true');
       } else {
-        // If they logged in without "Remember Me", clear any previously saved credentials
         await AsyncStorage.removeItem('savedEmail');
         await AsyncStorage.removeItem('savedPassword');
         await AsyncStorage.setItem('rememberCredentials', 'false');
@@ -268,7 +285,6 @@ export default function SignUpScreen() {
 
       showMessage('Login Successful!', () => {
         completeAuthAction();
-        // Navigation will happen automatically because the user object in AuthContext is now set
       });
     } catch (error) {
       console.log('LOGIN FAILED on SignUpScreen');
@@ -288,10 +304,9 @@ export default function SignUpScreen() {
   };
 
   const handleGoogleSignIn = async () => {
-    // Disable other actions while Google flow is active
-    setIsLoading(true); // You might use isAuthLoading from context here too
+    setIsLoading(true);
     try {
-      await googleSignIn(); // Call the Google sign-in flow
+      await googleSignIn();
     } catch (error) {
       console.error('Google Sign-In initiation failed:', error);
       Alert.alert(
@@ -299,7 +314,7 @@ export default function SignUpScreen() {
         'Could not start Google sign-in process. Please try again.'
       );
     } finally {
-      setIsLoading(false); // Re-enable local loading state
+      setIsLoading(false);
     }
   };
 
@@ -402,7 +417,6 @@ export default function SignUpScreen() {
                         colors={['rgba(255, 255, 255, 1)', 'rgba(219, 225, 236, 1)']}
                         style={styles.linearGradient}
                       >
-                        {/* FIX: Using consistent setEmail setter */}
                         <TextInput
                           label="Email"
                           mode="outlined"
@@ -470,6 +484,7 @@ export default function SignUpScreen() {
                       <Checkbox
                         status={checked ? 'checked' : 'unchecked'}
                         onPress={() => setChecked(!checked)}
+                        disabled={isLoading}
                       />
                       <View style={{ flexDirection: 'row' }}>
                         <Text style={[styles.checkboxText, { left: 2 }]}>I agree to the </Text>
@@ -493,14 +508,13 @@ export default function SignUpScreen() {
                     </TouchableOpacity>
                   </View>
 
-                  {/* FIX: Replaced complex positioned elements with a clean flexbox layout */}
                   <View style={styles.separatorContainer}>
                     <View style={styles.separatorLine} />
                     <Text style={styles.separatorText}>Or Sign up with</Text>
                     <View style={styles.separatorLine} />
                   </View>
                   <View style={styles.socialLoginContainer}>
-                    <TouchableOpacity style={styles.socialButton} onPress={handleGoogleSignIn}>
+                    <TouchableOpacity style={styles.socialButton} onPress={handleGoogleSignIn} disabled={isLoading}>
                       <Image
                         source={require('../assets/images/Google_2015_logo.svg.png')}
                         style={styles.icon}
@@ -524,7 +538,6 @@ export default function SignUpScreen() {
                           colors={['rgba(255, 255, 255, 1)', 'rgba(219, 225, 236, 1)']}
                           style={styles.loginLinearGradient}
                         >
-                          {/* FIX: Using consistent setEmail setter */}
                           <TextInput
                             label="Email"
                             mode="outlined"
@@ -567,8 +580,16 @@ export default function SignUpScreen() {
                         <Checkbox
                           status={rememberMe ? 'checked' : 'unchecked'}
                           onPress={() => setRememberMe(!rememberMe)}
+                          disabled={isLoading}
                         />
                         <Text style={styles.loginCheckboxText}>Remember Me</Text>
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('ForgotPassword')}
+                            style={styles.forgotPasswordLink}
+                            disabled={isLoading}
+                        >
+                            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                        </TouchableOpacity>
                       </View>
                       <TouchableOpacity
                         style={[styles.loginCreateButton, isLoading && styles.buttonDisabled]}
@@ -583,14 +604,13 @@ export default function SignUpScreen() {
                       </TouchableOpacity>
                     </View>
 
-                    {/* FIX: Replaced complex positioned elements with a clean flexbox layout */}
                     <View style={styles.separatorContainer}>
                       <View style={styles.separatorLine} />
                       <Text style={styles.separatorText}>Or Sign in with</Text>
                       <View style={styles.separatorLine} />
                     </View>
                     <View style={styles.socialLoginContainer}>
-                      <TouchableOpacity style={styles.socialButton} onPress={handleGoogleSignIn}>
+                      <TouchableOpacity style={styles.socialButton} onPress={handleGoogleSignIn} disabled={isLoading}>
                         <Image
                           source={require('../assets/images/Google_2015_logo.svg.png')}
                           style={styles.icon}
@@ -599,11 +619,11 @@ export default function SignUpScreen() {
                     </View>
                   </View>
                   <View style={styles.footerLinks}>
-                    <TouchableOpacity onPress={() => openPolicyModal('policy')}>
+                    <TouchableOpacity onPress={() => openPolicyModal('privacy')} disabled={isLoading}>
                       <Text style={styles.link}>Privacy Policy</Text>
                     </TouchableOpacity>
                     <Text style={styles.footerSeparator}>|</Text>
-                    <TouchableOpacity onPress={() => openPolicyModal('terms')}>
+                    <TouchableOpacity onPress={() => openPolicyModal('terms')} disabled={isLoading}>
                       <Text style={styles.link}>Terms of Service</Text>
                     </TouchableOpacity>
                   </View>
@@ -623,7 +643,6 @@ export default function SignUpScreen() {
   );
 }
 
-// STYLES (Cleaned and with new additions for the fixes)
 const styles = StyleSheet.create({
   backgroundImage: {
     height: IMAGE_HEIGHT,
@@ -727,7 +746,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     elevation: 3,
     top: 15,
-    marginBottom: 15 /* Added margin */,
+    marginBottom: 15,
   },
   loginCreateButton: {
     alignItems: 'center',
@@ -741,7 +760,6 @@ const styles = StyleSheet.create({
   },
   createButtonLabel: { color: 'white', fontSize: 13, fontWeight: 'bold', textAlign: 'center' },
 
-  // --- FIX: New, robust styles for social login section ---
   separatorContainer: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -772,8 +790,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 10,
   },
-  icon: { height: 24, width: 24 }, // Cleaned up icon style
-
+  icon: { height: 24, width: 24 },
   eyeIcon: { position: 'absolute', right: 20, top: '50%', transform: [{ translateY: -12 }] },
   loginEyeIcon: { position: 'absolute', right: 20, top: '50%', transform: [{ translateY: -12 }] },
   toggleToLoginText: {
@@ -792,9 +809,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginBottom: 10,
     paddingLeft: 10,
+    width: '100%',
+    justifyContent: 'space-between',
   },
-  loginCheckboxText: { color: '#444', fontSize: 10, marginLeft: 6 },
-
+  loginCheckboxText: { color: '#444', fontSize: 10, right: 35 },
+  forgotPasswordLink: {
+      paddingVertical: 5,
+      paddingHorizontal: 5,
+  },
+  forgotPasswordText: {
+      color: '#007bff',
+      fontSize: 10,
+      textDecorationLine: 'underline',
+  },
   policyModalOverlay: {
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',

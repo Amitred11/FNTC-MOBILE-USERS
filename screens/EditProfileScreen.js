@@ -175,7 +175,9 @@ export default function EditProfileScreen() {
     return await ImagePicker.launchImageLibraryAsync(options);
   }, []);
 
-  const handleSaveChanges = useCallback(async () => {
+  // screens/EditProfileScreen.js
+
+const handleSaveChanges = useCallback(async () => {
     const validationError = validateForm(formData);
     if (validationError) {
       showAlert('Invalid Input', validationError, [{ text: 'OK' }]);
@@ -183,10 +185,25 @@ export default function EditProfileScreen() {
     }
     setIsSaving(true);
     try {
-      const payload = { ...formData };
+      // Build the nested payload as we discussed before
+      const payload = {
+        displayName: formData.displayName,
+        profile: {
+          mobileNumber: formData.mobileNumber,
+          birthday: formData.birthday,
+          gender: formData.gender,
+          address: formData.address,
+          phase: formData.phase,
+          city: formData.city,
+          province: formData.province,
+          zipCode: formData.zipCode,
+        }
+      };
+      
       if (newPhoto) {
         payload.photoData = { base64: newPhoto.base64, mimeType: newPhoto.mimeType };
-      }
+      }     
+
       await updateProfile(payload);
       showMessage('Profile Updated!', 'Your changes have been saved successfully.');
       setNewPhoto(null);
@@ -197,8 +214,7 @@ export default function EditProfileScreen() {
     } finally {
       setIsSaving(false);
     }
-  }, [formData, newPhoto, updateProfile, showMessage, showAlert, navigation]);
-
+}, [formData, newPhoto, updateProfile, showMessage, showAlert, navigation]);
   useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
       navigation.goBack();

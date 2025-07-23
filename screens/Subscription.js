@@ -12,8 +12,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  TextInput,
-} from 'react-native';
+} from 'react-native'; // Removed unused TextInput
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
@@ -24,7 +23,7 @@ import { BottomNavBar } from '../components/BottomNavBar';
 import { requestMediaLibraryPermissions, requestCameraPermissions } from '../utils/permissions';
 import PhotoSourceSheet from '../components/PhotoSourceSheet';
 
-// --- OPTIMIZATION: Static assets defined once at the top level ---
+// --- Static assets (unchanged) ---
 const GCASH_LOGO_IMAGE = require('../assets/images/gcash.png');
 const GCASH_QR_IMAGE = require('../assets/images/gcashqr.png');
 const COD_LOGO_IMAGE = require('../assets/images/cod.png');
@@ -36,7 +35,7 @@ const ILLUSTRATIONS = {
   SUSPENDED: require('../assets/images/declined.png'),
 };
 
-// --- OPTIMIZATION: All sub-components are memoized to prevent re-renders ---
+// --- Sub-Components (unchanged and correct) ---
 
 const StatusView = memo(({ illustration, title, text, children, buttonText, onButtonPress, onCancel, theme }) => {
   const styles = getStyles(theme);
@@ -171,7 +170,8 @@ const PlanSelectionFlow = memo(({ isChangingPlan = false, onFlowFinish }) => {
     const [isLoadingPlans, setIsLoadingPlans] = useState(true);
     const [isGcashModalVisible, setGcashModalVisible] = useState(false);
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
-    const [proofOfPayment, setProofOfPayment] = useState(null);
+    // --- FIX #1: The state should only store the base64 data URI string, or null. ---
+    const [proofOfPayment, setProofOfPayment] = useState(null); 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isPhotoSourceSheetVisible, setPhotoSourceSheetVisible] = useState(false);
     const [installationAddress, setInstallationAddress] = useState({ address: '', phase: '', city: '', province: '', zipCode: '' });
@@ -203,10 +203,6 @@ const PlanSelectionFlow = memo(({ isChangingPlan = false, onFlowFinish }) => {
         };
         fetchPlans();
     }, [api, showAlert]);
-    
-    const handleAddressChange = useCallback((field, value) => {
-        setInstallationAddress(prev => ({ ...prev, [field]: value }));
-    }, []);
 
     const handleProceedToPaymentMethod = useCallback(() => {
         if (!selectedPlan) return;
@@ -219,11 +215,12 @@ const PlanSelectionFlow = memo(({ isChangingPlan = false, onFlowFinish }) => {
         setFlowStep(2);
     }, [selectedPlan, profile, showAlert, navigation]);
 
-    const handleNewSubscriptionSubmit = useCallback(async (method, proof) => {
+    // --- FIX #2: The 'proof' parameter is now the base64 string directly ---
+    const handleNewSubscriptionSubmit = useCallback(async (method, proofBase64) => {
         setIsSubmitting(true);
         try {
-            await subscribeToPlan(selectedPlan, method, proof?.base64, installationAddress);
-            showMessage('Submission Received!', 'Your subscription is now pending verification.');
+            await subscribeToPlan(selectedPlan, method, proofBase64, installationAddress);
+            showMessage('Submission Received!', 'Your application is now pending.');
             if (isGcashModalVisible) setGcashModalVisible(false);
         } catch (error) {
             showAlert('Submission Failed', error.response?.data?.message || 'An error occurred.');
@@ -262,7 +259,8 @@ const PlanSelectionFlow = memo(({ isChangingPlan = false, onFlowFinish }) => {
         }
     }, [selectedPlan, changePlan, showMessage, showAlert, onFlowFinish]);
 
-    const pickImageFromCamera = useCallback(async () => {
+    // --- FIX #3: Image pickers now set only the base64 data URI string to state ---
+     const pickImageFromCamera = useCallback(async () => {
         setPhotoSourceSheetVisible(false);
         const hasPermission = await requestCameraPermissions();
         if (!hasPermission) return;
@@ -270,7 +268,7 @@ const PlanSelectionFlow = memo(({ isChangingPlan = false, onFlowFinish }) => {
         if (!result.canceled && result.assets?.[0]) {
             const asset = result.assets[0];
             const base64Data = `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}`;
-            setProofOfPayment({ uri: asset.uri, base64: base64Data });
+            setProofOfPayment(base64Data);
         }
     }, []);
 
@@ -282,7 +280,7 @@ const PlanSelectionFlow = memo(({ isChangingPlan = false, onFlowFinish }) => {
         if (!result.canceled && result.assets?.[0]) {
             const asset = result.assets[0];
             const base64Data = `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}`;
-            setProofOfPayment({ uri: asset.uri, base64: base64Data });
+            setProofOfPayment(base64Data);
         }
     }, []);
 
@@ -357,8 +355,33 @@ const PlanSelectionFlow = memo(({ isChangingPlan = false, onFlowFinish }) => {
             <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.modalOverlay}>
                 <View style={styles.modalContent}>
                     <View style={styles.modalHeader}><Text style={styles.modalTitle}>Pay with GCash</Text><TouchableOpacity onPress={() => setGcashModalVisible(false)}><Ionicons name="close" size={28} color={theme.textSecondary} /></TouchableOpacity></View>
-                    <ScrollView contentContainerStyle={{alignItems: 'center', paddingBottom: 100}}><Text style={styles.modalDescription}>1. Scan the QR or send payment to the number below.</Text><Image source={GCASH_QR_IMAGE} style={styles.paymentModalImage} resizeMode="contain" /><View style={styles.gcashDetailsContainer}><Text style={styles.gcashDetailLabel}>GCash Name:</Text><Text style={styles.gcashDetailValue}>Fibear Inc.</Text><Text style={styles.gcashDetailLabel}>GCash Number:</Text><Text style={styles.gcashDetailValue}>0912-345-6789</Text></View><Text style={styles.modalDescription}>2. Upload a screenshot of your receipt.</Text><View style={styles.uploadSection}>{proofOfPayment ? (<View style={{alignItems: 'center'}}><Image source={{ uri: proofOfPayment.uri }} style={styles.proofPreviewImage} /><TouchableOpacity style={styles.changeImageButton} onPress={() => setPhotoSourceSheetVisible(true)}><Text style={styles.changeImageText}>Change Screenshot</Text></TouchableOpacity></View>) : (<TouchableOpacity style={styles.uploadButton} onPress={() => setPhotoSourceSheetVisible(true)}><Ionicons name="cloud-upload-outline" size={24} color={theme.primary} /><Text style={styles.uploadButtonText}>Upload Proof</Text></TouchableOpacity>)}</View></ScrollView>
+                    <ScrollView contentContainerStyle={{alignItems: 'center', paddingBottom: 100}}>
+                        <Text style={styles.modalDescription}>1. Scan the QR or send payment to the number below.</Text>
+                        <Image source={GCASH_QR_IMAGE} style={styles.paymentModalImage} resizeMode="contain" />
+                        <View style={styles.gcashDetailsContainer}>
+                            <Text style={styles.gcashDetailLabel}>GCash Name:</Text><Text style={styles.gcashDetailValue}>Fibear Inc.</Text>
+                            <Text style={styles.gcashDetailLabel}>GCash Number:</Text><Text style={styles.gcashDetailValue}>0912-345-6789</Text>
+                        </View>
+                        <Text style={styles.modalDescription}>2. Upload a screenshot of your receipt.</Text>
+                        <View style={styles.uploadSection}>
+                            {proofOfPayment ? (
+                                <View style={{alignItems: 'center'}}>
+                                    {/* --- FIX #4: The Image source URI is now the base64 string itself --- */}
+                                    <Image source={{ uri: proofOfPayment }} style={styles.proofPreviewImage} />
+                                    <TouchableOpacity style={styles.changeImageButton} onPress={() => setPhotoSourceSheetVisible(true)}>
+                                        <Text style={styles.changeImageText}>Change Screenshot</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            ) : (
+                                <TouchableOpacity style={styles.uploadButton} onPress={() => setPhotoSourceSheetVisible(true)}>
+                                    <Ionicons name="cloud-upload-outline" size={24} color={theme.primary} />
+                                    <Text style={styles.uploadButtonText}>Upload Proof</Text>
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                    </ScrollView>
                     <View style={styles.fixedModalButtonContainer}>
+                        {/* --- FIX #5: Pass the proofOfPayment base64 string directly --- */}
                         <TouchableOpacity style={[styles.primaryButton, (!proofOfPayment || isSubmitting) && styles.buttonDisabled]} onPress={() => handleNewSubscriptionSubmit('GCash', proofOfPayment)} disabled={!proofOfPayment || isSubmitting}>
                             {isSubmitting ? <ActivityIndicator color={theme.textOnPrimary} /> : <Text style={styles.buttonText}>CONFIRM PAYMENT</Text>}
                         </TouchableOpacity>
@@ -393,7 +416,7 @@ const PlanSelectionFlow = memo(({ isChangingPlan = false, onFlowFinish }) => {
 function SubscriptionScreen() {
     const route = useRoute();
     const navigation = useNavigation();
-    const { subscriptionStatus, subscriptionData, isLoading, refreshSubscription, clearSubscription, cancelSubscription, activePlan } = useSubscription();
+    const { subscriptionStatus, subscriptionData, isLoading, clearSubscription, cancelSubscription, activePlan } = useSubscription();
     const { theme } = useTheme();
     const { showAlert } = useAlert();
     const [isPlanChangeFlowActive, setPlanChangeFlowActive] = useState(route.params?.isChangingPlan || false);
