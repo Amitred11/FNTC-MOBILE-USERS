@@ -1,6 +1,6 @@
 // screens/DisplayRecoveryCodeScreen.js
 
-import React, { useCallback, useEffect } from 'react'; // Added useEffect
+import React, { useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,20 +12,16 @@ import {
   BackHandler
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useNavigation, CommonActions } from '@react-navigation/native'; // Removed useRoute
-import { useTheme, useMessage, useAlert, useAuth } from '../contexts';  
+import { useNavigation } from '@react-navigation/native';
+import { lightTheme } from '../constants/colors';
+import { useMessage, useAlert, useAuth } from '../contexts';  
 import * as Animatable from 'react-native-animatable';
 
 
-const Header = React.memo(() => { // Removed onBackPress from props as it's not used
-  const { theme } = useTheme();
-  const styles = getStyles(theme);
+const Header = React.memo(() => {
+  const styles = getStyles(lightTheme);
   return (
     <View style={styles.header}>
-      {/* The back button here doesn't do anything, which is fine for this screen */}
-      <TouchableOpacity style={styles.backButton}>
-        <Ionicons name="arrow-back" size={26} color={theme.text} />
-      </TouchableOpacity>
       <Text style={styles.headerTitle}>Recovery Code</Text>
       <View style={{ width: 26 }} />
     </View>
@@ -34,20 +30,16 @@ const Header = React.memo(() => { // Removed onBackPress from props as it's not 
 
 export default function DisplayRecoveryCodeScreen() {
   const navigation = useNavigation();
-  const { theme } = useTheme();
+  const theme = lightTheme;
   const { showMessage } = useMessage();
   const { showAlert } = useAlert();
+  const { pendingRecoveryCode, acknowledgeRecoveryCode } = useAuth();
   const styles = getStyles(theme);
 
-  // --- FIX #1: Get the code ONLY from the AuthContext ---
-  const { pendingRecoveryCode, acknowledgeRecoveryCode } = useAuth();
-  // --- REMOVED: const { recoveryCode } = route.params; ---
-
-  // Prevent going back to SignUp via hardware back button directly
   useEffect(() => {
     navigation.setOptions({
-      headerLeft: null, // Hide back button in the navigator header if it exists
-      gestureEnabled: false, // Disable swipe back
+      headerLeft: null,
+      gestureEnabled: false,
     });
     
     const backHandler = () => {
@@ -56,19 +48,18 @@ export default function DisplayRecoveryCodeScreen() {
         "Please save your recovery code before continuing. This is the only time it will be shown.",
         [{ text: "OK" }]
       );
-      return true; // Prevent default back action
+      return true;
     };
 
     const hardwareBackHandler = BackHandler.addEventListener('hardwareBackPress', backHandler);
 
     return () => {
-      hardwareBackHandler.remove(); // Clean up hardware back button listener
+      hardwareBackHandler.remove();
     };
   }, [navigation, showAlert]);
 
 
   const handleCopyCode = useCallback(() => {
-    // --- FIX #2: Use the `pendingRecoveryCode` variable ---
     if (pendingRecoveryCode) {
         Clipboard.setString(pendingRecoveryCode);
         showMessage('Recovery code copied to clipboard!');
@@ -80,7 +71,6 @@ export default function DisplayRecoveryCodeScreen() {
   }, [acknowledgeRecoveryCode]);
 
   useEffect(() => {
-    // This is a good safety check in case the screen is rendered in an unexpected state
     if (!pendingRecoveryCode) {
         console.warn("DisplayRecoveryCodeScreen rendered without a pending code. Acknowledging to proceed.");
         acknowledgeRecoveryCode(); 
@@ -89,7 +79,6 @@ export default function DisplayRecoveryCodeScreen() {
   
   return (
     <SafeAreaView style={styles.container}>
-      {/* You can remove the Header component if your StackNavigator already has `headerShown: false` */}
       <Header /> 
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -99,13 +88,15 @@ export default function DisplayRecoveryCodeScreen() {
         <Animatable.Text animation="fadeInUp" duration={600} delay={200} style={styles.title}>
           Save Your Recovery Code!
         </Animatable.Text>
+        
         <Animatable.Text animation="fadeInUp" duration={600} delay={300} style={styles.subtitle}>
-          This is a critical code you will need to reset your password if you ever lose access to your email.
-          **Write it down and store it in a very safe, private place.**
+          This is a critical code you will need to reset your password if you ever lose access to your email.{' '}
+          <Text style={styles.boldText}>
+            Write it down and store it in a very safe, private place.
+          </Text>
         </Animatable.Text>
 
         <Animatable.View animation="fadeInUp" duration={600} delay={400} style={styles.recoveryCodeBox}>
-          {/* --- FIX #3: Display the `pendingRecoveryCode` variable --- */}
           <Text style={styles.recoveryCodeText}>{pendingRecoveryCode || 'Loading...'}</Text>
           <TouchableOpacity onPress={handleCopyCode} style={styles.copyButton}>
             <Ionicons name="copy-outline" size={28} color={theme.textOnPrimary} />
@@ -113,7 +104,10 @@ export default function DisplayRecoveryCodeScreen() {
         </Animatable.View>
 
         <Animatable.Text animation="fadeInUp" duration={600} delay={500} style={styles.warningText}>
-          **WARNING:** This code will **NOT** be shown again. If you lose it, you will need to contact support for manual assistance.
+          <Text style={styles.boldText}>WARNING:</Text>
+          {' This code will '}
+          <Text style={styles.boldText}>NOT</Text>
+          {' be shown again. If you lose it, you will need to contact support for manual assistance.'}
         </Animatable.Text>
         
         <Animatable.View animation="fadeInUp" duration={600} delay={600} style={styles.buttonContainer}>
@@ -126,10 +120,8 @@ export default function DisplayRecoveryCodeScreen() {
   );
 }
 
-// Styles function remains the same
 const getStyles = (theme) =>
   StyleSheet.create({
-    // ... all your styles
     container: { flex: 1, backgroundColor: theme.background },
     header: {
       flexDirection: 'row',
@@ -141,7 +133,6 @@ const getStyles = (theme) =>
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
     },
-    backButton: { padding: 5 },
     headerTitle: { color: theme.text, fontSize: 17, fontWeight: '600' },
     scrollContent: {
       flexGrow: 1,
@@ -170,7 +161,7 @@ const getStyles = (theme) =>
     recoveryCodeBox: {
       backgroundColor: theme.surface,
       borderRadius: 12,
-      padding: 20,
+      padding: 10,
       width: '100%',
       maxWidth: 350,
       flexDirection: 'row',
@@ -186,7 +177,7 @@ const getStyles = (theme) =>
       elevation: 5,
     },
     recoveryCodeText: {
-      fontSize: 20,
+      fontSize: 12,
       fontWeight: 'bold',
       color: theme.primary,
       flexShrink: 1,
@@ -201,11 +192,14 @@ const getStyles = (theme) =>
     warningText: {
       color: theme.danger,
       fontSize: 14,
-      fontWeight: 'bold',
       textAlign: 'center',
       lineHeight: 20,
       marginBottom: 40,
       paddingHorizontal: 10,
+    },
+
+    boldText: {
+      fontWeight: 'bold',
     },
     buttonContainer: {
       width: '100%',

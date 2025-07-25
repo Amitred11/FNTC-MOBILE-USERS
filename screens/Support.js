@@ -36,13 +36,15 @@ import CustomPicker from '../components/CustomPicker'
 // --- Constants ---
 const { Config_INTERNAL_API_KEY, CHATBOT_API_ENDPOINT } = apiConfig;
 const CHARACTER_NAME = 'FNTC Bot';
-const HEADER_HEIGHT = Platform.OS === 'ios' ? 90 : 70;
+const HEADER_HEIGHT = Platform.select({ ios: 90, android: 70 });
 const CATEGORY_ITEMS = [
     { label: 'Technical Issue', value: 'technical' },
     { label: 'Billing and Refunds', value: 'billing' },
     { label: 'General Inquiry', value: 'general' },
 ];
-
+const INITIAL_BOT_MESSAGE = `Hello! I'm ${CHARACTER_NAME}, your virtual assistant.\n\nHow can I help you today?`;
+const RETRY_DELAY_MS = 5000;
+const MAX_INITIALIZATION_TIME_MS = 25000;
 // ====================================================================
 // --- CHILD & HELPER COMPONENTS (Unchanged)
 // ====================================================================
@@ -140,91 +142,100 @@ const ChatbotScreen = forwardRef(({ onRefresh, isRefreshing }, ref) => {
   const [selectedMessage, setSelectedMessage] = useState(null);
   const netInfo = useNetInfo();
   const { showAlert } = useAlert();
+  const retryTimeoutRef = useRef(null);
+  const initializationTimeoutRef = useRef(null);
 
-  const isSendActive = !isReplying && inputText.trim() !== '' && chatState.status === 'online';
+  const isSendActive = !isReplying && inputText.trim() !== '';
   
-  useEffect(() => {
-    if (flatListRef.current && messages.length > 0) {
-      flatListRef.current.scrollToEnd({ animated: true });
-    }
-  }, [messages, isReplying]);
-
+  // The initializeChat function will now be the core of our retry logic
   const initializeChat = useCallback(async () => {
-    setChatState({ status: 'initializing', message: 'Connecting...' });
+    // Clear any pending retries or timeouts to avoid race conditions
+    if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
+    if (initializationTimeoutRef.current) clearTimeout(initializationTimeoutRef.current);
+
+    setChatState({ status: 'connecting', message: 'Connecting to AI...' });
+    setMessages([]); // Clear messages on each new initialization attempt
+
     if (netInfo.isConnected === false) {
-      setChatState({ status: 'offline', message: 'You appear to be offline.' });
-      setMessages([
-        {
-          id: 'err-offline',
-          text: 'You are currently offline. Please check your internet connection.',
-          isUser: false,
-        },
-      ]);
+      setChatState({ status: 'offline', message: 'You appear to be offline. Retrying...' });
+      // Schedule a retry and exit
+      retryTimeoutRef.current = setTimeout(initializeChat, 5000); // Retry after 5 seconds
       return;
     }
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('timeout')), 25000)
-    );
+
     try {
       const apiHeaders = { 'X-API-Key': Config_INTERNAL_API_KEY };
-      await Promise.race([
-        fetch(`${CHATBOT_API_ENDPOINT}/health`, { headers: apiHeaders }),
-        timeoutPromise,
-      ]);
-      setChatState({ status: 'online', message: 'Connected' });
-
-      const historyResponse = await fetch(`${CHATBOT_API_ENDPOINT}/history/${profile._id}`, {
-        headers: apiHeaders,
+      
+      const timeoutPromise = new Promise((_, reject) => {
+          initializationTimeoutRef.current = setTimeout(() => reject(new Error('AI_TIMEOUT')), 15000); // 15-second timeout
       });
+
+      const healthCheckPromise = fetch(`${CHATBOT_API_ENDPOINT}/health`, { headers: apiHeaders });
+      const healthResponse = await Promise.race([healthCheckPromise, timeoutPromise]);
+      
+      clearTimeout(initializationTimeoutRef.current); // Clear the timeout if fetch succeeds
+
+      if (!healthResponse.ok) {
+        throw new Error(`AI service responded with status ${healthResponse.status}`);
+      }
+      
+      // --- SUCCESS ---
+      setChatState({ status: 'online', message: 'Online' });
+
+      // Fetch history only on successful connection
+      const historyResponse = await fetch(`${CHATBOT_API_ENDPOINT}/history/${profile._id}`, { headers: apiHeaders });
       const historyData = await historyResponse.json();
 
-      // --- FIX 2: Only show welcome message if there's no history ---
-      if (historyData && historyData.length > 0) {
-        const formattedHistory = historyData.map((m, i) => ({
-          id: `hist-${i}-${profile._id}`,
-          text: m.parts[0].text,
-          isUser: m.role === 'user',
-        }));
-        setMessages(formattedHistory);
+      if (historyData?.length > 0) {
+        setMessages(historyData.map((m, index) => ({ id: `hist-${m.id || index}`, text: m.parts[0].text, isUser: m.role === 'user' })));
       } else {
-        const initialMsg = {
-          id: `initial-${Date.now()}`,
-          text: `Hello! I'm ${CHARACTER_NAME}, your virtual assistant.\n\nHow can I help you today?`,
-          isUser: false,
-        };
-        setMessages([initialMsg]);
+        setMessages([{ id: `initial-${Date.now()}`, text: INITIAL_BOT_MESSAGE, isUser: false }]);
       }
+
     } catch (error) {
-      let errorMessage =
-        'Sorry, our AI services are currently unavailable. Please try again later.';
-      if (error.message === 'timeout') {
-        errorMessage =
-          'The connection to our AI service timed out. This can happen if the service is starting up. Please wait a moment and try again.';
+      // --- FAILURE ---
+      let errorMessage = 'Could not connect to AI services. Retrying...';
+      if (error.message === 'AI_TIMEOUT') {
+        errorMessage = 'Connection timed out. Retrying...';
       } else if (error.message.includes('Network request failed')) {
-        errorMessage =
-          'Network request failed. Please check your internet connection and the server address.';
-      } else if (error.message.includes('status')) {
-        errorMessage = `Our AI service isn't ready at the moment (${error.message}). Please try again shortly.`;
+        errorMessage = 'Network error. Retrying...';
       }
-
-      console.error('Chat Initialization Error:', error.message);
+      
+      console.error('Chat Initialization Error, will retry:', error.message);
       setChatState({ status: 'error', message: errorMessage });
-      setMessages([{ id: 'err-server', text: errorMessage, isUser: false }]);
+      
+      // Schedule the next retry attempt
+      retryTimeoutRef.current = setTimeout(initializeChat, 5000); // Retry after 5 seconds
     }
-  }, [netInfo.isConnected, profile]);
+  }, [netInfo.isConnected, profile?._id]);
 
+  // Main effect to start and stop the connection process
   useEffect(() => {
-    // --- FIX 5: Ensure profile exists before initializing chat ---
     if (profile) {
       initializeChat();
+    } else {
+      // If user logs out, clear everything
+      setChatState({ status: 'disconnected', message: 'Disconnected' });
+      setMessages([]);
     }
-  }, [profile, initializeChat]);
-    useImperativeHandle(ref, () => ({
+    
+    // --- Cleanup function ---
+    // This is crucial. It runs when the component unmounts (e.g., user navigates away).
+    return () => {
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+      if (initializationTimeoutRef.current) {
+        clearTimeout(initializationTimeoutRef.current);
+      }
+    };
+  }, [profile, initializeChat]); // Depend on initializeChat
+
+  useImperativeHandle(ref, () => ({
     refresh: () => {
       initializeChat();
     }
   }));
-
   const sendChatMessage = (textToSend) => {
     const text = textToSend.trim();
     if (!isSendActive) return;
@@ -338,15 +349,14 @@ const ChatbotScreen = forwardRef(({ onRefresh, isRefreshing }, ref) => {
     }
   };
 
-  if (chatState.status === 'initializing') {
+  if (chatState.status === 'initializing' || chatState.status === 'connecting' || chatState.status === 'error' || chatState.status === 'offline') {
     return (
       <View style={styles.placeholderContent}>
         <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={styles.placeholderText}>{chatState.message}</Text>
+        <Text style={styles.placeholderText}>{chatState.message}</Text> 
       </View>
     );
   }
-
   return (
     <View style={{ flex: 1 }}>
       <Modal
@@ -961,6 +971,7 @@ export default function SupportScreen() {
   const styles = getStyles(theme);
   const [mode, setMode] = useState('hub');
   const [refreshing, setRefreshing] = useState(false);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     setTimeout(() => setRefreshing(false), 1000);
@@ -1026,7 +1037,6 @@ export default function SupportScreen() {
                 <BotAvatar theme={theme} inHeader={true} />
                 <View>
                     <Text style={styles.headerTitle}>{CHARACTER_NAME}</Text>
-                    <Text style={styles.headerSubtitle}>Online</Text>
                 </View>
                 </View>
             ) : (
@@ -1127,7 +1137,6 @@ const getStyles = (theme) =>
       flex: 1,
       flexDirection: 'row',
       justifyContent: 'center',
-      paddingLeft: Platform.OS === 'ios' ? 0 : 20,
     },
     closeTicketButton: {
       alignItems: 'center',
@@ -1203,7 +1212,6 @@ const getStyles = (theme) =>
       paddingHorizontal: 15,
     },
     headerBackIcon: { paddingRight: 10 },
-    headerSubtitle: { color: theme.textSecondary, fontSize: 13, fontWeight: '400' },
     headerTitle: { color: theme.textBe, fontSize: 18, fontWeight: '600' },
     hubContainer: { padding: 20, paddingTop: Platform.OS === 'ios' ? 20 : 40 },
     imagePickerContainer: {
@@ -1220,7 +1228,6 @@ const getStyles = (theme) =>
       marginTop: 10,
       padding: 10,
     },
-    imagePreview: { borderRadius: 10, height: 150, marginBottom: 10, width: 150 },
     imagePreview: { borderRadius: 10, height: 150, marginBottom: 10, width: 150 },
     input: {
       backgroundColor: theme.bot,

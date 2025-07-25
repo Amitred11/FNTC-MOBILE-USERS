@@ -124,6 +124,7 @@ const AppContent = () => {
   return <AppNavigator />;
 };
 
+
 export default function App() {
   return (
     <ThemeProvider>
@@ -131,7 +132,6 @@ export default function App() {
         <MessageProvider>
           <AuthProvider>
             <SubscriptionProvider>
-              {/* Instead of rendering AppNavigator directly, we render AppContent */}
               <AppContent />
             </SubscriptionProvider>
           </AuthProvider>

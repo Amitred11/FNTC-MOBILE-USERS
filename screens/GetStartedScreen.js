@@ -1,4 +1,4 @@
-// screens/GetStartedScreen.js (Cleaned)
+// screens/GetStartedScreen.js (Corrected to always use Light Theme)
 
 import React, { useState, useCallback, useMemo } from 'react';
 import {
@@ -15,8 +15,9 @@ import {
 } from 'react-native';
 import * as Animatable from 'react-native-animatable';
 import { useNavigation } from '@react-navigation/native';
-import { useTheme } from '../contexts'; // Use the context instead of hardcoding
-import TermsOfServiceText from '../texts/Terms of Services.js'; // Use named imports
+// --- CHANGE 1: Import lightTheme directly, remove useTheme ---
+import { lightTheme } from '../constants/colors';
+import TermsOfServiceText from '../texts/Terms of Services.js';
 import PrivacyPolicyText from '../texts/Privacy Policy.js';
 
 // --- Constants ---
@@ -27,8 +28,8 @@ const SUBTITLE_TEXT = 'We are committed to keeping you connected. We provide fas
 
 // --- Sub-Components (Memoized for Performance) ---
 const PolicyModal = React.memo(({ visible, title, content, onClose }) => {
-  const { theme } = useTheme();
-  const styles = getStyles(theme);
+  // --- CHANGE 2: Use the imported lightTheme object directly ---
+  const styles = getStyles(lightTheme);
 
   // Replace placeholder at render time
   const formattedContent = useMemo(() => {
@@ -57,8 +58,8 @@ const PolicyModal = React.memo(({ visible, title, content, onClose }) => {
 // --- Main Screen Component ---
 export default function GetStartedScreen() {
   const navigation = useNavigation();
-  const { theme } = useTheme(); // Use the theme from the context
-  const styles = getStyles(theme);
+  // --- CHANGE 3: Use the imported lightTheme object directly ---
+  const styles = getStyles(lightTheme);
 
   const [isPolicyModalVisible, setPolicyModalVisible] = useState(false);
   const [policyContent, setPolicyContent] = useState({ title: '', text: '' });
@@ -155,7 +156,8 @@ const getStyles = (theme) =>
     },
     overlayContainer: {
       alignItems: 'center',
-      backgroundColor: theme.surface,
+      // Explicitly set surface color from the light theme
+      backgroundColor: lightTheme.surface, 
       borderTopLeftRadius: 50,
       borderTopRightRadius: 50,
       bottom: 0,
@@ -206,7 +208,7 @@ const getStyles = (theme) =>
     secondaryButton: {
       backgroundColor: theme.surface,
       borderColor: theme.primary,
-      borderColor: '#00BBD6',
+      // borderColor: '#00BBD6', // This was a duplicate, removed
       borderRadius: 10,
       borderWidth: 1.5,
       boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.6)',

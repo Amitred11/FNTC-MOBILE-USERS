@@ -124,7 +124,7 @@ const NotificationDetailModal = React.memo(({ notification, visible, onClose }) 
     );
 });
 
-const Header = React.memo(({ isSelectionMode, onCancelSelection, selectedCount, onSelectAll, allSelected, onDelete, onMarkAllRead, onToggleDnd, dndEnabled, onBackPress }) => {
+const Header = React.memo(({ isSelectionMode, onCancelSelection, selectedCount, onSelectAll, allSelected, onDelete, onMarkAllRead, onBackPress }) => {
     const { theme } = useTheme();
     const styles = getStyles(theme);
 
@@ -166,9 +166,7 @@ const Header = React.memo(({ isSelectionMode, onCancelSelection, selectedCount, 
                     </Animatable.View>
                 ) : (
                     <Animatable.View animation="fadeIn" duration={300} style={styles.headerActions}>
-                        <TouchableOpacity onPress={onToggleDnd} style={styles.headerIcon}>
-                            <Ionicons name={dndEnabled ? "notifications-outline" : "notifications-off-outline"} size={26} color={dndEnabled ? theme.primary : theme.text} />
-                        </TouchableOpacity>
+                        {/* DND BUTTON REMOVED */}
                         <TouchableOpacity onPress={onMarkAllRead} style={styles.headerIcon}>
                             <Ionicons name="mail-unread-outline" size={28} color={theme.text} />
                         </TouchableOpacity>
@@ -178,7 +176,6 @@ const Header = React.memo(({ isSelectionMode, onCancelSelection, selectedCount, 
         </View>
     );
 });
-
 
 // --- Main Screen Component ---
 export default function NotificationScreen() {
@@ -192,14 +189,13 @@ export default function NotificationScreen() {
   const [notifications, setNotifications] = useState([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [dndEnabled, setDndEnabled] = useState(profile?.dndEnabled || false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [loadingState, setLoadingState] = useState({ initial: true, refreshing: false, loadingMore: false });
   const [isDetailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState(null);
 
-  useEffect(() => { setDndEnabled(profile?.dndEnabled || false); }, [profile]);
+  // DND STATE AND EFFECT REMOVED
 
   const fetchNotifications = useCallback(async (isInitial = true, isRefreshing = false) => {
     const isCurrentlyLoadingMore = loadingState.loadingMore;
@@ -300,17 +296,7 @@ export default function NotificationScreen() {
     } catch (e) { showAlert('Error', 'Could not mark all as read.'); }
   }, [notifications, api, showMessage, showAlert]);
 
-  const toggleDnd = useCallback(async () => {
-    const newStatus = !dndEnabled;
-    setDndEnabled(newStatus);
-    showMessage(newStatus ? 'Do Not Disturb Enabled' : 'Do Not Disturb Disabled');
-    try {
-      await api.put('/users/dnd-status', { dndEnabled: newStatus });
-    } catch (e) {
-      showAlert('Error', 'Could not update DND status.');
-      setDndEnabled(!newStatus);
-    }
-  }, [dndEnabled, api, showMessage, showAlert]);
+  // DND TOGGLE FUNCTION REMOVED
 
   const groupedNotifications = useMemo(() => {
     const unread = notifications.filter((n) => !n.read);
@@ -324,7 +310,7 @@ export default function NotificationScreen() {
   if (loadingState.initial) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header onBackPress={() => navigation.goBack()} dndEnabled={dndEnabled} onToggleDnd={toggleDnd} onMarkAllRead={handleMarkAllAsRead} />
+        <Header onBackPress={() => navigation.goBack()} onMarkAllRead={handleMarkAllAsRead} />
         <View style={styles.loadingContainer}><ActivityIndicator size="large" color={theme.primary} /></View>
       </SafeAreaView>
     );
@@ -340,8 +326,6 @@ export default function NotificationScreen() {
         allSelected={notifications.length > 0 && selectedIds.size === notifications.length}
         onDelete={handleDeleteSelected}
         onMarkAllRead={handleMarkAllAsRead}
-        onToggleDnd={toggleDnd}
-        dndEnabled={dndEnabled}
         onBackPress={() => navigation.goBack()}
       />
       
@@ -383,7 +367,7 @@ const getStyles = (theme) =>
     statusDisplayWrapper: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, marginTop: '20%' },
 
     header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 60, backgroundColor: theme.surface, borderBottomWidth: 1, borderBottomColor: theme.border },
-    selectionHeader: { backgroundColor: theme.isDarkMode ? '#2c3e50' : '#eaf2f8' },
+    selectionHeader: { backgroundColor: theme.isDarkMode ? '#2c3e50' : '#7a9effff' },
     headerLeft: { flex: 1, alignItems: 'flex-start' },
     headerCenter: { flex: 2, alignItems: 'center' },
     headerRight: { flex: 1, alignItems: 'flex-end' },

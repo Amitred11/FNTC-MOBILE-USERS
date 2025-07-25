@@ -1,6 +1,6 @@
 // screens/SupportHelpScreen.js
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,21 +8,23 @@ import {
   ScrollView,
   SafeAreaView,
   TouchableOpacity,
-  Linking, // For opening external links
+  Linking,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
-import { useTheme } from '../contexts';
+import { lightTheme } from '../constants/colors';
 import * as Animatable from 'react-native-animatable';
 
 const CONTACT_INFO = {
-  phone: '+63 9XX XXX XXXX', // Replace with actual phone number
-  email: 'support@fibearnetwork.com', // Replace with actual support email
-  facebook: 'https://facebook.com/FiBearNetwork', // Replace with actual FB page
+  phone: '+63 945 220 3371',
+  email: 'rparreno@fibearnetwork.com',
+  facebook: 'https://www.facebook.com/FiBearNetworkTechnologiesCorpMontalban',
 };
 
+// --- Sub-components ---
+
 const Header = React.memo(({ onBackPress }) => {
-  const { theme } = useTheme();
+  const theme = lightTheme;
   const styles = getStyles(theme);
   return (
     <View style={styles.header}>
@@ -35,42 +37,52 @@ const Header = React.memo(({ onBackPress }) => {
   );
 });
 
-const HelpOptionCard = React.memo(({ icon, title, description, onPress, animDelay }) => {
-  const { theme } = useTheme();
+const HelpOptionRow = React.memo(({ icon, title, description, onPress, isLast = false }) => {
+  const theme = lightTheme;
   const styles = getStyles(theme);
+
   return (
-    <Animatable.View animation="fadeInUp" duration={500} delay={animDelay} style={styles.card}>
-      <TouchableOpacity style={styles.cardContent} onPress={onPress}>
+    <>
+      <TouchableOpacity style={styles.optionRow} onPress={onPress} activeOpacity={0.7}>
         <View style={styles.iconContainer}>
-          <Ionicons name={icon} size={30} color={theme.primary} />
+          <Ionicons name={icon} size={24} color={theme.primary} />
         </View>
         <View style={styles.textContainer}>
-          <Text style={styles.cardTitle}>{title}</Text>
-          <Text style={styles.cardDescription}>{description}</Text>
+          <Text style={styles.optionTitle}>{title}</Text>
+          <Text style={styles.optionDescription} numberOfLines={1}>{description}</Text>
         </View>
-        <Ionicons name="chevron-forward" size={24} color={theme.textSecondary} />
+        <Ionicons name="chevron-forward" size={22} color={theme.textSecondary} />
       </TouchableOpacity>
-    </Animatable.View>
+      {!isLast && <View style={styles.divider} />}
+    </>
   );
 });
 
+// --- Main Screen Component ---
+
 export default function SupportHelpScreen() {
   const navigation = useNavigation();
-  const { theme } = useTheme();
+  const theme = lightTheme;
   const styles = getStyles(theme);
 
   const handleGoBack = useCallback(() => navigation.goBack(), [navigation]);
 
   const handlePhoneCall = useCallback(() => {
-    Linking.openURL(`tel:${CONTACT_INFO.phone}`);
+    Linking.openURL(`tel:${CONTACT_INFO.phone}`).catch(err =>
+      console.error('Failed to open phone dialer.', err)
+    );
   }, []);
 
   const handleEmailCompose = useCallback(() => {
-    Linking.openURL(`mailto:${CONTACT_INFO.email}?subject=Help with Recovery Code`);
+    Linking.openURL(`mailto:${CONTACT_INFO.email}?subject=Help with My Account`).catch(err =>
+      console.error('Failed to open email client.', err)
+    );
   }, []);
 
   const handleFacebookPage = useCallback(() => {
-    Linking.openURL(CONTACT_INFO.facebook);
+    Linking.openURL(CONTACT_INFO.facebook).catch(err =>
+      console.error('Failed to open Facebook.', err)
+    );
   }, []);
 
   return (
@@ -78,37 +90,43 @@ export default function SupportHelpScreen() {
       <Header onBackPress={handleGoBack} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Ionicons name="headset-outline" size={80} color={theme.primary} style={styles.mainIcon} />
-        <Text style={styles.mainTitle}>Need Assistance?</Text>
-        <Text style={styles.mainSubtitle}>
-          If you've lost your recovery code or need help with account access, our team is here to assist you.
-        </Text>
-
-        <HelpOptionCard
-          icon="call-outline"
-          title="Call Us"
-          description={`Speak directly with our support team: ${CONTACT_INFO.phone}`}
-          onPress={handlePhoneCall}
-          animDelay={300}
-        />
-        <HelpOptionCard
-          icon="mail-outline"
-          title="Email Us"
-          description={`Send us a detailed email: ${CONTACT_INFO.email}`}
-          onPress={handleEmailCompose}
-          animDelay={400}
-        />
-        <HelpOptionCard
-          icon="logo-facebook"
-          title="Message Us on Facebook"
-          description="Connect with us on our official Facebook page."
-          onPress={handleFacebookPage}
-          animDelay={500}
-        />
+        <View style={styles.heroSection}>
+          <View style={styles.heroIconContainer}>
+            <Ionicons name="headset-outline" size={50} color={theme.primary} />
+          </View>
+          <Text style={styles.mainTitle}>Need Assistance?</Text>
+          <Text style={styles.mainSubtitle}>
+            If you've lost your recovery code or need help, our team is here to assist you.
+          </Text>
+        </View>
+        
+        <Animatable.View animation="fadeInUp" duration={600} delay={300} style={styles.optionsContainer}>
+            <HelpOptionRow
+              icon="call"
+              title="Call Us"
+              description={CONTACT_INFO.phone}
+              onPress={handlePhoneCall}
+            />
+            <HelpOptionRow
+              icon="mail"
+              title="Email Us"
+              description="Tap to send an email"
+              onPress={handleEmailCompose}
+            />
+            <HelpOptionRow
+              icon="logo-facebook"
+              title="Message on Facebook"
+              description="Connect on our official page"
+              onPress={handleFacebookPage}
+              isLast
+            />
+        </Animatable.View>
       </ScrollView>
     </SafeAreaView>
   );
 }
+
+// --- Styles ---
 
 const getStyles = (theme) =>
   StyleSheet.create({
@@ -118,76 +136,88 @@ const getStyles = (theme) =>
       alignItems: 'center',
       justifyContent: 'space-between',
       paddingHorizontal: 16,
-      paddingVertical: 12,
-      backgroundColor: theme.surface,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border,
+      paddingTop: 12,
+      paddingBottom: 8,
+      backgroundColor: theme.background, // Match background for seamless look
     },
     backButton: { padding: 5 },
-    headerTitle: { color: theme.text, fontSize: 17, fontWeight: '600' },
+    headerTitle: { color: theme.text, fontSize: 20, fontWeight: 'bold' },
     scrollContent: {
-      padding: 20,
-      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingBottom: 40,
     },
-    mainIcon: {
-      marginTop: 20,
-      marginBottom: 15,
+    // Hero Section
+    heroSection: {
+      alignItems: 'center',
+      paddingTop: 20,
+      paddingBottom: 30,
+    },
+    heroIconContainer: {
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+      backgroundColor: theme.surface,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 24,
+      borderWidth: 1,
+      borderColor: theme.border,
     },
     mainTitle: {
       color: theme.text,
       fontSize: 28,
       fontWeight: 'bold',
-      marginBottom: 10,
+      marginBottom: 12,
       textAlign: 'center',
     },
     mainSubtitle: {
       color: theme.textSecondary,
       fontSize: 16,
       lineHeight: 24,
-      marginBottom: 40,
       textAlign: 'center',
-      paddingHorizontal: 10,
+      maxWidth: '95%',
     },
-    card: {
-      backgroundColor: theme.surface,
-      borderRadius: 16,
-      marginBottom: 15,
-      width: '100%',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 5,
-      borderWidth: 1,
-      borderColor: theme.border,
+    // Options List
+    optionsContainer: {
+        backgroundColor: theme.surface,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: theme.border,
+        overflow: 'hidden', // Ensures inner items clip to the border radius
     },
-    cardContent: {
+    optionRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      padding: 20,
+      paddingVertical: 18,
+      paddingHorizontal: 16,
+      backgroundColor: 'transparent',
     },
     iconContainer: {
-      width: 50,
-      height: 50,
-      borderRadius: 25,
-      backgroundColor: `${theme.primary}20`,
+      width: 46,
+      height: 46,
+      borderRadius: 23,
+      backgroundColor: `${theme.primary}1A`, // Subtle background color
       justifyContent: 'center',
       alignItems: 'center',
-      marginRight: 15,
+      marginRight: 16,
     },
     textContainer: {
       flex: 1,
       marginRight: 10,
     },
-    cardTitle: {
+    optionTitle: {
       color: theme.text,
-      fontSize: 18,
-      fontWeight: 'bold',
-      marginBottom: 5,
+      fontSize: 17,
+      fontWeight: '600',
+      marginBottom: 4,
     },
-    cardDescription: {
+    optionDescription: {
       color: theme.textSecondary,
       fontSize: 14,
-      lineHeight: 20,
+    },
+    divider: {
+      height: 1,
+      backgroundColor: theme.border,
+      marginLeft: 78, // Aligns with the start of the text (icon width + margins)
     },
   });
