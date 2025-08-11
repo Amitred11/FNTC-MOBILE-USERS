@@ -54,31 +54,18 @@ Follow these steps to set up and run the project locally.
 *   Google Cloud Project (for Google Sign-In)
 *   Expo Go app on your mobile device
 
-### 1. Backend Setup ⚙️
+### 1. Backend Setup ⚙️ (Private)
 
-1.  **Clone & Navigate:**
-    ```bash
-    git clone https://github.com/Amitred11/FNTC-Mobile
-    cd FNTC-Mobile/backend
-    ```
-2.  **Install Dependencies:** `npm install`
-3.  **Create `.env` file:** Create a `.env` file in the `backend` root and populate it using `.env.example` as a template with your credentials for MongoDB, JWT, Cloudinary, and Google OAuth.
-4.  **Start Server:** `npm run dev`
+**Please Note:** The backend repository for this project is private and not publicly available. The server handles sensitive logic, including authentication, payment processing simulation, and data management.
 
-### 2. Frontend Setup 📱
+**To run the frontend application locally, you will need to create a mock API that simulates the backend's responses.**
 
-1.  **Navigate to Frontend:**
-    ```bash
-    cd ../frontend
-    ```
-2.  **Install Dependencies:** `npm install`
-3.  **Configure API URL:** Open `frontend/services/api.js` and set `API_BASE_URL` to your local IP address (e.g., `http://192.168.1.5:5000/api`). **Do not use `localhost`**.
-4.  **Run the App:**
-    ```bash
-    npx expo start
-    ```
-    Scan the QR code with the Expo Go app to launch the application.
+#### Setting Up a Mock Backend:
+You can use tools like **[JSON Server](https://github.com/typicode/json-server)** to quickly create a mock REST API.
 
+1.  **Create API endpoints** that match the ones called in the frontend code (e.g., `/api/auth/login`, `/api/plans`, `/api/subscriptions/details`).
+2.  **Define sample JSON data** to be returned by these endpoints. For example, a `plans.json` file could contain a list of internet plans.
+3.  **Run the mock server** on `http://localhost:5000` (or update the frontend's API URL to point to your mock server).
 ---
 
 ## 📄 Disclaimer
@@ -92,12 +79,7 @@ Follow these steps to set up and run the project locally.
 
 ## 🎓 Author
 
-This project was created by **Amitred11** as the culmination of their studies, showcasing the practical application of software engineering principles.
-
----
-
-## 📜 License
-
+This project was created by **Amitred11** in collaboration with **Fibear Network Technologies Corp.** as the culmination of their studies, showcasing the practical application of software engineering principles.
 ---
 
 ## 📜 License and Usage Rights
