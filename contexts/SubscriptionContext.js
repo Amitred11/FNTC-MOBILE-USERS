@@ -1,4 +1,6 @@
-import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
+// contexts/SubscriptionContext.js
+
+import React, { createContext, useState, useEffect, useContext, useCallback, useMemo } from 'react';
 import { useAuth } from './AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -10,14 +12,18 @@ export const SubscriptionProvider = ({ children }) => {
   const [subscriptionData, setSubscriptionData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const refreshSubscription = useCallback(async () => {
+  const refreshSubscription = useCallback(async (showLoader = false) => {
     if (!user?._id) {
       setSubscriptionData(null);
       setIsLoading(false);
       await AsyncStorage.removeItem('cachedSubscription');
       return;
     }
-    setIsLoading(true);
+    
+    if (showLoader) {
+      setIsLoading(true);
+    }
+
     try {
       const { data: response } = await api.get('/subscriptions/details');
       const subscriptionPayload = response.subscriptionData;
@@ -30,10 +36,7 @@ export const SubscriptionProvider = ({ children }) => {
         await AsyncStorage.removeItem('cachedSubscription');
       }
     } catch (error) {
-      console.error(
-        'Failed to fetch subscription:',
-        error.response?.data?.message || error.message
-      );
+      console.error('Failed to fetch subscription:', error.response?.data?.message || error.message);
       try {
         const cachedSub = await AsyncStorage.getItem('cachedSubscription');
         setSubscriptionData(cachedSub ? JSON.parse(cachedSub) : null);
@@ -47,6 +50,7 @@ export const SubscriptionProvider = ({ children }) => {
 
   useEffect(() => {
     if (user) {
+      setIsLoading(true); 
       refreshSubscription();
     } else {
       setSubscriptionData(null);
@@ -54,77 +58,86 @@ export const SubscriptionProvider = ({ children }) => {
     }
   }, [user, refreshSubscription]);
 
+
   const subscribeToPlan = async (plan, paymentMethod, proofOfPaymentBase64, installationAddress) => {
-    // The `proofOfPaymentBase64` argument is already the correct data URI or null.
-    // No more conversion is needed.
-    
-    const payload = {
-      plan,
-      paymentMethod,
-      installationAddress,
-      proofOfPayment: proofOfPaymentBase64, // Pass the Base64 string directly.
-    };
-    
-    // Wrap in try...catch to handle potential API errors gracefully.
+    const payload = { plan, paymentMethod, installationAddress, proofOfPayment: proofOfPaymentBase64 };
     try {
         await api.post('/subscriptions/subscribe', payload);
         await refreshSubscription();
     } catch (error) {
         console.error("Failed to subscribe:", error.response?.data?.message || error.message);
-        throw error; // Re-throw the error so the calling component can catch it.
+        throw error;
     }
   };
 
   const changePlan = async (selectedPlan) => {
-    await api.post('/subscriptions/change-plan', { plan: selectedPlan });
-    await refreshSubscription();
+    try {
+      await api.post('/subscriptions/change-plan', { plan: selectedPlan });
+      await refreshSubscription();
+    } catch (error) {
+      console.error("Failed to change plan:", error.response?.data?.message || error.message);
+      throw error;
+    }
   };
 
+  const cancelScheduledChange = useCallback(async () => {
+    if (!api) throw new Error('Not authenticated');
+    await api.post('/subscriptions/cancel-scheduled-change');
+    await refreshSubscription();
+  }, [api, refreshSubscription]);
+
   const payBill = async (billId, proofOfPaymentBase64) => {
-    const { data } = await api.post('/billing/pay', {
-      billId,
-      proofOfPayment: proofOfPaymentBase64, // Pass Base64 string directly
-    });
-    if (data.subscriptionData) {
-      setSubscriptionData(data.subscriptionData);
-    } else {
-      await refreshSubscription(); 
+    try {
+      const { data } = await api.post('/billing/pay', { billId, proofOfPayment: proofOfPaymentBase64 });
+      if (data.subscriptionData) {
+        setSubscriptionData(data.subscriptionData);
+      } else {
+        await refreshSubscription(); 
+      }
+    } catch (error) {
+      console.error("Failed to pay bill:", error.response?.data?.message || error.message);
+      throw error;
     }
   };
 
   const submitProof = async (billId, proofOfPaymentBase64) => {
-    if (!proofOfPaymentBase64) {
-        throw new Error("Proof of payment is required for submission.");
+    try {
+      if (!proofOfPaymentBase64) throw new Error("Proof of payment is required for submission.");
+      await api.post('/billing/submit-proof', { billId, proofOfPaymentBase64 });
+      await refreshSubscription();
+    } catch (error) {
+      console.error("Failed to submit proof:", error.response?.data?.message || error.message);
+      throw error;
     }
-    await api.post('/billing/submit-proof', { billId, proofOfPaymentBase64 });
-    await refreshSubscription();
   };
 
   const cancelPlanChange = async () => {
-    await api.post('/subscriptions/cancel-change');
-    await refreshSubscription();
+    try {
+      await api.post('/subscriptions/cancel-change');
+      await refreshSubscription();
+    } catch (error) {
+      console.error("Failed to cancel plan change:", error.response?.data?.message || error.message);
+      throw error;
+    }
   };
 
   const cancelSubscription = useCallback(async () => {
-    if (!api) throw new Error('Not authenticated');
     await api.post('/subscriptions/cancel');
     await refreshSubscription();
-  }, [api, refreshSubscription]);
+  }, [refreshSubscription]);
 
   const reactivateSubscription = useCallback(async () => {
-    if (!api) throw new Error('Not authenticated');
     await api.post('/subscriptions/reactivate');
     await refreshSubscription();
-  }, [api, refreshSubscription]);
+  }, [refreshSubscription]);
 
   const clearSubscription = useCallback(async () => {
-    if (!api) throw new Error('Not authenticated');
     await api.delete('/subscriptions/clear-inactive');
     setSubscriptionData(null);
     await AsyncStorage.removeItem('cachedSubscription');
-  }, [api]);
+  }, []);
 
-  const value = {
+  const value = useMemo(() => ({
     subscriptionStatus: subscriptionData?.status || null,
     subscriptionData: subscriptionData,
     paymentHistory: subscriptionData?.history || [],
@@ -133,19 +146,27 @@ export const SubscriptionProvider = ({ children }) => {
     activePlan: subscriptionData?.planId || null,
     startDate: subscriptionData?.startDate || null,
     renewalDate: subscriptionData?.renewalDate || null,
-    dataUsage: subscriptionData?.dataUsage || null, 
     cancellationEffectiveDate: subscriptionData?.cancellationEffectiveDate || null,
-    // Action functions
+    
     refreshSubscription,
     subscribeToPlan,
     changePlan,
     cancelPlanChange,
+    cancelScheduledChange,
     payBill,
     submitProof,
     cancelSubscription,
     reactivateSubscription,
     clearSubscription,
-  };
+  }), [
+    subscriptionData, 
+    isLoading, 
+    refreshSubscription, 
+    cancelScheduledChange,
+    cancelSubscription, 
+    reactivateSubscription,
+    clearSubscription
+  ]);
 
   return <SubscriptionContext.Provider value={value}>{children}</SubscriptionContext.Provider>;
 };

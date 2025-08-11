@@ -101,25 +101,47 @@ export const AuthProvider = ({ children }) => {
     showMessage('Login Successful!');
   };
 
-  const register = async ({ displayName, email, password }) => {
-   const { data } = await api.post('/auth/register', { displayName, email, password });
-
-    const { accessToken: newAccessToken, refreshToken: newRefreshToken, user: backendUser, recoveryCode } = data;
-
-    if (recoveryCode) {
-      setPendingRecoveryCode(recoveryCode);
+  const register = useCallback(async (credentials) => {
+    try {
+      await api.post('/auth/register', credentials);
+    } catch (error) {
+      throw error;
     }
-    
-    await updateAccessToken(newAccessToken);
-    await updateUserStateAndCache(backendUser);
-    if (newRefreshToken) {
-      await AsyncStorage.setItem('refreshToken', newRefreshToken);
-    }
-  };
+  }, []);
 
-  const acknowledgeRecoveryCode = () => {
+  const verifyOtpAndLogin = useCallback(async (email, otp) => {
+    try {
+      const { data } = await api.post('/auth/verify-otp', { email, otp });
+      
+      const { accessToken: newAccessToken, refreshToken: newRefreshToken, user: backendUser, recoveryCode } = data;
+
+      api.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
+      
+      await AsyncStorage.setItem('@auth_token', newAccessToken);
+      await AsyncStorage.setItem('@refresh_token', newRefreshToken);
+      setUser(backendUser);
+      setAccessToken(newAccessToken);
+      
+      if (recoveryCode) {
+        setPendingRecoveryCode(recoveryCode);
+      }
+
+    } catch (error) {
+      throw error;
+    }
+  }, []);
+
+  const acknowledgeRecoveryCode = useCallback(() => {
     setPendingRecoveryCode(null);
-  };
+  }, []);
+
+  const resendOtp = useCallback(async (email) => {
+    try {
+      await api.post('/auth/resend-otp', { email });
+    } catch (error) {
+      throw error;
+    }
+  }, []);
 
 
   const updateProfile = async (newProfileData) => {
@@ -274,6 +296,8 @@ export const AuthProvider = ({ children }) => {
     signIn,
     signOut,
     register,
+    verifyOtpAndLogin,
+    resendOtp,
     api,
     googleSignIn: promptAsync,
     refreshUser,

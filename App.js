@@ -10,6 +10,7 @@ import { SubscriptionProvider } from './contexts/SubscriptionContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import LoadingScreen from './screens/LoadingScreen';
 import * as Notifications from 'expo-notifications';
+import { LanguageProvider } from './contexts/LanguageContext';
 import {
   setupNotificationHandler,
   setupAndroidNotificationChannels,
@@ -39,6 +40,8 @@ import MySubscriptionScreen from './screens/MySubscriptionScreen';
 import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
 import SupportHelpScreen from './screens/SupportHelpScreen';
 import DisplayRecoveryCodeScreen from './screens/DisplayRecoveryCodeScreen'; 
+import VerifyOtpScreen from './screens/VerifyOtpScreen';
+import HowToUseScreen from './screens/HowToUseScreen';
 
 const Stack = createStackNavigator();
 
@@ -72,6 +75,7 @@ const AppNavigator = () => {
             <Stack.Screen name="CustomerFeedbackScreen" component={CustomerFeedbackScreen} />
             <Stack.Screen name="LiveChatScreen" component={LiveChatScreen} />
             <Stack.Screen name="MySubscriptionScreen" component={MySubscriptionScreen} />
+            <Stack.Screen name="HowToUseScreen" component={HowToUseScreen} />
           </>
         ) : (
           // --- User is not logged in: Show the auth stack ---
@@ -79,6 +83,7 @@ const AppNavigator = () => {
             <Stack.Screen name="SplashScreen2" component={SplashScreen2} />
             <Stack.Screen name="GetStarted" component={GetStartedScreen} />
             <Stack.Screen name="SignUpScreen" component={SignUpScreen} />
+            <Stack.Screen name="VerifyOtp" component={VerifyOtpScreen} />
             <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} /> 
             <Stack.Screen name="SupportHelp" component={SupportHelpScreen} />
           </>
@@ -127,6 +132,7 @@ const AppContent = () => {
 
 export default function App() {
   return (
+    <LanguageProvider>
     <ThemeProvider>
       <AlertProvider>
         <MessageProvider>
@@ -138,5 +144,6 @@ export default function App() {
         </MessageProvider>
       </AlertProvider>
     </ThemeProvider>
+    </LanguageProvider>
   );
 }

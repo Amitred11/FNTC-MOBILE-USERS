@@ -83,7 +83,21 @@ const InfoNotice = React.memo(({ icon, color, title, onAction, actionText, child
 
 // --- Main Screen Component ---
 export default function MySubscriptionScreen() {
-  const { subscriptionData, paymentHistory, cancelSubscription, cancelPlanChange, reactivateSubscription, refreshSubscription, dataUsage, isLoading } = useSubscription();
+  const {
+    activePlan,
+    scheduledPlanChange,
+    startDate,
+    renewalDate,
+    cancellationEffectiveDate,
+    cancelScheduledChange, 
+    paymentHistory,
+    isLoading,
+    cancelSubscription,
+    reactivateSubscription,
+    refreshSubscription,
+  } = useSubscription();
+  // --- FIX END ---
+
   const { theme } = useTheme();
   const styles = getStyles(theme);
   const { showAlert } = useAlert();
@@ -91,18 +105,15 @@ export default function MySubscriptionScreen() {
   const navigation = useNavigation();
   const [refreshing, setRefreshing] = useState(false);
 
-  // Destructure for easier access and null safety
-  const { activePlan, scheduledPlanChange, startDate, renewalDate, cancellationEffectiveDate } = useMemo(() => ({
-      activePlan: subscriptionData?.planId,
-      scheduledPlanChange: subscriptionData?.scheduledPlanChange,
-      startDate: subscriptionData?.startDate,
-      renewalDate: subscriptionData?.renewalDate,
-      cancellationEffectiveDate: subscriptionData?.cancellationEffectiveDate
-  }), [subscriptionData]);
-  
+  useFocusEffect(
+    useCallback(() => {
+      refreshSubscription(false); 
+    }, [refreshSubscription])
+  );
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await refreshSubscription();
+    await refreshSubscription(true);
     setRefreshing(false);
   }, [refreshSubscription]);
   
@@ -120,11 +131,16 @@ export default function MySubscriptionScreen() {
         confirmText: 'Yes, Cancel Change',
         confirmStyle: 'destructive',
         onConfirm: async () => {
-            try { await cancelPlanChange(); showMessage('Request Cancelled'); } 
-            catch (e) { showAlert('Error', 'Could not cancel the request.'); }
+            try { 
+                await cancelScheduledChange(); 
+                showMessage('Request Cancelled Successfully'); 
+            } 
+            catch (e) { 
+                showAlert('Action Failed', e.response?.data?.message || 'Could not cancel the request.');
+            }
         }
     });
-  }, [handleActionWithConfirmation, cancelPlanChange, showMessage, showAlert]);
+  }, [handleActionWithConfirmation, cancelScheduledChange, showMessage, showAlert]);
 
   const handleReactivate = useCallback(() => {
     handleActionWithConfirmation({
@@ -164,36 +180,39 @@ export default function MySubscriptionScreen() {
 
   const { percentage, statusText } = useMemo(() => {
     if (!startDate || !renewalDate) return { percentage: 0, statusText: 'N/A' };
-    
-    const pendingBill = paymentHistory.find(item => item.type === 'bill' && item.status === 'Pending Verification');
-    const dueBill = paymentHistory.find(bill => bill.type === 'bill' && (bill.status === 'Due' || bill.status === 'Overdue'));
 
+    const today = new Date();
     const start = new Date(startDate);
     const renewal = new Date(renewalDate);
-    const today = new Date();
+
     const totalDuration = renewal.getTime() - start.getTime();
     const elapsedDuration = today.getTime() - start.getTime();
     let calculatedPercentage = totalDuration > 0 ? (elapsedDuration / totalDuration) * 100 : 100;
-    calculatedPercentage = Math.max(0, Math.min(100, calculatedPercentage));
-    
-    let text = 'All Paid';
-    if (pendingBill) {
-        text = 'Verifying';
-    } else if (dueBill) {
-        if (dueBill.status === 'Overdue') text = 'Overdue';
-        else {
-            const dueDate = new Date(dueBill.dueDate);
-            const daysLeft = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
-            text = daysLeft >= 0 ? `${daysLeft}d to Pay` : 'Grace Period';
-        }
+    calculatedPercentage = Math.max(0, Math.min(100, Math.round(calculatedPercentage)));
+
+
+    const overdueBill = paymentHistory.find(b => b.type === 'bill' && b.status === 'Overdue');
+    if (overdueBill) {
+        return { percentage: 100, statusText: 'Overdue' };
     }
-    return { percentage: Math.round(calculatedPercentage), statusText: text };
+    
+    const pendingBill = paymentHistory.find(b => b.type === 'bill' && b.status === 'Pending Verification');
+    if (pendingBill) {
+        return { percentage: calculatedPercentage, statusText: 'Verifying' };
+    }
+
+    const dueBill = paymentHistory.find(b => b.type === 'bill' && b.status === 'Due');
+    if (dueBill) {
+        const dueDate = new Date(dueBill.dueDate);
+        const daysLeft = Math.max(0, Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24)));
+        const text = daysLeft > 0 ? `${daysLeft}d to Pay` : 'Due Today';
+        return { percentage: calculatedPercentage, statusText: text };
+    }
+    
+    return { percentage: calculatedPercentage, statusText: 'All Paid' };
+
   }, [startDate, renewalDate, paymentHistory]);
   
-  const dataUsagePercentage = useMemo(() => (
-    dataUsage?.allowance > 0 ? (dataUsage.used / dataUsage.allowance) * 100 : 0
-  ), [dataUsage]);
-
   if (isLoading && !refreshing) {
     return (
       <SafeAreaView style={styles.container}>
@@ -248,13 +267,7 @@ export default function MySubscriptionScreen() {
           <View style={styles.dateInfoContainer}>
             <View style={styles.dateInfo}><Text style={styles.dateLabel}>Start Date</Text><Text style={styles.dateValue}>{formatDate(startDate)}</Text></View>
             <View style={styles.dateInfo}><Text style={styles.dateLabel}>Next Renewal</Text><Text style={styles.dateValue}>{formatDate(renewalDate)}</Text></View>
-          </View>
-          {dataUsage && (
-            <View style={styles.dataUsageContainer}>
-              <View style={styles.dataUsageHeader}><Text style={styles.dataUsageLabel}>Data Usage</Text><Text style={styles.dataUsageValue}>{`${dataUsage.used} / ${dataUsage.allowance} GB`}</Text></View>
-              <View style={styles.progressBarBackground}><View style={[styles.progressBarFill, { width: `${dataUsagePercentage}%` }]} /></View>
-            </View>
-          )}
+          </View>   
         </View>
 
         <View style={styles.featuresCard}>
@@ -384,31 +397,6 @@ const getStyles = (theme) =>
     dateInfo: { alignItems: 'center', flex: 1 },
     dateLabel: { color: theme.textSecondary, fontSize: 13, marginBottom: 4 },
     dateValue: { color: theme.text, fontSize: 15, fontWeight: '600' },
-    dataUsageContainer: {
-      borderTopColor: theme.border,
-      borderTopWidth: 1,
-      marginTop: 20,
-      paddingTop: 20,
-    },
-    dataUsageHeader: {
-      alignItems: 'flex-end',
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      marginBottom: 8,
-    },
-    dataUsageLabel: { color: theme.textSecondary, fontSize: 14 },
-    dataUsageValue: { color: theme.text, fontSize: 15, fontWeight: '600' },
-    progressBarBackground: {
-      backgroundColor: theme.border,
-      borderRadius: 4,
-      height: 8,
-      overflow: 'hidden',
-    },
-    progressBarFill: {
-      backgroundColor: theme.accent || theme.primary,
-      borderRadius: 4,
-      height: '100%',
-    },
 
     // Features Card
     featuresCard: {

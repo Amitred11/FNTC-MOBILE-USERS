@@ -1,6 +1,6 @@
-// screens/ChangePasswordScreen.js (Cleaned)
+// screens/ChangePasswordScreen.js (REFURBISHED)
 
-import React, { useState, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -20,50 +20,83 @@ import * as Animatable from 'react-native-animatable';
 
 // --- Constants ---
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+{}\[\]:;<>,.?~\\/-]).{8,}$/;
-const PASSWORD_REQUIREMENT_TEXT = 'Password must be 8+ characters and include an uppercase letter, a number, and a special character.';
+const REQUIREMENTS = [
+    { id: 'length', text: 'At least 8 characters', regex: /.{8,}/ },
+    { id: 'uppercase', text: 'An uppercase letter', regex: /[A-Z]/ },
+    { id: 'number', text: 'A number', regex: /\d/ },
+    { id: 'special', text: 'A special character', regex: /[!@#$%^&*()_+{}\[\]:;<>,.?~\\/-]/ },
+];
 
 // --- Sub-Components (Memoized for Performance) ---
-const Header = React.memo(({ onBackPress }) => {
-    const { theme } = useTheme();
-    const styles = getStyles(theme);
-    return (
-        <View style={styles.header}>
-            <TouchableOpacity onPress={onBackPress} style={styles.backButton}>
-                <Ionicons name="arrow-back" size={26} color={theme.text} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Change Password</Text>
-            <View style={{ width: 26 }} />
-        </View>
-    );
-});
 
-const PasswordInput = React.memo(({ label, value, onChangeText, isVisible, onToggleVisibility, editable }) => {
+const PasswordInput = React.memo(({ label, value, onChangeText, error, ...props }) => {
   const { theme } = useTheme();
   const styles = getStyles(theme);
+  const [isFocused, setIsFocused] = useState(false);
+  const [isPasswordVisible, setPasswordVisible] = useState(false);
+  
+  const containerStyle = [
+    styles.inputContainer,
+    isFocused && styles.inputContainerActive,
+    error && styles.inputContainerError,
+  ];
+
   return (
     <View style={styles.inputGroup}>
       <Text style={styles.label}>{label}</Text>
-      <View style={styles.inputContainer}>
+      <View style={containerStyle}>
         <TextInput
           style={styles.input}
           value={value}
           onChangeText={onChangeText}
-          secureTextEntry={!isVisible}
-          editable={editable}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          secureTextEntry={!isPasswordVisible}
           autoCapitalize="none"
           placeholderTextColor={theme.textSecondary}
+          {...props}
         />
-        <TouchableOpacity onPress={onToggleVisibility} style={styles.eyeIcon}>
-          <Ionicons
-            name={isVisible ? 'eye-off-outline' : 'eye-outline'}
-            size={24}
-            color={theme.textSecondary}
-          />
+        <TouchableOpacity onPress={() => setPasswordVisible(v => !v)} style={styles.eyeIcon}>
+          <Ionicons name={isPasswordVisible ? 'eye-off-outline' : 'eye-outline'} size={24} color={theme.textSecondary} />
         </TouchableOpacity>
       </View>
+      {error && <Text style={styles.errorText}>{error}</Text>}
     </View>
   );
 });
+
+const PasswordStrengthMeter = React.memo(({ password }) => {
+    const { theme } = useTheme();
+    const styles = getStyles(theme);
+
+    const fulfilledRequirements = useMemo(() => {
+        return REQUIREMENTS.map(req => ({
+            ...req,
+            isMet: req.regex.test(password),
+        }));
+    }, [password]);
+
+    if (!password) return null;
+
+    return (
+        <Animatable.View animation="fadeIn" duration={400} style={styles.strengthContainer}>
+            {fulfilledRequirements.map(req => (
+                <View key={req.id} style={styles.requirementRow}>
+                    <Ionicons
+                        name={req.isMet ? 'checkmark-circle' : 'close-circle-outline'}
+                        size={20}
+                        color={req.isMet ? theme.success : theme.danger}
+                        style={styles.requirementIcon}
+                    />
+                    <Text style={[styles.requirementText, req.isMet ? styles.requirementMet : styles.requirementPending]}>
+                        {req.text}
+                    </Text>
+                </View>
+            ))}
+        </Animatable.View>
+    );
+});
+
 
 // --- Main Screen Component ---
 export default function ChangePasswordScreen() {
@@ -76,123 +109,104 @@ export default function ChangePasswordScreen() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-
-  const [visibility, setVisibility] = useState({ current: false, new: false });
+  const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const errorRef = useRef(null);
-
-  const handleValidation = useCallback(() => {
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      return 'All fields are required.';
+  
+  useEffect(() => {
+    if (confirmPassword && newPassword !== confirmPassword) {
+      setErrors(prev => ({ ...prev, confirmPassword: 'Passwords do not match.' }));
+    } else {
+      if (errors.confirmPassword) {
+        setErrors(prev => {
+          const { confirmPassword, ...rest } = prev;
+          return rest;
+        });
+      }
     }
-    if (newPassword !== confirmPassword) {
-      return 'New passwords do not match.';
-    }
-    if (!PASSWORD_REGEX.test(newPassword)) {
-      return PASSWORD_REQUIREMENT_TEXT;
-    }
-    return null; // No error
-  }, [currentPassword, newPassword, confirmPassword]);
+  }, [newPassword, confirmPassword, errors.confirmPassword]);
 
   const handleUpdatePassword = async () => {
-    const validationError = handleValidation();
-    if (validationError) {
-      setError(validationError);
-      errorRef.current?.shake(800);
+    const currentErrors = {};
+    if (!currentPassword) currentErrors.currentPassword = 'Current password is required.';
+    if (!newPassword) currentErrors.newPassword = 'New password is required.';
+    if (!PASSWORD_REGEX.test(newPassword)) currentErrors.newPassword = 'Please meet all password requirements.';
+    if (newPassword !== confirmPassword) currentErrors.confirmPassword = 'Passwords do not match.';
+    
+    if (Object.keys(currentErrors).length > 0) {
+      setErrors(currentErrors);
       return;
     }
     
-    setError('');
+    setErrors({});
     setIsLoading(true);
 
     try {
-      await api.put('/users/change-password', {
-        currentPassword,
-        newPassword,
-      });
-
-      showAlert(
-        'Success',
-        'Your password has been changed successfully. You will be logged out from other devices.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
+      await api.put('/users/change-password', { currentPassword, newPassword });
+      showAlert( 'Success', 'Your password has been changed successfully.', [{ text: 'OK', onPress: () => navigation.goBack() }]);
     } catch (err) {
-      const errorMessage =
-        err.response?.data?.message || 'An unexpected error occurred. Please try again.';
-      setError(errorMessage);
-      errorRef.current?.shake(800);
-    } finally {
+      const errorMessage = err.response?.data?.message || 'An unexpected error occurred.';
+      setErrors({ currentPassword: errorMessage });
       setIsLoading(false);
     }
   };
 
-  const handleToggleVisibility = useCallback((field) => {
-    setVisibility(prev => ({ ...prev, [field]: !prev[field] }));
-  }, []);
-
   const handleGoBack = useCallback(() => navigation.goBack(), [navigation]);
   
-  const isButtonDisabled = useMemo(() => {
-    return isLoading || !currentPassword || !newPassword || !confirmPassword;
-  }, [isLoading, currentPassword, newPassword, confirmPassword]);
+  const isButtonDisabled = isLoading || !currentPassword || !newPassword || !confirmPassword || !!errors.confirmPassword;
+
+  useEffect(() => {
+    navigation.setOptions({
+        headerTitle: 'Change Password',
+        headerLeft: () => (
+             <TouchableOpacity onPress={handleGoBack} style={{ marginLeft: 16 }}>
+                <Ionicons name="arrow-back" size={26} color={theme.text} />
+            </TouchableOpacity>
+        ),
+        headerRight: () => <View style={{ width: 26, marginRight: 16 }} />,
+        headerShadowVisible: true,
+        headerStyle: { backgroundColor: theme.background },
+        headerTitleStyle: { color: theme.text },
+    });
+  }, [navigation, theme]);
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header onBackPress={handleGoBack} />
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          
+          <Animatable.View animation="fadeInDown" duration={600}>
+            <Ionicons name="key-outline" size={50} color={theme.primary} style={styles.iconHeader} />
+            <Text style={styles.title}>Secure Your Account</Text>
+            <Text style={styles.subtitle}>Create a new password to keep your account safe.</Text>
+          </Animatable.View>
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-        >
-          <Ionicons
-            name="lock-closed-outline"
-            size={60}
-            color={theme.primary}
-            style={styles.iconHeader}
-          />
-          <Text style={styles.title}>Update Your Password</Text>
-          <Text style={styles.subtitle}>
-            Enter your current password and a new secure password.
-          </Text>
+          <Animatable.View animation="fadeInUp" duration={600} delay={200}>
+            <PasswordInput
+              label="Current Password"
+              value={currentPassword}
+              onChangeText={setCurrentPassword}
+              editable={!isLoading}
+              error={errors.currentPassword}
+            />
+            <PasswordInput
+              label="New Password"
+              value={newPassword}
+              onChangeText={setNewPassword}
+              editable={!isLoading}
+              error={errors.newPassword}
+            />
 
-          <PasswordInput
-            label="Current Password"
-            value={currentPassword}
-            onChangeText={setCurrentPassword}
-            isVisible={visibility.current}
-            onToggleVisibility={() => handleToggleVisibility('current')}
-            editable={!isLoading}
-          />
-          <PasswordInput
-            label="New Password"
-            value={newPassword}
-            onChangeText={setNewPassword}
-            isVisible={visibility.new}
-            onToggleVisibility={() => handleToggleVisibility('new')}
-            editable={!isLoading}
-          />
-          <PasswordInput
-            label="Confirm New Password"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            isVisible={visibility.new} // Should match new password visibility
-            onToggleVisibility={() => handleToggleVisibility('new')}
-            editable={!isLoading}
-          />
+            <PasswordStrengthMeter password={newPassword} />
 
-          {error ? (
-            <Animatable.View ref={errorRef} style={styles.errorContainer}>
-              <Ionicons name="alert-circle-outline" size={16} color={theme.danger} />
-              <Text style={styles.errorText}>{error}</Text>
-            </Animatable.View>
-          ) : null}
+            <PasswordInput
+              label="Confirm New Password"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              editable={!isLoading}
+              error={errors.confirmPassword}
+            />
+          </Animatable.View>
+
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -202,11 +216,7 @@ export default function ChangePasswordScreen() {
           onPress={handleUpdatePassword}
           disabled={isButtonDisabled}
         >
-          {isLoading ? (
-            <ActivityIndicator color={theme.textOnPrimary} />
-          ) : (
-            <Text style={styles.buttonText}>Update Password</Text>
-          )}
+          {isLoading ? <ActivityIndicator color={theme.textOnPrimary} /> : <Text style={styles.buttonText}>Update Password</Text>}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -215,100 +225,74 @@ export default function ChangePasswordScreen() {
 
 const getStyles = (theme) =>
   StyleSheet.create({
-    backButton: {},
-    button: {
-      alignItems: 'center',
-      backgroundColor: theme.primary,
-      borderRadius: 14,
-      height: 54,
-      justifyContent: 'center',
-      padding: 16,
-    },
-    buttonContainer: {
-      backgroundColor: theme.background,
-      borderTopColor: theme.border,
-      borderTopWidth: 1,
-      padding: 20,
-      paddingBottom: Platform.OS === 'ios' ? 30 : 20,
-    },
-    buttonDisabled: { backgroundColor: theme.disabled },
-    buttonText: {
-      color: theme.textOnPrimary,
-      fontSize: 16,
-      fontWeight: 'bold',
-    },
-    container: { backgroundColor: theme.background, flex: 1 },
-    errorContainer: {
+    container: { flex: 1, backgroundColor: theme.background },
+    scrollContent: { flexGrow: 1, padding: 25, paddingTop: 30 },
+    iconHeader: { alignSelf: 'center', marginBottom: 15 },
+    title: { fontSize: 26, fontWeight: 'bold', color: theme.text, textAlign: 'center', marginBottom: 10 },
+    subtitle: { fontSize: 16, color: theme.textSecondary, textAlign: 'center', marginBottom: 35 },
+    
+    inputGroup: { marginBottom: 18 },
+    label: { fontSize: 15, fontWeight: '500', color: theme.text, marginBottom: 10, paddingLeft: 4 },
+    inputContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: `${theme.danger}20`,
-        borderRadius: 8,
+        backgroundColor: theme.surface,
+        borderRadius: 12,
+        borderWidth: 1.5,
+        borderColor: theme.border,
+    },
+    inputContainerActive: { borderColor: theme.primary },
+    inputContainerError: { borderColor: theme.danger },
+    input: { flex: 1, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: theme.text },
+    eyeIcon: { paddingHorizontal: 12 },
+    errorText: { color: theme.danger, fontSize: 13, marginTop: 6, marginLeft: 8 },
+
+    strengthContainer: {
+        marginTop: -10,
+        marginBottom: 20,
         paddingHorizontal: 15,
-        paddingVertical: 12,
-        marginBottom: 15,
+        paddingVertical: 10,
+        backgroundColor: theme.surface,
+        borderRadius: 10,
     },
-    errorText: {
-      color: theme.danger,
-      fontSize: 14,
-      flex: 1, 
-      marginLeft: 10,
+    requirementRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginVertical: 4,
     },
-    eyeIcon: {
-      padding: 12,
+    requirementIcon: {
+        marginRight: 10,
     },
-    header: {
-      alignItems: 'center',
-      borderBottomColor: theme.border,
-      borderBottomWidth: 1,
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
+    requirementText: {
+        fontSize: 14,
     },
-    headerTitle: { color: theme.text, fontSize: 17, fontWeight: '600' },
-    iconHeader: {
-      alignSelf: 'center',
-      marginBottom: 20,
+    requirementMet: {
+        color: theme.success,
     },
-    input: {
-      color: theme.text,
-      flex: 1,
-      fontSize: 16,
-      padding: 16,
+    requirementPending: {
+        color: theme.textSecondary,
     },
-    inputContainer: {
-      alignItems: 'center',
-      backgroundColor: theme.surface,
-      borderColor: theme.border,
+    
+    buttonContainer: {
+        paddingHorizontal: 20,
+        paddingTop: 15,
+        paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+        backgroundColor: theme.background,
+        borderTopWidth: 1,
+        borderTopColor: theme.border,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 5,
+        elevation: 8,
+    },
+    button: {
+      backgroundColor: theme.primary,
       borderRadius: 12,
-      borderWidth: 1,
-      flexDirection: 'row',
-    },
-    inputGroup: {
-      marginBottom: 20,
-    },
-    label: {
-      color: theme.textSecondary,
-      fontSize: 14,
-      marginBottom: 8,
-      marginLeft: 4,
-    },
-    scrollContent: {
-      flexGrow: 1,
+      padding: 16,
+      alignItems: 'center',
       justifyContent: 'center',
-      padding: 20,
     },
-    subtitle: {
-      color: theme.textSecondary,
-      fontSize: 16,
-      marginBottom: 40,
-      textAlign: 'center',
-    },
-    title: {
-      color: theme.text,
-      fontSize: 26,
-      fontWeight: 'bold',
-      marginBottom: 8,
-      textAlign: 'center',
-    },
+    buttonDisabled: { backgroundColor: theme.disabled },
+    buttonText: { color: theme.textOnPrimary, fontSize: 16, fontWeight: 'bold' },
   });

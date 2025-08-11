@@ -10,13 +10,12 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  // Removed ImageBackground import as it's not used for section headers
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme, useAuth, useSubscription } from '../contexts';
 
-// Static data remains the same
 const servicesData = [
   {
     icon: 'git-network-outline',
@@ -42,6 +41,7 @@ const servicesData = [
 
 const plansData = [
   {
+    _id: 'plan_1000',
     name: 'PLAN 1000',
     price: '₱1000',
     speed: 'Up to 30Mbps',
@@ -49,14 +49,15 @@ const plansData = [
     features: ['No Data Capping', 'Fast Internet Speed', 'Quick Installation', 'P1500 Installation Fee'],
   },
   {
+    _id: 'plan_1300',
     name: 'PLAN 1300',
     price: '₱1300',
     speed: 'Up to 40Mbps',
     boostedSpeed: 'Boosted Up to 70Mbps',
     features: ['No Data Capping', 'Fast Internet Speed', 'Quick Installation', 'P1500 Installation Fee'],
-    isPopular: true,
   },
   {
+    _id: 'plan_1500',
     name: 'PLAN 1500',
     price: '₱1500',
     speed: 'Up to 60Mbps',
@@ -64,6 +65,7 @@ const plansData = [
     features: ['No Data Capping', 'Fast Internet Speed', 'Quick Installation', 'P1500 Installation Fee'],
   },
   {
+    _id: 'plan_1800',
     name: 'PLAN 1800',
     price: '₱1800',
     speed: 'Up to 100Mbps',
@@ -78,11 +80,11 @@ const Header = React.memo(({ onBackPress }) => {
   const styles = useMemo(() => getStyles(theme), [theme]);
   return (
     <View style={styles.header}>
-      <TouchableOpacity onPress={onBackPress} style={styles.headerIcon}>
+      <TouchableOpacity onPress={onBackPress} style={styles.headerIconContainer}>
         <Ionicons name="arrow-back" size={26} color={theme.text} />
       </TouchableOpacity>
       <Text style={styles.headerTitle}>Our Services & Plans</Text>
-      <View style={styles.headerIcon}/>
+      <View style={styles.headerIconContainer}/>
     </View>
   );
 });
@@ -108,6 +110,19 @@ const ServiceItem = React.memo(({ icon, title, description }) => {
 const PlanCard = React.memo(({ plan, onChoose }) => {
   const { theme } = useTheme();
   const styles = useMemo(() => getStyles(theme), [theme]);
+
+  const ChooseButton = () => (
+    <TouchableOpacity
+        style={styles.choosePlanButton}
+        onPress={() => onChoose(plan)} 
+        activeOpacity={0.7}
+      >
+        <Text style={styles.choosePlanButtonText}>
+          Choose Plan
+        </Text>
+      </TouchableOpacity>
+  );
+
   return (
     <View style={styles.planCard}>
       <Text style={styles.planName}>{plan.name}</Text>
@@ -127,12 +142,15 @@ const PlanCard = React.memo(({ plan, onChoose }) => {
           </View>
         ))}
       </View>
-      <TouchableOpacity
-        style={styles.choosePlanButton}
-        onPress={() => onChoose(plan.name)}
-      >
-        <Text style={styles.choosePlanButtonText}>Choose Plan</Text>
-      </TouchableOpacity>
+      
+        <LinearGradient
+            colors={[theme.accent, theme.primary]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.buttonGradient}
+        >
+           <ChooseButton />
+        </LinearGradient>
     </View>
   );
 });
@@ -148,16 +166,17 @@ export default function OurServicesScreen() {
     Alert.alert(title, message);
   }, []);
 
-  const handleChoosePlan = useCallback((planName) => {
+  const handleChoosePlan = useCallback((planObject) => {
     if (!user) {
       showAlert('Login Required', 'Please log in or sign up to choose a plan.');
+      navigation.navigate('Auth');
       return;
     }
 
     if (subscriptionStatus === 'active') {
-      navigation.navigate('Subscription', { isChangingPlan: true, selectedPlan: planName });
+      navigation.navigate('Subscription', { screen: 'ChangePlanScreen', params: { selectedPlan: planObject } });
     } else {
-      navigation.navigate('Subscription', { selectedPlan: planName });
+      navigation.navigate('Subscription', { screen: 'NewSubscriptionScreen', params: { selectedPlan: planObject } });
     }
   }, [navigation, user, subscriptionStatus, showAlert]);
 
@@ -179,7 +198,7 @@ export default function OurServicesScreen() {
       <ScrollView contentContainerStyle={styles.scrollContainer}>
 
         <View style={styles.sectionHeaderContainer}>
-          <Text style={styles.sectionTitle}>Our Services</Text>
+          <Text style={styles.sectionTitle}>Our Core Services</Text>
           <Text style={styles.sectionSubtitle}>Dedicated to providing top-tier internet solutions and unparalleled customer support.</Text>
         </View>
 
@@ -187,20 +206,20 @@ export default function OurServicesScreen() {
           <ServiceItem key={index} {...service} />
         ))}
 
-        <View style={[styles.sectionHeaderContainer, { marginTop: 30 }]}>
-          <Text style={styles.sectionTitle}>Subscription Plans</Text>
-          <Text style={styles.sectionSubtitle}>We provide affordable and reliable internet with fast installation and we address client concerns as fast as we can in a secured way. The following are the internet plans that are offered:</Text>
+        <View style={[styles.sectionHeaderContainer, { marginTop: 40 }]}>
+          <Text style={styles.sectionTitle}>Choose Your Plan</Text>
+          <Text style={styles.sectionSubtitle}>Affordable, reliable, and fast internet with premium customer service. Find the perfect fit for your needs.</Text>
         </View>
 
-        {plansData.map((plan, index) => (
-          <PlanCard key={index} plan={plan} onChoose={handleChoosePlan} />
+        {plansData.map((plan) => (
+          <PlanCard key={plan._id} plan={plan} onChoose={handleChoosePlan} />
         ))}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-// --- Styles ---
+// --- Styles (Refactored for new design) ---
 const getStyles = (theme) =>
   StyleSheet.create({
     container: {
@@ -208,7 +227,7 @@ const getStyles = (theme) =>
       backgroundColor: theme.background,
     },
     scrollContainer: {
-      paddingHorizontal: 16,
+      paddingHorizontal: 20,
       paddingBottom: 40,
     },
     header: {
@@ -216,75 +235,61 @@ const getStyles = (theme) =>
       justifyContent: 'space-between',
       alignItems: 'center',
       paddingHorizontal: 16,
-      paddingVertical: 14,
+      paddingVertical: 12,
       backgroundColor: theme.surface,
-      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomWidth: 1,
       borderBottomColor: theme.border,
-      shadowColor: theme.shadow,
-      shadowOffset: { width: 0, height: 3 },
-      shadowOpacity: 0.15,
-      shadowRadius: 5,
-      elevation: 6,
     },
-    headerIcon: {
+    headerIconContainer: {
       width: 40,
+      height: 40,
+      justifyContent: 'center',
     },
     headerTitle: {
-      fontSize: 20,
-      fontWeight: '700',
+      fontSize: 18,
+      fontWeight: '600',
       color: theme.text,
     },
-    // Modernized styles for section headers
     sectionHeaderContainer: {
-      marginTop: 24,
-      marginBottom: 16,
-      paddingVertical: 10, // Slightly less vertical padding, let margin handle spacing
-      alignItems: 'center', // Center text
-      // Removed backgroundColor, borderRadius, shadows, and borders to make it flow with the background
+      marginTop: 30,
+      marginBottom: 20,
+      alignItems: 'center',
     },
     sectionTitle: {
-      fontSize: 26, // Slightly larger for more impact
+      fontSize: 28,
       fontWeight: 'bold',
-      color: theme.text, // Use theme text color
+      color: theme.text,
       textAlign: 'center',
-      marginBottom: 6, // Reduced margin
+      marginBottom: 8,
     },
     sectionSubtitle: {
-      fontSize: 16, // Slightly larger for readability
-      color: theme.textSecondary, // Use secondary text for descriptions
+      fontSize: 16,
+      color: theme.textSecondary,
       textAlign: 'center',
-      lineHeight: 24, // Increased line height for readability
-      paddingHorizontal: 10, // Ensure padding for text
+      lineHeight: 24,
+      maxWidth: '90%',
     },
-    // Service Card Styles 
     serviceCard: {
       flexDirection: 'row',
       backgroundColor: theme.surface,
-      borderRadius: 14,
-      padding: 18,
+      borderRadius: 16,
+      padding: 16,
       marginTop: 16,
       alignItems: 'center',
-      shadowColor: theme.shadow,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.15,
-      shadowRadius: 6,
-      elevation: 5,
-      borderWidth: StyleSheet.hairlineWidth,
+      borderWidth: 1,
       borderColor: theme.border,
     },
     serviceIconContainer: {
-      backgroundColor: `${theme.primary}25`,
-      padding: 14,
-      borderRadius: 30,
-      marginRight: 18,
-      alignItems: 'center',
-      justifyContent: 'center',
+      backgroundColor: `${theme.primary}20`,
+      padding: 12,
+      borderRadius: 12,
+      marginRight: 16,
     },
     serviceTextContainer: {
       flex: 1,
     },
     serviceTitle: {
-      fontSize: 17,
+      fontSize: 16,
       fontWeight: '700',
       color: theme.text,
       marginBottom: 4,
@@ -294,50 +299,43 @@ const getStyles = (theme) =>
       color: theme.textSecondary,
       lineHeight: 20,
     },
-    // Plan Card Styles
     planCard: {
       backgroundColor: theme.surface,
-      borderRadius: 18,
-      padding: 24,
-      marginBottom: 20,
+      borderRadius: 20,
+      padding: 20,
+      marginBottom: 24,
       borderWidth: 1,
       borderColor: theme.border,
       overflow: 'hidden',
-      shadowColor: theme.shadow,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 5,
-      elevation: 4,
-      position: 'relative',
     },
-
     planName: {
-      fontSize: 22,
-      fontWeight: 'bold',
-      color: theme.text,
-      marginBottom: 10,
+      fontSize: 18,
+      fontWeight: '600',
+      color: theme.textSecondary,
+      marginBottom: 12,
     },
     planPriceContainer: {
       flexDirection: 'row',
-      alignItems: 'baseline',
-      marginBottom: 20,
+      alignItems: 'flex-end',
+      marginBottom: 16,
     },
     planPrice: {
-      fontSize: 38,
+      fontSize: 36,
       fontWeight: 'bold',
-      color: theme.primary,
+      color: theme.text,
     },
     planPerMonth: {
-      fontSize: 17,
+      fontSize: 16,
       color: theme.textSecondary,
-      marginLeft: 6,
+      marginLeft: 8,
+      paddingBottom: 4,
     },
     speedContainer: {
       marginBottom: 20,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderColor: theme.border,
       paddingVertical: 15,
+      borderTopWidth: 1,
+      borderBottomWidth: 1,
+      borderColor: theme.border,
     },
     planSpeed: {
       fontSize: 16,
@@ -348,7 +346,7 @@ const getStyles = (theme) =>
       fontSize: 14,
       fontWeight: '600',
       color: theme.success,
-      marginTop: 6,
+      marginTop: 4,
     },
     featuresList: {
       marginBottom: 24,
@@ -356,30 +354,34 @@ const getStyles = (theme) =>
     featureItem: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: 10,
+      marginBottom: 12,
     },
     featureText: {
       fontSize: 15,
-      color: theme.textSecondary,
+      color: theme.text,
       marginLeft: 12,
-      flexShrink: 1,
     },
     choosePlanButton: {
-      backgroundColor: theme.accent,
+      width: '100%',
+      backgroundColor: theme.surface,
       borderRadius: 12,
       paddingVertical: 16,
       alignItems: 'center',
       justifyContent: 'center',
-      marginTop: 10,
-      shadowColor: theme.shadow,
-      shadowOffset: { width: 0, height: 3 },
-      shadowOpacity: 0.2,
-      shadowRadius: 4,
-      elevation: 5,
+      borderWidth: 2,
+      borderColor: theme.primary,
+    },
+    buttonGradient: {
+        borderRadius: 12,
+        shadowColor: theme.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
+        elevation: 8,
     },
     choosePlanButtonText: {
-      color: theme.textOnPrimary,
-      fontSize: 17,
+      color: theme.primary,
+      fontSize: 16,
       fontWeight: 'bold',
     },
     loadingContainer: {

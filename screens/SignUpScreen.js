@@ -245,20 +245,19 @@ export default function SignUpScreen() {
 
     try {
         await register({ displayName: Name, email, password });
+            
+            // On success, show a message and navigate to the VerifyOtpScreen
+            showMessage('Registration successful! Please verify your email.');
+            navigation.navigate('VerifyOtp', { email }); // Pass the email to the next screen
 
-
-    } catch (error) {
-        console.error('Sign-up API call failed:', error.response?.data?.message || error.message);
-        const errorMsg = error.response?.data?.message || 'An unexpected error occurred.';
-        showAlert('Sign-Up Failed', errorMsg);
-
-        if (completeAuthAction) { 
-            completeAuthAction();
+        } catch (error) {
+            console.error('Sign-up API call failed:', error.response?.data?.message || error.message);
+            const errorMsg = error.response?.data?.message || 'An unexpected error occurred.';
+            showAlert('Sign-Up Failed', errorMsg);
+        } finally {
+            setIsLoading(false);
         }
-    } finally {
-        setIsLoading(false);
-    }
-};
+    };
 
   const handleLogin = async () => {
     setIsLoading(true);

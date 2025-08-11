@@ -7,12 +7,10 @@ const MessageContext = createContext();
 export const MessageProvider = ({ children }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [message, setMessage] = useState('');
-  // Use a ref for the callback to avoid re-renders of the provider
   const onCloseCallbackRef = useRef(null);
 
   const showMessage = useCallback((msg, onClose) => {
     setMessage(msg);
-    // --- FIX: Store the callback directly in the ref ---
     onCloseCallbackRef.current = onClose;
     setIsVisible(true);
   }, []);
@@ -22,7 +20,7 @@ export const MessageProvider = ({ children }) => {
     if (typeof onCloseCallbackRef.current === 'function') {
       onCloseCallbackRef.current();
     }
-    onCloseCallbackRef.current = null; // Clear callback after use
+    onCloseCallbackRef.current = null;
   };
 
   return (
@@ -60,7 +58,7 @@ const styles = StyleSheet.create({
     elevation: 2,
     marginTop: 10,
     paddingHorizontal: 30,
-    paddingVertical: 12, // Example danger color
+    paddingVertical: 12,
   },
   centeredView: {
     alignItems: 'center',

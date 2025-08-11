@@ -1,7 +1,7 @@
-// screens/LegalDocumentScreen.js (Cleaned)
+// screens/LegalDocumentScreen.js (REFURBISHED)
 
 import React, { useEffect, useMemo, useCallback, Fragment } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Platform } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../contexts';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -9,56 +9,56 @@ import * as Animatable from 'react-native-animatable';
 
 // --- Sub-Components (Memoized for Performance) ---
 
-const Header = React.memo(({ title, onBackPress }) => {
-    const { theme } = useTheme();
-    const styles = getStyles(theme);
-    return (
-        <View style={styles.header}>
-            <TouchableOpacity onPress={onBackPress} style={styles.backButton}>
-                <Ionicons name="arrow-back" size={26} color={theme.text} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>{title}</Text>
-            <View style={{ width: 40 }} />
-        </View>
-    );
-});
-
 const Footer = React.memo(({ onAgreePress }) => {
     const { theme } = useTheme();
     const styles = getStyles(theme);
     return (
         <View style={styles.footer}>
             <TouchableOpacity style={styles.agreeButton} onPress={onAgreePress}>
-                <Text style={styles.agreeButtonText}>I Understand</Text>
+                <Text style={styles.agreeButtonText}>I Understand and Agree</Text>
             </TouchableOpacity>
         </View>
     );
 });
 
 
-// --- Helper Function ---
+// --- NEW Markdown-Style Content Parser ---
 const ParsedContent = React.memo(({ text }) => {
     const { theme } = useTheme();
     const styles = getStyles(theme);
 
     const contentElements = useMemo(() => {
-        // Regex to split by a newline followed by a number and a period (e.g., "\n1.")
-        const sections = text.split(/\n\n?(?=\d+\.\s)/);
+        if (!text) return [];
 
-        return sections.map((section, index) => {
-            const firstLineBreak = section.indexOf('\n');
-            let title = section;
-            let body = '';
+        const lines = text.split('\n');
 
-            if (firstLineBreak !== -1) {
-                title = section.substring(0, firstLineBreak).trim();
-                body = section.substring(firstLineBreak + 1).trim();
+        return lines.map((line, index) => {
+            const trimmedLine = line.trim();
+            
+            // Render H2 style for lines starting with '##'
+            if (trimmedLine.startsWith('## ')) {
+                return (
+                    <Animatable.View key={index} animation="fadeInUp" delay={index * 20} duration={300}>
+                        <Text style={styles.heading2}>{trimmedLine.substring(3)}</Text>
+                    </Animatable.View>
+                );
             }
-
+            // Render H3 style for lines starting with '###'
+            if (trimmedLine.startsWith('### ')) {
+                 return (
+                    <Animatable.View key={index} animation="fadeInUp" delay={index * 20} duration={300}>
+                        <Text style={styles.heading3}>{trimmedLine.substring(4)}</Text>
+                    </Animatable.View>
+                );
+            }
+            // Render a spacer for empty lines to create paragraph breaks
+            if (trimmedLine === '') {
+                return <View key={index} style={styles.spacer} />;
+            }
+            // Render a standard paragraph
             return (
-                <Animatable.View key={index} animation="fadeInUp" delay={index * 50} duration={400}>
-                    <Text style={styles.sectionTitle}>{title}</Text>
-                    {body ? <Text style={styles.paragraph}>{body}</Text> : null}
+                <Animatable.View key={index} animation="fadeInUp" delay={index * 20} duration={300}>
+                    <Text style={styles.paragraph}>{trimmedLine}</Text>
                 </Animatable.View>
             );
         });
@@ -77,10 +77,19 @@ export default function LegalDocumentScreen() {
 
   const { title, content } = route.params;
 
-  // Hide the default navigator header
+  // Configure the header using React Navigation's options
   useEffect(() => {
-    navigation.setOptions({ headerShown: false });
-  }, [navigation]);
+    navigation.setOptions({
+        headerShown: true,
+        headerTransparent: true, // Make header background transparent
+        headerTitle: '', // Hide the title text in the header bar
+        headerLeft: () => (
+             <TouchableOpacity onPress={handleGoBack} style={styles.backButton}>
+                <Ionicons name="close-circle" size={32} color={theme.textSecondary} />
+            </TouchableOpacity>
+        ),
+    });
+  }, [navigation, theme]);
 
   const handleGoBack = useCallback(() => {
     navigation.goBack();
@@ -88,9 +97,15 @@ export default function LegalDocumentScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header title={title} onBackPress={handleGoBack} />
-
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        
+        <Animatable.View animation="fadeInDown" duration={500} style={styles.documentHeader}>
+            <Ionicons name="shield-checkmark-outline" size={48} color={theme.primary} style={styles.documentIcon} />
+            <Text style={styles.documentTitle}>{title}</Text>
+        </Animatable.View>
+        
+        <View style={styles.divider} />
+
         <ParsedContent text={content} />
       </ScrollView>
 
@@ -102,40 +117,68 @@ export default function LegalDocumentScreen() {
 const getStyles = (theme) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: theme.background },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 15,
-      paddingVertical: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border,
-      backgroundColor: theme.surface,
+    backButton: { 
+        marginLeft: 15,
+        backgroundColor: 'rgba(255, 255, 255, 0.7)',
+        borderRadius: 16,
     },
-    headerTitle: { fontSize: 20, fontWeight: '600', color: theme.text },
-    backButton: { padding: 5 },
-    scrollContent: { padding: 20 },
-    sectionTitle: {
-      fontSize: 18,
+    scrollContent: { 
+        paddingHorizontal: 25,
+        paddingTop: 80, 
+        paddingBottom: 40,
+    },
+    documentHeader: {
+        alignItems: 'center',
+        marginBottom: 25,
+    },
+    documentIcon: {
+        marginBottom: 15,
+    },
+    documentTitle: {
+      fontSize: 28,
+      fontWeight: '700',
+      color: theme.text,
+      textAlign: 'center',
+    },
+    divider: {
+        height: 1,
+        backgroundColor: theme.border,
+        marginVertical: 15,
+    },
+    heading2: {
+      fontSize: 20,
       fontWeight: 'bold',
-      color: theme.primary,
-      marginBottom: 10,
-      marginTop: 15,
-      lineHeight: 24,
+      color: theme.text,
+      marginBottom: 12,
+      marginTop: 10,
+      lineHeight: 28,
+    },
+    heading3: {
+      fontSize: 17,
+      fontWeight: '600',
+      color: theme.textSecondary,
+      marginBottom: 8,
+      marginTop: 8,
     },
     paragraph: {
       fontSize: 16,
       color: theme.textSecondary,
       lineHeight: 26,
-      textAlign: 'justify',
+      textAlign: 'left',
+    },
+    spacer: {
+        height: 15,
     },
     footer: {
       paddingHorizontal: 20,
-      paddingTop: 10,
-      paddingBottom: 30,
-      borderTopWidth: 1,
-      borderTopColor: theme.border,
+      paddingTop: 15,
+      paddingBottom: Platform.OS === 'ios' ? 34 : 20,
       backgroundColor: theme.surface,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: -2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 5,
     },
     agreeButton: {
       backgroundColor: theme.primary,

@@ -1,4 +1,4 @@
-// screens/PayBillsScreen.js (Cleaned)
+// screens/PayBillsScreen.js
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
@@ -15,6 +15,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -23,8 +24,9 @@ import { useSubscription, useTheme, useAlert, useMessage, useAuth } from '../con
 import { requestMediaLibraryPermissions, requestCameraPermissions } from '../utils/permissions';
 import StatusDisplay from '../components/StatusDisplay';
 import PhotoSourceSheet from '../components/PhotoSourceSheet';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Animatable from 'react-native-animatable';
 
-// --- Constants & Static Assets ---
 const GCASH_QR_IMAGE = require('../assets/images/gcashqr.png');
 const GCASH_LOGO_IMAGE = require('../assets/images/gcash.png');
 const CASH_LOGO_IMAGE = require('../assets/images/cod.png');
@@ -40,90 +42,131 @@ const EMPTY_STATES_CONFIG = (theme, navigation) => ({
   active: { icon: 'checkmark-done-circle-outline', color: theme.success, title: 'All Paid Up!', text: 'You have no outstanding bills. Great job!' },
 });
 
-// --- Sub-Components (Memoized for Performance) ---
 
 const Header = React.memo(({ onBackPress }) => {
     const { theme } = useTheme();
     const styles = getStyles(theme);
     return (
         <View style={styles.header}>
-            <TouchableOpacity onPress={onBackPress} style={styles.headerIcon}>
+            <TouchableOpacity onPress={onBackPress} style={styles.headerButton}>
                 <Ionicons name="arrow-back" size={26} color={theme.text} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Pay Bill</Text>
-            <View style={styles.headerIcon} />
+            <View style={styles.headerButton} />
         </View>
     );
 });
 
-const PaymentOption = React.memo(({ method, logo, isSelected, onSelect }) => {
-  const { theme } = useTheme();
-  const styles = getStyles(theme);
-  return (
-    <TouchableOpacity style={[styles.paymentOption, isSelected && styles.paymentOptionSelected]} onPress={onSelect} disabled={isSelected}>
-      <Image source={logo} style={styles.paymentMethodLogo} />
-      <Text style={styles.paymentOptionText}>{method}</Text>
-      <Ionicons name={isSelected ? 'radio-button-on' : 'radio-button-off'} size={24} color={isSelected ? theme.primary : theme.border} />
-    </TouchableOpacity>
-  );
-});
-
-const GcashModal = React.memo(({ isVisible, onClose, onSubmit, onImagePick, proofOfPayment, isSubmitting, dueBillAmount }) => {
+const BillSummaryCard = React.memo(({ bill }) => {
     const { theme } = useTheme();
     const styles = getStyles(theme);
     return (
-        <Modal animationType="slide" transparent={true} visible={isVisible} onRequestClose={onClose}>
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
-                <View style={styles.modalContent}>
-                    <View style={styles.modalHeader}>
-                        <Text style={styles.modalTitle}>Pay with GCash</Text>
-                        <TouchableOpacity onPress={onClose}><Ionicons name="close" size={28} color={theme.textSecondary} /></TouchableOpacity>
-                    </View>
-                    <ScrollView contentContainerStyle={styles.modalScrollContent}>
-                        <Text style={styles.modalDescription}>1. Scan the QR or send payment to the number below.</Text>
-                        <Image source={GCASH_QR_IMAGE} style={styles.paymentModalImage} resizeMode="contain" />
-                        <View style={styles.gcashDetailsContainer}>
-                            <Text style={styles.gcashDetailLabel}>GCash Name:</Text><Text style={styles.gcashDetailValue}>Fibear Inc.</Text>
-                            <Text style={styles.gcashDetailLabel}>GCash Number:</Text><Text style={styles.gcashDetailValue}>0912-345-6789</Text>
-                        </View>
-                        <Text style={styles.modalDescription}>2. Upload a screenshot of your payment receipt.</Text>
-                        <View style={styles.uploadSection}>
-                            {proofOfPayment ? (
-                                <View style={{ alignItems: 'center' }}>
-                                <Image source={{ uri: proofOfPayment.uri }} style={styles.proofPreviewImage} />
-                                <TouchableOpacity style={styles.changeImageButton} onPress={onImagePick}><Text style={styles.changeImageText}>Change Screenshot</Text></TouchableOpacity>
-                                </View>
-                            ) : (
-                                <TouchableOpacity style={styles.uploadButton} onPress={onImagePick}>
-                                <Ionicons name="cloud-upload-outline" size={24} color={theme.primary} />
-                                <Text style={styles.uploadButtonText}>Upload Proof of Payment</Text>
-                                </TouchableOpacity>
-                            )}
-                        </View>
-                    </ScrollView>
-                    <View style={styles.fixedModalButtonContainer}>
-                        <TouchableOpacity style={[styles.button, (!proofOfPayment || isSubmitting) && styles.buttonDisabled]} onPress={onSubmit} disabled={!proofOfPayment || isSubmitting}>
-                            {isSubmitting ? <ActivityIndicator color={theme.textOnPrimary} /> : <Text style={styles.buttonText}>I HAVE PAID ₱{dueBillAmount}</Text>}
-                        </TouchableOpacity>
-                    </View>
+        <Animatable.View animation="fadeInDown" duration={600}>
+            <LinearGradient colors={theme.isDarkMode ? ['#0A84FF', '#0052A3'] : ['#007AFF', '#0052A3']} style={styles.heroCard}>
+                <Ionicons name="receipt-outline" size={80} color="rgba(255,255,255,0.1)" style={styles.heroCardBackgroundIcon} />
+                <Text style={styles.heroCardLabel}>Amount Due for {bill.planName}</Text>
+                <Text style={styles.heroCardAmount}>₱{bill.amount.toFixed(2)}</Text>
+                <View style={styles.heroCardDueDateContainer}>
+                    <Ionicons name="alarm-outline" size={16} color={theme.textOnPrimary} />
+                    <Text style={styles.heroCardDueDateText}>Due on {new Date(bill.dueDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}</Text>
                 </View>
-            </KeyboardAvoidingView>
+            </LinearGradient>
+        </Animatable.View>
+    );
+});
+
+const PaymentMethodCard = React.memo(({ icon, title, description, isSelected, onSelect }) => {
+    const { theme } = useTheme();
+    const styles = getStyles(theme);
+    return (
+        <Animatable.View animation="fadeInUp" duration={600} delay={100}>
+            <TouchableOpacity 
+                style={[styles.paymentMethodCard, isSelected && styles.paymentMethodCardSelected]} 
+                onPress={onSelect}
+            >
+                <Image source={icon} style={styles.paymentMethodLogo} />
+                <View style={styles.paymentMethodTextContainer}>
+                    <Text style={styles.paymentMethodTitle}>{title}</Text>
+                    <Text style={styles.paymentMethodDescription}>{description}</Text>
+                </View>
+                <View style={styles.radioCircle}>
+                    {isSelected && <View style={styles.radioDot} />}
+                </View>
+            </TouchableOpacity>
+        </Animatable.View>
+    );
+});
+
+
+const GcashPaymentSheet = React.memo(({ isVisible, onClose, onSubmit, onImagePick, proofOfPayment, isSubmitting, dueBillAmount }) => {
+    const { theme } = useTheme();
+    const styles = getStyles(theme);
+    return (
+        <Modal animationType="fade" transparent={true} visible={isVisible} onRequestClose={onClose}>
+            <TouchableWithoutFeedback onPress={onClose}>
+                <View style={styles.modalOverlay}>
+                    <TouchableWithoutFeedback>
+                        <Animatable.View animation="slideInUp" duration={400} style={styles.sheetContent}>
+                            <View style={styles.gripper} />
+                            <Text style={styles.sheetTitle}>Pay with GCash</Text>
+                            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+                                <View style={styles.stepContainer}>
+                                    <Text style={styles.stepHeader}>Step 1: Send Payment</Text>
+                                    <Text style={styles.stepDescription}>Scan the QR code below or manually send ₱{dueBillAmount} to our official GCash account.</Text>
+                                    <View style={styles.gcashInfoBox}>
+                                        <Image source={GCASH_QR_IMAGE} style={styles.gCashQrImage} />
+                                        <View style={styles.gCashDetails}>
+                                            <Text style={styles.gCashLabel}>Name</Text>
+                                            <Text style={styles.gCashValue}>Fibear Inc.</Text>
+                                            <Text style={styles.gCashLabel}>Number</Text>
+                                            <Text style={styles.gCashValue}>0912-345-6789</Text>
+                                        </View>
+                                    </View>
+                                </View>
+                                <View style={styles.stepContainer}>
+                                    <Text style={styles.stepHeader}>Step 2: Upload Proof</Text>
+                                    <Text style={styles.stepDescription}>Attach a screenshot of your successful transaction receipt. This is required for verification.</Text>
+                                    {proofOfPayment ? (
+                                        <View style={styles.proofPreviewContainer}>
+                                            <Image source={{ uri: proofOfPayment.uri }} style={styles.proofPreviewImage} />
+                                            <TouchableOpacity onPress={onImagePick} style={styles.changeImageButton}>
+                                                <Ionicons name="repeat-outline" size={20} color={theme.textOnPrimary} />
+                                                <Text style={styles.changeImageButtonText}>Change Screenshot</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    ) : (
+                                        <TouchableOpacity style={styles.uploadButton} onPress={onImagePick}>
+                                            <Ionicons name="cloud-upload-outline" size={28} color={theme.primary} />
+                                            <Text style={styles.uploadButtonText}>Choose Screenshot</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                            </ScrollView>
+                            <View style={styles.sheetActions}>
+                                <TouchableOpacity style={[styles.button, (!proofOfPayment || isSubmitting) && styles.buttonDisabled]} onPress={onSubmit} disabled={!proofOfPayment || isSubmitting}>
+                                    {isSubmitting ? <ActivityIndicator color={theme.textOnPrimary} /> : <Text style={styles.buttonText}>Submit for Verification</Text>}
+                                </TouchableOpacity>
+                            </View>
+                        </Animatable.View>
+                    </TouchableWithoutFeedback>
+                </View>
+            </TouchableWithoutFeedback>
         </Modal>
     );
 });
 
 
-// --- Main Screen Component ---
+// --- Main Screen Component (No changes needed here) ---
 export default function PayBillsScreen() {
   const navigation = useNavigation();
-  const { paymentHistory, submitProof, subscriptionStatus, subscriptionData, refreshSubscription, isLoading } = useSubscription();
+  const { paymentHistory, submitProof, subscriptionStatus, refreshSubscription, isLoading } = useSubscription();
   const { theme } = useTheme();
   const styles = getStyles(theme);
   const { showAlert, showMessage } = useAlert();
   const { user } = useAuth();
 
   const [paymentMethod, setPaymentMethod] = useState(null);
-  const [isGcashModalVisible, setGcashModalVisible] = useState(false);
+  const [isGcashSheetVisible, setGcashSheetVisible] = useState(false);
   const [proofOfPayment, setProofOfPayment] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -140,24 +183,21 @@ export default function PayBillsScreen() {
     setRefreshing(false);
   }, [refreshSubscription]);
   
-  useFocusEffect(
-      useCallback(() => {
-          onRefresh();
-      }, [onRefresh])
-    );
+  useFocusEffect(useCallback(() => { onRefresh(); }, []));
 
   useEffect(() => {
     const backAction = () => {
-      if (isGcashModalVisible) { setGcashModalVisible(false); return true; }
+      if (isGcashSheetVisible) { setGcashSheetVisible(false); return true; }
+      if (isPhotoSheetVisible) { setPhotoSheetVisible(false); return true; }
       navigation.goBack();
       return true;
     };
     const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
     return () => backHandler.remove();
-  }, [isGcashModalVisible, navigation]);
+  }, [isGcashSheetVisible, isPhotoSheetVisible, navigation]);
 
   const handleProceed = useCallback(() => {
-    if (paymentMethod === 'GCash') setGcashModalVisible(true);
+    if (paymentMethod === 'GCash') setGcashSheetVisible(true);
     else if (paymentMethod === 'Cash' && dueBill) navigation.navigate('PaymentVoucherScreen', { bill: dueBill, user });
   }, [paymentMethod, dueBill, user, navigation]);
 
@@ -166,7 +206,7 @@ export default function PayBillsScreen() {
     setIsSubmitting(true);
     try {
       await submitProof(dueBill.id, proofOfPayment.base64);
-      setGcashModalVisible(false);
+      setGcashSheetVisible(false);
       setProofOfPayment(null);
       showMessage('Submitted for Verification', 'Your payment is now being reviewed by our team.');
     } catch (error) {
@@ -203,30 +243,26 @@ export default function PayBillsScreen() {
   }, []);
 
   const renderPaymentFlow = () => (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <>
       <ScrollView contentContainerStyle={styles.scrollContainer} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} tintColor={theme.primary} />}>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Amount Due for {dueBill.planName}</Text>
-          <Text style={styles.amountDue}>₱{dueBill.amount.toFixed(2)}</Text>
-          <View style={styles.statusBadgeDue}><Text style={styles.statusBadgeTextDue}>Due on: {new Date(dueBill.dueDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}</Text></View>
-        </View>
+        <BillSummaryCard bill={dueBill} />
         <View style={styles.paymentSection}>
           <Text style={styles.sectionHeader}>Choose Payment Method</Text>
-          <PaymentOption method="GCash e-Wallet" logo={GCASH_LOGO_IMAGE} isSelected={paymentMethod === 'GCash'} onSelect={() => setPaymentMethod('GCash')} />
-          <PaymentOption method="Pay at the Office (Cash)" logo={CASH_LOGO_IMAGE} isSelected={paymentMethod === 'Cash'} onSelect={() => setPaymentMethod('Cash')} />
+          <PaymentMethodCard icon={GCASH_LOGO_IMAGE} title="GCash e-Wallet" description="Pay online and upload proof" isSelected={paymentMethod === 'GCash'} onSelect={() => setPaymentMethod('GCash')} />
+          <PaymentMethodCard icon={CASH_LOGO_IMAGE} title="Cash Payment" description="Generate voucher for office payment" isSelected={paymentMethod === 'Cash'} onSelect={() => setPaymentMethod('Cash')} />
         </View>
       </ScrollView>
       <View style={styles.fixedButtonContainer}>
         <TouchableOpacity style={[styles.button, !paymentMethod && styles.buttonDisabled]} onPress={handleProceed} disabled={!paymentMethod}>
-          <Text style={styles.buttonText}>PROCEED</Text>
+          <Text style={styles.buttonText}>Continue</Text>
         </TouchableOpacity>
       </View>
-    </KeyboardAvoidingView>
+    </>
   );
 
   const renderEmptyState = () => {
     if (pendingBill) {
-      return <ScrollView contentContainerStyle={styles.fullScreenScroll} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} tintColor={theme.primary} />}><StatusDisplay illustration={ILLUSTRATIONS.VERIFICATION} title="Payment Under Review" text={`We have received your payment proof for ₱${pendingBill.amount.toFixed(2)} and are currently verifying it. This may take up to 24 hours.`} /></ScrollView>;
+      return <ScrollView contentContainerStyle={styles.fullScreenScroll} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} tintColor={theme.primary} />}><StatusDisplay illustration={require('../assets/images/completedplan.png')} title="Payment Under Review" text={`We are verifying your payment of ₱${pendingBill.amount.toFixed(2)}. This may take up to 24 hours.`} /></ScrollView>;
     }
     const stateConfig = EMPTY_STATES_CONFIG(theme, navigation);
     const state = stateConfig[subscriptionStatus] || stateConfig.active;
@@ -234,19 +270,17 @@ export default function PayBillsScreen() {
   };
   
   if (isLoading && !refreshing) {
-    return <SafeAreaView style={styles.container}><Header onBackPress={() => navigation.goBack()} title="Pay Bill" /><ActivityIndicator size="large" color={theme.primary} style={{flex: 1}} /></SafeAreaView>
+    return <SafeAreaView style={styles.container}><Header onBackPress={() => navigation.goBack()} /><View style={styles.fullScreenScroll}><ActivityIndicator size="large" color={theme.primary} /></View></SafeAreaView>
   }
-
-  const shouldRenderPaymentFlow = dueBill && !pendingBill;
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header onBackPress={() => navigation.goBack()} title="Pay Bill" />
-      {shouldRenderPaymentFlow ? renderPaymentFlow() : renderEmptyState()}
+      <Header onBackPress={() => navigation.goBack()} />
+      {dueBill && !pendingBill ? renderPaymentFlow() : renderEmptyState()}
       {dueBill && 
-        <GcashModal
-          isVisible={isGcashModalVisible}
-          onClose={() => setGcashModalVisible(false)}
+        <GcashPaymentSheet
+          isVisible={isGcashSheetVisible}
+          onClose={() => setGcashSheetVisible(false)}
           onSubmit={handleGcashPaymentSubmit}
           onImagePick={() => setPhotoSheetVisible(true)}
           proofOfPayment={proofOfPayment}
@@ -265,181 +299,89 @@ export default function PayBillsScreen() {
   );
 }
 
+
+// --- Stylesheet (Refactored) ---
 const getStyles = (theme) =>
   StyleSheet.create({
-    header: {
+    container: { backgroundColor: theme.background, flex: 1 },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, height: 60 },
+    headerButton: { width: 40, height: 40, justifyContent: 'center', alignItems: 'flex-start' },
+    headerTitle: { fontSize: 20, fontWeight: 'bold', color: theme.text },
+    scrollContainer: { paddingHorizontal: 20, paddingBottom: 120 },
+    fullScreenScroll: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+
+    // --- Hero Card ---
+    heroCard: { borderRadius: 24, padding: 25, overflow: 'hidden' },
+    heroCardBackgroundIcon: { position: 'absolute', right: -10, top: 10, opacity: 0.1 },
+    heroCardLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 16, fontWeight: '500' },
+    heroCardAmount: { color: theme.textOnPrimary, fontSize: 48, fontWeight: 'bold', marginVertical: 8 },
+    heroCardDueDateContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6, alignSelf: 'flex-start' },
+    heroCardDueDateText: { color: theme.textOnPrimary, fontSize: 14, fontWeight: '600', marginLeft: 6 },
+    
+    // --- Payment Section ---
+    paymentSection: { marginTop: 30 },
+    sectionHeader: { color: theme.text, fontSize: 18, fontWeight: 'bold', marginBottom: 15 },
+    paymentMethodCard: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 16,
-      paddingVertical: 20,
       backgroundColor: theme.surface,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border,
+      borderRadius: 16,
+      padding: 20,
+      marginBottom: 12,
+      borderWidth: 2,
+      borderColor: theme.surface,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 5,
+      elevation: 3,
+      transition: 'all 0.3s ease',
     },
-    headerTitle: {
-      fontSize: 18,
-      fontWeight: '600',
-      color: theme.text,
+    paymentMethodCardSelected: {
+      borderColor: theme.primary,
+      transform: [{ scale: 1.03 }],
+      shadowColor: theme.primary,
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
+      elevation: 8,
     },
-    headerIcon: {
-      width: 40, // For spacing
-      alignItems: 'flex-start',
-    },
-    amountDue: { color: theme.text, fontSize: 48, fontWeight: 'bold', marginVertical: 8 },
-    button: {
-      alignItems: 'center',
-      backgroundColor: theme.primary,
-      borderRadius: 14,
-      height: 54,
-      justifyContent: 'center',
-      padding: 16,
-    },
-    buttonDisabled: { backgroundColor: theme.disabled },
-    buttonText: { color: theme.textOnPrimary, fontSize: 16, fontWeight: 'bold' },
-    changeImageButton: {
-      backgroundColor: theme.surface,
-      borderColor: theme.border,
-      borderRadius: 8,
-      borderWidth: 1,
-      padding: 12,
-    },
-    changeImageText: { color: theme.accent, fontSize: 14, fontWeight: '600' },
-    container: { backgroundColor: theme.background, flex: 1 },
-    emptyStateContainer: { alignItems: 'center', flex: 1, justifyContent: 'center', padding: 30 },
-    emptyStateText: {
-      color: theme.textSecondary,
-      fontSize: 16,
-      lineHeight: 24,
-      marginTop: 8,
-      paddingHorizontal: 10,
-      textAlign: 'center',
-    },
-    emptyStateTitle: {
-      color: theme.text,
-      fontSize: 22,
-      fontWeight: 'bold',
-      marginTop: 15,
-      textAlign: 'center',
-    },
+    paymentMethodLogo: { width: 40, height: 40, resizeMode: 'contain', marginRight: 15 },
+    paymentMethodTextContainer: { flex: 1 },
+    paymentMethodTitle: { fontSize: 17, fontWeight: 'bold', color: theme.text },
+    paymentMethodDescription: { fontSize: 14, color: theme.textSecondary, marginTop: 4 },
+    radioCircle: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: theme.border, justifyContent: 'center', alignItems: 'center' },
+    radioDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: theme.primary },
+
+    // --- Fixed Bottom Button ---
     fixedButtonContainer: {
       backgroundColor: theme.surface,
       borderTopColor: theme.border,
       borderTopWidth: 1,
       padding: 20,
       paddingBottom: Platform.OS === 'ios' ? 34 : 20,
-      paddingTop: 10,
     },
-    fixedModalButtonContainer: {
-      backgroundColor: theme.surface,
-      borderColor: theme.border,
-      borderTopWidth: 1,
-      bottom: 0,
-      left: 0,
-      padding: 20,
-      paddingBottom: Platform.OS === 'ios' ? 34 : 20,
-      position: 'absolute',
-      right: 0,
-    },
-    fullScreenScroll: { alignItems: 'center', flexGrow: 1, justifyContent: 'center' },
-    gcashDetailLabel: { color: theme.textSecondary, fontSize: 13 },
-    gcashDetailValue: { color: theme.text, fontSize: 16, fontWeight: '600', marginBottom: 8 },
-    gcashDetailsContainer: {
-      alignSelf: 'center',
-      backgroundColor: theme.background,
-      borderRadius: 8,
-      marginTop: 20,
-      padding: 15,
-      width: '90%',
-    },
-    modalContent: {
-      backgroundColor: theme.surface,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-      height: '95%',
-      overflow: 'hidden',
-      width: '100%',
-    },
-    modalDescription: {
-      color: theme.textSecondary,
-      fontSize: 15,
-      lineHeight: 22,
-      marginVertical: 20,
-      paddingHorizontal: 10,
-      textAlign: 'center',
-    },
-    modalHeader: {
-      alignItems: 'center',
-      borderBottomColor: theme.border,
-      borderBottomWidth: 1,
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      padding: 20,
-    },
-    modalOverlay: { backgroundColor: 'rgba(0, 0, 0, 0.7)', flex: 1, justifyContent: 'flex-end' },
-    modalScrollContent: { paddingBottom: 120 },
-    modalTitle: { color: theme.text, fontSize: 20, fontWeight: 'bold' },
-    paymentMethodLogo: { height: 32, marginRight: 15, resizeMode: 'contain', width: 32 },
-    paymentModalImage: { alignSelf: 'center', borderRadius: 8, height: 200, width: 200 },
-    paymentOption: {
-      alignItems: 'center',
-      backgroundColor: theme.surface,
-      borderColor: theme.border,
-      borderRadius: 14,
-      borderWidth: 2,
-      flexDirection: 'row',
-      marginBottom: 12,
-      padding: 16,
-    },
-    paymentOptionSelected: { backgroundColor: `${theme.primary}1A`, borderColor: theme.primary },
-    paymentOptionText: { color: theme.text, flex: 1, fontSize: 17, fontWeight: '600' },
-    paymentSection: { marginTop: 30 },
-    proofPreviewImage: {
-      borderColor: theme.border,
-      borderRadius: 12,
-      borderWidth: 1,
-      height: 180,
-      marginBottom: 15,
-      width: 180,
-    },
-    scrollContainer: { flexGrow: 1, padding: 20, paddingBottom: 120 },
-    sectionHeader: { color: theme.text, fontSize: 18, fontWeight: 'bold', marginBottom: 15 },
-    statusBadgeDue: {
-      alignSelf: 'flex-start',
-      backgroundColor: `${theme.danger}20`,
-      borderRadius: 8,
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-    },
-    statusBadgeTextDue: { color: theme.danger, fontSize: 13, fontWeight: 'bold' },
-    subscribeButton: {
-      backgroundColor: theme.primary,
-      borderRadius: 12,
-      marginTop: 25,
-      paddingHorizontal: 30,
-      paddingVertical: 14,
-    },
-    subscribeButtonText: { color: theme.textOnPrimary, fontSize: 16, fontWeight: 'bold' },
-    summaryCard: {
-      backgroundColor: theme.surface,
-      borderColor: theme.border,
-      borderRadius: 20,
-      borderWidth: 1,
-      marginBottom: 30,
-      padding: 20,
-    },
-    summaryLabel: { color: theme.textSecondary, fontSize: 16, fontWeight: '500' },
-    uploadButton: {
-      alignItems: 'center',
-      backgroundColor: `${theme.primary}10`,
-      borderColor: theme.primary,
-      borderRadius: 12,
-      borderStyle: 'dashed',
-      borderWidth: 1,
-      flexDirection: 'row',
-      paddingHorizontal: 20,
-      paddingVertical: 15,
-    },
-    uploadButtonText: { color: theme.primary, fontSize: 16, fontWeight: '600', marginLeft: 10 },
-    uploadSection: { alignItems: 'center', padding: 20, width: '100%' },
+    button: { alignItems: 'center', backgroundColor: theme.primary, borderRadius: 14, height: 54, justifyContent: 'center' },
+    buttonDisabled: { backgroundColor: theme.disabled, opacity: 0.7 },
+    buttonText: { color: theme.textOnPrimary, fontSize: 16, fontWeight: 'bold' },
+
+    // --- GCash Bottom Sheet ---
+    modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' },
+    sheetContent: { backgroundColor: theme.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 16, maxHeight: '90%' },
+    gripper: { width: 40, height: 5, backgroundColor: theme.border, borderRadius: 2.5, alignSelf: 'center', marginBottom: 12 },
+    sheetTitle: { fontSize: 22, fontWeight: 'bold', color: theme.text, textAlign: 'center', marginBottom: 16 },
+    stepContainer: { marginBottom: 24 },
+    stepHeader: { fontSize: 16, fontWeight: 'bold', color: theme.text, marginBottom: 8 },
+    stepDescription: { fontSize: 14, color: theme.textSecondary, lineHeight: 20, marginBottom: 16 },
+    gcashInfoBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.background, padding: 16, borderRadius: 12 },
+    gCashQrImage: { width: 100, height: 100, borderRadius: 8 },
+    gCashDetails: { marginLeft: 16 },
+    gCashLabel: { fontSize: 13, color: theme.textSecondary },
+    gCashValue: { fontSize: 16, fontWeight: '600', color: theme.text, marginBottom: 8 },
+    uploadButton: { alignItems: 'center', justifyContent: 'center', padding: 30, backgroundColor: theme.background, borderRadius: 12, borderStyle: 'dashed', borderWidth: 1, borderColor: theme.border },
+    uploadButtonText: { color: theme.primary, fontSize: 16, fontWeight: '600', marginTop: 8 },
+    proofPreviewContainer: { alignItems: 'center' },
+    proofPreviewImage: { width: '100%', height: 200, borderRadius: 12, resizeMode: 'contain', marginBottom: 12 },
+    changeImageButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 12, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 10, position: 'absolute', bottom: 20 },
+    changeImageButtonText: { color: theme.textOnPrimary, fontWeight: 'bold', marginLeft: 8 },
+    sheetActions: { paddingTop: 10, borderTopColor: theme.border, borderTopWidth: 1, marginTop: 10 },
   });

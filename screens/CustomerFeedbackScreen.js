@@ -1,4 +1,4 @@
-// screens/CustomerFeedbackScreen.js (Cleaned)
+// screens/CustomerFeedbackScreen.js (Refactored with Submission Fix)
 
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import {
@@ -18,6 +18,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import * as Animatable from 'react-native-animatable';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth, useTheme, useMessage, useAlert } from '../contexts';
 
 // --- Constants ---
@@ -33,24 +34,33 @@ const RATING_DESCRIPTIONS = {
 const POSITIVE_TAGS = ['Fast Speed', 'Reliable Connection', 'Good Customer Service', 'Affordable Price', 'Easy App'];
 const NEGATIVE_TAGS = ['Slow Speed', 'Connection Drops', 'Billing Issue', 'Poor Support', 'App is Confusing'];
 
-// --- Sub-Components (Memoized for Performance) ---
+// --- Sub-Components ---
 const StarRating = React.memo(({ currentRating, onRate, disabled }) => {
   const { theme } = useTheme();
+  const styles = getStyles(theme);
+  const starRefs = useRef([]);
+
+  const handlePress = (star) => {
+    onRate(star);
+    starRefs.current[star-1]?.pulse(600);
+  }
+
   return (
-    <View style={getStyles(theme).starsContainer}>
+    <View style={styles.starsContainer}>
       {[1, 2, 3, 4, 5].map((star) => (
-        <TouchableOpacity 
-            key={star} 
-            onPress={() => onRate(star)} 
-            disabled={disabled}
-            style={{ padding: 5 }}
-        >
-            <Ionicons 
-                name={star <= currentRating ? 'star' : 'star-outline'} 
-                size={44} 
-                color={star <= currentRating ? '#FFC700' : theme.border} 
-            />
-        </TouchableOpacity>
+        <Animatable.View key={star} ref={ref => starRefs.current[star-1] = ref}>
+          <TouchableOpacity 
+              onPress={() => handlePress(star)} 
+              disabled={disabled}
+              style={styles.starButton}
+          >
+              <Ionicons 
+                  name={star <= currentRating ? 'star' : 'star-outline'} 
+                  size={44} 
+                  color={star <= currentRating ? '#FFC700' : theme.border} 
+              />
+          </TouchableOpacity>
+        </Animatable.View>
       ))}
     </View>
   );
@@ -70,16 +80,18 @@ const TagSelector = React.memo(({ rating, selectedTags, onTagPress }) => {
         <Animatable.View animation="fadeIn" duration={400} style={styles.tagsSection}>
             <Text style={styles.sectionTitle}>What stood out?</Text>
             <View style={styles.tagsContainer}>
-            {relevantTags.map((tag) => (
-                <TouchableOpacity
-                    key={tag}
-                    style={[styles.tag, selectedTags.has(tag) && styles.tagSelected]}
-                    onPress={() => onTagPress(tag)}
-                >
-                    <Text style={[styles.tagText, selectedTags.has(tag) && styles.tagTextSelected]}>
-                        {tag}
-                    </Text>
-                </TouchableOpacity>
+            {relevantTags.map((tag, index) => (
+                <Animatable.View key={tag} animation="fadeInUp" delay={index * 50}>
+                    <TouchableOpacity
+                        style={[styles.tag, selectedTags.has(tag) && styles.tagSelected]}
+                        onPress={() => onTagPress(tag)}
+                    >
+                        {selectedTags.has(tag) && <Ionicons name="checkmark" size={16} color={theme.textOnPrimary} style={{ marginRight: 6 }} />}
+                        <Text style={[styles.tagText, selectedTags.has(tag) && styles.tagTextSelected]}>
+                            {tag}
+                        </Text>
+                    </TouchableOpacity>
+                </Animatable.View>
             ))}
             </View>
         </Animatable.View>
@@ -100,13 +112,31 @@ export default function CustomerFeedbackScreen() {
   const feedbackToEdit = route.params?.feedbackItem;
   const isEditMode = Boolean(feedbackToEdit);
 
-  const [rating, setRating] = useState(feedbackToEdit?.rating || 0);
-  const [feedbackText, setFeedbackText] = useState(feedbackToEdit?.text || '');
+  const [rating, setRating] = useState(0);
+  const [feedbackText, setFeedbackText] = useState('');
   const [selectedTags, setSelectedTags] = useState(new Set());
   const [isLoading, setIsLoading] = useState(false);
-  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+  
+  useEffect(() => {
+    if (isEditMode && feedbackToEdit) {
+        setRating(feedbackToEdit.rating || 0);
+        
+        const textContent = feedbackToEdit.text || '';
+        const tagMarker = '\n\n[Tags]: ';
+        const tagIndex = textContent.indexOf(tagMarker);
 
-  const titleRef = useRef(null);
+        if (tagIndex !== -1) {
+            const mainText = textContent.substring(0, tagIndex);
+            const tagsString = textContent.substring(tagIndex + tagMarker.length);
+            const tagsArray = tagsString.split(', ').filter(Boolean);
+            setFeedbackText(mainText);
+            setSelectedTags(new Set(tagsArray));
+        } else {
+            setFeedbackText(textContent);
+            setSelectedTags(new Set());
+        }
+    }
+  }, [isEditMode, feedbackToEdit]);
 
   const handleSubmit = useCallback(async () => {
     if (rating === 0) {
@@ -119,11 +149,13 @@ export default function CustomerFeedbackScreen() {
 
     setIsLoading(true);
     try {
+      const payload = { rating, text: finalText };
+
       if (isEditMode) {
-        await api.put(`/feedback/${feedbackToEdit._id}`, { rating, text: finalText });
+        await api.put(`/feedback/${feedbackToEdit._id}`, payload);
         showMessage('Feedback Updated', 'Your changes have been saved.');
       } else {
-        await api.post('/feedback', { rating, text: finalText });
+        await api.post('/feedback', payload);
         showMessage('Feedback Submitted', 'Thank you for your valuable feedback!');
       }
       navigation.goBack();
@@ -139,11 +171,10 @@ export default function CustomerFeedbackScreen() {
     navigation.setOptions({
       headerShown: true,
       title: isEditMode ? 'Edit Feedback' : 'Give Feedback',
-      headerShadowVisible: false,
-      headerStyle: { backgroundColor: theme.surface, borderBottomWidth: 1, borderBottomColor: theme.border },
+      headerTransparent: true,
       headerTitleStyle: { color: theme.text, fontWeight: '600' },
       headerLeft: () => (
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginLeft: 10 }}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginLeft: 10, padding: 5 }}>
           <Ionicons name="close" size={28} color={theme.text} />
         </TouchableOpacity>
       ),
@@ -156,7 +187,10 @@ export default function CustomerFeedbackScreen() {
           {isLoading ? (
             <ActivityIndicator size="small" color={theme.textOnPrimary} />
           ) : (
-            <Text style={styles.headerButtonText}>{isEditMode ? 'Update' : 'Send'}</Text>
+            <>
+              <Ionicons name={isEditMode ? "checkmark-done" : "send"} size={16} color={theme.textOnPrimary} style={{marginRight: 6}} />
+              <Text style={styles.headerButtonText}>{isEditMode ? 'Update' : 'Send'}</Text>
+            </>
           )}
         </TouchableOpacity>
       ),
@@ -168,11 +202,11 @@ export default function CustomerFeedbackScreen() {
     setRating(newRating);
     if (newRating > 0) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      titleRef.current?.pulse(800);
     }
   }, [rating]);
 
   const handleTagPress = useCallback((tag) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedTags(prevTags => {
         const newTags = new Set(prevTags);
         if (newTags.has(tag)) {
@@ -183,94 +217,156 @@ export default function CustomerFeedbackScreen() {
         return newTags;
     });
   }, []);
-
-  useEffect(() => {
-    const showSub = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
-    const hideSub = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
-
+  
   const { title, subtitle } = RATING_DESCRIPTIONS[rating];
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.kavContainer}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 100}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
+    <LinearGradient
+        colors={theme.isDarkMode ? ['#2A2D34', '#1A1C20'] : ['#F2F5F9', '#E4E9F2']}
+        style={styles.container}
+    >
+      <SafeAreaView style={styles.container}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.kavContainer}
         >
-          <Animatable.View>
-            <Animatable.Text ref={titleRef} animation="fadeInUp" delay={100} style={styles.title} key={title}>
-              {title}
-            </Animatable.Text>
-            <Animatable.Text animation="fadeInUp" delay={200} style={styles.subtitle} key={subtitle}>
-              {subtitle}
-            </Animatable.Text>
-          </Animatable.View>
-
-          <Animatable.View animation="fadeInUp" delay={300}>
-            <StarRating currentRating={rating} onRate={handleRatingPress} disabled={isLoading} />
-          </Animatable.View>
-          
-          <TagSelector rating={rating} selectedTags={selectedTags} onTagPress={handleTagPress} />
-
-          <Animatable.View
-            animation="fadeInUp"
-            delay={rating > 0 ? 100 : 400}
-            style={{ marginTop: 20 }}
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
           >
-            <View style={styles.messageBoxWrapper}>
-              <TextInput
-                style={styles.textInput}
-                multiline
-                placeholder="Share more details... (optional)"
-                placeholderTextColor={theme.textSecondary}
-                value={feedbackText}
-                onChangeText={setFeedbackText}
-                maxLength={MAX_CHARACTERS}
-                editable={!isLoading}
-              />
-              <Text style={styles.charCounter}>
-                {feedbackText.length}/{MAX_CHARACTERS}
-              </Text>
+            <View style={styles.contentWrapper}>
+                <Animatable.Text animation="fadeInUp" duration={600} style={styles.title} key={title}>
+                {title}
+                </Animatable.Text>
+                <Animatable.Text animation="fadeInUp" duration={600} delay={100} style={styles.subtitle} key={subtitle}>
+                {subtitle}
+                </Animatable.Text>
+
+                <Animatable.View animation="fadeInUp" delay={200}>
+                    <StarRating currentRating={rating} onRate={handleRatingPress} disabled={isLoading} />
+                </Animatable.View>
+                
+                <TagSelector rating={rating} selectedTags={selectedTags} onTagPress={handleTagPress} />
+
+                {rating > 0 && (
+                    <Animatable.View
+                        animation="fadeInUp"
+                        delay={100}
+                        style={{ width: '100%', marginTop: 20 }}
+                    >
+                        <View style={styles.messageBoxWrapper}>
+                        <TextInput
+                            style={styles.textInput}
+                            multiline
+                            placeholder="Share more details... (optional)"
+                            placeholderTextColor={theme.textSecondary}
+                            value={feedbackText}
+                            onChangeText={setFeedbackText}
+                            maxLength={MAX_CHARACTERS}
+                            editable={!isLoading}
+                        />
+                        <Text style={styles.charCounter}>
+                            {feedbackText.length}/{MAX_CHARACTERS}
+                        </Text>
+                        </View>
+                    </Animatable.View>
+                )}
             </View>
-          </Animatable.View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const getStyles = (theme) =>
   StyleSheet.create({
-    charCounter: {
-      color: theme.textSecondary,
-      fontSize: 12,
-      paddingBottom: 8,
-      paddingHorizontal: 12,
-      paddingTop: 4,
-      textAlign: 'right',
-    },
     container: { backgroundColor: theme.background, flex: 1 },
+    kavContainer: { flex: 1 },
+    scrollContent: { 
+      flexGrow: 1, 
+      justifyContent: 'center',
+      paddingTop: 80, 
+      paddingBottom: 20
+    },
+    contentWrapper: {
+        paddingHorizontal: 20,
+        alignItems: 'center',
+    },
     headerButton: {
       alignItems: 'center',
       backgroundColor: theme.primary,
       borderRadius: 20,
       flexDirection: 'row',
       marginRight: 10,
-      paddingHorizontal: 18,
+      paddingHorizontal: 16,
       paddingVertical: 9,
     },
     headerButtonDisabled: { backgroundColor: theme.disabled },
     headerButtonText: { color: theme.textOnPrimary, fontSize: 16, fontWeight: 'bold' },
-    kavContainer: { flex: 1 },
+    title: {
+      color: theme.text,
+      fontSize: 28,
+      fontWeight: 'bold',
+      marginBottom: 8,
+      textAlign: 'center',
+    },
+    subtitle: {
+      color: theme.textSecondary,
+      fontSize: 18,
+      marginBottom: 40,
+      textAlign: 'center',
+    },
+    starsContainer: {
+      flexDirection: 'row',
+      gap: 16,
+      justifyContent: 'center',
+      marginBottom: 30,
+    },
+    starButton: {
+        padding: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 5,
+    },
+    tagsSection: { 
+        width: '100%',
+        marginBottom: 10,
+    },
+    sectionTitle: {
+      color: theme.text,
+      fontSize: 16,
+      fontWeight: '600',
+      marginBottom: 16,
+      textAlign: 'center',
+    },
+    tagsContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 12,
+      justifyContent: 'center',
+    },
+    tag: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.surface,
+      borderColor: theme.border,
+      borderRadius: 30,
+      borderWidth: 1.5,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+    },
+    tagSelected: {
+      backgroundColor: theme.primary,
+      borderColor: theme.primary,
+    },
+    tagText: { 
+        color: theme.text, 
+        fontWeight: '500', 
+        fontSize: 15 
+    },
+    tagTextSelected: { color: theme.textOnPrimary },
     messageBoxWrapper: {
       backgroundColor: theme.surface,
       borderColor: theme.border,
@@ -279,47 +375,6 @@ const getStyles = (theme) =>
       minHeight: 150,
       padding: 5,
     },
-    scrollContent: { flexGrow: 1, padding: 20 },
-    sectionTitle: {
-      color: theme.text,
-      fontSize: 16,
-      fontWeight: '600',
-      marginBottom: 15,
-      textAlign: 'center',
-    },
-    starsContainer: {
-      flexDirection: 'row',
-      gap: 16,
-      justifyContent: 'center',
-      marginBottom: 10,
-    },
-    subtitle: {
-      color: theme.textSecondary,
-      fontSize: 16,
-      marginBottom: 30,
-      textAlign: 'center',
-    },
-    tag: {
-      backgroundColor: theme.surface,
-      borderColor: theme.border,
-      borderRadius: 20,
-      borderWidth: 1,
-      paddingHorizontal: 10,
-      paddingVertical: 10,
-    },
-    tagSelected: {
-      backgroundColor: theme.primary,
-      borderColor: theme.primary,
-    },
-    tagText: { color: theme.text, fontWeight: '500' },
-    tagTextSelected: { color: theme.textOnPrimary },
-    tagsContainer: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 10,
-      justifyContent: 'center',
-    },
-    tagsSection: { marginBottom: 10 },
     textInput: {
       color: theme.text,
       flex: 1,
@@ -329,11 +384,11 @@ const getStyles = (theme) =>
       paddingTop: 12,
       textAlignVertical: 'top',
     },
-    title: {
-      color: theme.text,
-      fontSize: 24,
-      fontWeight: 'bold',
-      marginBottom: 8,
-      textAlign: 'center',
+    charCounter: {
+      color: theme.textSecondary,
+      fontSize: 12,
+      paddingBottom: 8,
+      paddingRight: 12,
+      textAlign: 'right',
     },
   });
