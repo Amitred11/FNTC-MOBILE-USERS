@@ -29,14 +29,6 @@ The primary goal of this capstone was to design, build, and deploy a complete, r
 *   **💬 Customer Support:** Create and manage support tickets, engage in live chat with agents, and receive real-time push notifications.
 *   **⭐ Feedback System:** Submit and manage public feedback to share your experience.
 
-### 🛠️ Admin Dashboard Application
-*   **📊 Dashboard Overview:** Live stats on total users, active subscriptions, and open tickets.
-*   **✅ Subscription Approval:** Review and approve or decline pending customer subscriptions with a single tap.
-*   **🎟️ Ticket Management:** View all support tickets, filter by status, reply to users, and update ticket status.
-*   **🎧 Live Chat Support:** View active chat sessions, engage in real-time chat with customers, and close sessions.
-*   **🔍 User Management:** Search and view customer profiles.
-*   **📢 Broadcast Messaging:** Send push notifications to all users or targeted segments (e.g., only `active` subscribers).
-
 ---
 
 ## 🛠️ Technology Stack
