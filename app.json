@@ -45,9 +45,9 @@
       "eas": {
         "projectId": "ca00445b-0508-46c4-bb74-05e2977fa248"
       },
-      "webClientId": "973096250612-jbaqc1dc8440q5s4n6knesovs5qe3s6a.apps.googleusercontent.com",
-      "iosClientId": "973096250612-736dnhpmon9pd2di7vtcpb2rdooo1k0u.apps.googleusercontent.com",
-      "androidClientId": "973096250612-isdkn4k5tmr0sld69pmsg1d5uatco4hk.apps.googleusercontent.com"
+      "webClientId": "web.apps.googleusercontent.com",
+      "iosClientId": "ios.apps.googleusercontent.com",
+      "androidClientId": "android.apps.googleusercontent.com"
     },
     "plugins": [
       [
