@@ -6,14 +6,6 @@ This repository contains the full-stack source code for the **Fibear Internet Se
 
 ---
 
-### 📺 Project Showcase
-
-*(A GIF is highly recommended here to quickly demonstrate the app's functionality!)*
-
-
-
----
-
 ## 🎯 Project Purpose & Learning Outcomes
 
 The primary goal of this capstone was to design, build, and deploy a complete, real-world application from scratch. This project showcases proficiency in the following areas:
