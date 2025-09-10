@@ -18,7 +18,7 @@ import { lightTheme } from '../../constants/colors';
 import { useAuth, useMessage, useAlert } from '../../contexts';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Animatable from 'react-native-animatable';
-import Clipboard from '@react-native-community/clipboard';
+import Clipboard from '@react-native-clipboard/clipboard';
 
 // --- Sub-components ---
 
