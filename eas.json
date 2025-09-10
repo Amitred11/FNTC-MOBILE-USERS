@@ -18,6 +18,11 @@
       "autoIncrement": true,
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "API_URL": "@API_URL",
+        "INTERNAL_API_KEY": "@INTERNAL_API_KEY",
+        "CHATBOT_API_ENDPOINT": "@CHATBOT_API_ENDPOINT"
       }
     }
   },
