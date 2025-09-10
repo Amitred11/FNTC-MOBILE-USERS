@@ -25,7 +25,7 @@ import { Easing } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useAuth, useMessage, useAlert } from '../contexts';
+import { useAuth, useMessage, useAlert } from '../../contexts/index.js';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 const IMAGE_HEIGHT = SCREEN_HEIGHT * 0.8;
@@ -183,10 +183,10 @@ export default function SignUpScreen() {
       let title = '';
 
       if (type === 'terms') {
-        rawTextModule = await import('../texts/Terms of Services.js');
+        rawTextModule = await import('../../texts/Terms of Services.js');
         title = 'Terms and Conditions';
       } else {
-        rawTextModule = await import('../texts/Privacy Policy.js');
+        rawTextModule = await import('../../texts/Privacy Policy.js');
         title = 'Privacy Policy';
       }
 
@@ -349,18 +349,18 @@ export default function SignUpScreen() {
   return (
     <View style={{ flex: 1 }}>
       <Image
-        source={require('../assets/images/logo.png')}
+        source={require('../../assets/images/logo.png')}
         style={styles.logos}
         resizeMode="contain"
       />
       <ImageBackground
-        source={require('../assets/images/getstarted.jpg')}
+        source={require('../../assets/images/getstarted.jpg')}
         style={styles.backgroundImage}
       >
         <View style={styles.blueOverlay} />
         <Animated.View style={[cardStyle, styles.cardShadow]}>
           <Image
-            source={require('../assets/images/logo.png')}
+            source={require('../../assets/images/logo.png')}
             style={styles.logo}
             resizeMode="contain"
           />
@@ -515,7 +515,7 @@ export default function SignUpScreen() {
                   <View style={styles.socialLoginContainer}>
                     <TouchableOpacity style={styles.socialButton} onPress={handleGoogleSignIn} disabled={isLoading}>
                       <Image
-                        source={require('../assets/images/Google_2015_logo.svg.png')}
+                        source={require('../../assets/images/Google_2015_logo.svg.png')}
                         style={styles.icon}
                       />
                     </TouchableOpacity>
@@ -611,7 +611,7 @@ export default function SignUpScreen() {
                     <View style={styles.socialLoginContainer}>
                       <TouchableOpacity style={styles.socialButton} onPress={handleGoogleSignIn} disabled={isLoading}>
                         <Image
-                          source={require('../assets/images/Google_2015_logo.svg.png')}
+                          source={require('../../assets/images/Google_2015_logo.svg.png')}
                           style={styles.icon}
                         />
                       </TouchableOpacity>

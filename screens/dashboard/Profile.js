@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { useTheme, useAuth } from '../contexts';
+import { useTheme, useAuth } from '../../contexts';
 
 // --- Reusable formatting function (no changes) ---
 const formatDate = (dateString) => {
@@ -128,7 +128,7 @@ export default function ProfileScreen() {
           source={
             userProfile.photoUrl
               ? { uri: userProfile.photoUrl }
-              : require('../assets/images/profilepic.jpg')
+              : require('../../assets/images/profilepic.jpg')
           }
           style={styles.profileImage}
         />

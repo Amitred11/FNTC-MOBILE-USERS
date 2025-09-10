@@ -5,10 +5,10 @@
     "scheme": "fibear",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/logo.png",
+    "icon": "./assets/logo.jpg",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/logo.png",
+      "image": "./assets/logo.jpg",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -26,7 +26,7 @@
       "googleServicesFile": "./google-services.json",
       "newArchEnabled": true,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/logo.png",
+        "foregroundImage": "./assets/logo.jpg",
         "backgroundColor": "#ffffff"
       },
       "permissions": [
@@ -39,7 +39,7 @@
       ]
     },
     "web": {
-      "favicon": "./assets/logo.png"
+      "favicon": "./assets/logo.jpg"
     },
     "extra": {
       "eas": {

@@ -17,11 +17,11 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
-import CustomPicker from '../components/CustomPicker';
+import CustomPicker from '../../components/CustomPicker';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { requestMediaLibraryPermissions, requestCameraPermissions } from '../utils/permissions';
-import PhotoSourceSheet from '../components/PhotoSourceSheet';
-import { useAuth, useTheme, useMessage, useAlert } from '../contexts';
+import { requestMediaLibraryPermissions, requestCameraPermissions } from '../../utils/permissions';
+import PhotoSourceSheet from '../../components/PhotoSourceSheet';
+import { useAuth, useTheme, useMessage, useAlert } from '../../contexts';
 
 // --- Reusable UI Component for this Screen's Design ---
 const FormField = React.memo(({ label, iconName, children }) => {
@@ -193,7 +193,7 @@ export default function EditProfileScreen() {
   }, [navigation]);
 
   const photoUri = newPhoto?.uri || profile?.photoUrl;
-  const photoSource = photoUri ? { uri: photoUri } : require('../assets/images/profilepic.jpg');
+  const photoSource = photoUri ? { uri: photoUri } : require('../../assets/images/profilepic.jpg');
   const datePickerValue = useMemo(() => (formData.birthday ? new Date(formData.birthday) : new Date()), [formData.birthday]);
   const canSave = !isSaving && isDirty;
 

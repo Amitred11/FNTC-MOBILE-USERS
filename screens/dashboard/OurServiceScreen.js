@@ -14,7 +14,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useTheme, useAuth, useSubscription } from '../contexts';
+import { useTheme, useAuth, useSubscription } from '../../contexts';
 
 const servicesData = [
   {

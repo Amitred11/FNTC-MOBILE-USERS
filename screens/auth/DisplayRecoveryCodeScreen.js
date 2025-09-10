@@ -14,8 +14,8 @@ import {
 import Clipboard from '@react-native-community/clipboard';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
-import { lightTheme } from '../constants/colors';
-import { useMessage, useAlert, useAuth } from '../contexts';  
+import { lightTheme } from '../../constants/colors';
+import { useMessage, useAlert, useAuth } from '../../contexts';  
 import * as Animatable from 'react-native-animatable';
 
 

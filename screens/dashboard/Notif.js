@@ -19,8 +19,8 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as Animatable from 'react-native-animatable';
-import { useTheme, useAlert, useAuth, useMessage } from '../contexts';
-import StatusDisplay from '../components/StatusDisplay'; // Make sure this path is correct
+import { useTheme, useAlert, useAuth, useMessage } from '../../contexts';
+import StatusDisplay from '../../components/StatusDisplay'; // Make sure this path is correct
 
 // --- Constants & Helpers ---
 const NOTIFICATIONS_PER_PAGE = 20;
@@ -357,7 +357,7 @@ export default function NotificationScreen() {
       {profile && !profile.pushToken ? (
         <View style={styles.statusDisplayWrapper}>
             <StatusDisplay 
-                illustration={require('../assets/images/notifications_disabled.png')} 
+                illustration={require('../../assets/images/notifications_disabled.png')} 
                 title="Notifications Disabled" 
                 text="Enable push notifications in your device settings to receive important updates." 
                 buttonText="Go to App Settings" 
@@ -370,7 +370,7 @@ export default function NotificationScreen() {
           keyExtractor={(item) => item._id}
           renderItem={({ item }) => <NotificationItem item={item} onPress={() => handleItemTap(item)} onLongPress={() => handleItemLongPress(item)} isSelectionMode={isSelectionMode} isSelected={selectedIds.has(item._id)} />}
           renderSectionHeader={({ section: { title } }) => <Text style={styles.sectionHeader}>{title}</Text>}
-          ListEmptyComponent={<View style={styles.statusDisplayWrapper}><StatusDisplay illustration={require('../assets/images/no_notifications.png')} title="All Caught Up!" text="You have no new notifications right now." /></View>}
+          ListEmptyComponent={<View style={styles.statusDisplayWrapper}><StatusDisplay illustration={require('../../assets/images/no_notifications.png')} title="All Caught Up!" text="You have no new notifications right now."/></View>}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
           stickySectionHeadersEnabled={false}
           onEndReached={() => { if (!loadingState.loadingMore && page < totalPages) fetchNotifications(false); }}

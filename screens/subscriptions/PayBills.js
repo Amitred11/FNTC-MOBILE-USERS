@@ -20,16 +20,16 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
-import { useSubscription, useTheme, useAlert, useMessage, useAuth } from '../contexts';
-import { requestMediaLibraryPermissions, requestCameraPermissions } from '../utils/permissions';
-import StatusDisplay from '../components/StatusDisplay';
-import PhotoSourceSheet from '../components/PhotoSourceSheet';
+import { useSubscription, useTheme, useAlert, useMessage, useAuth } from '../../contexts';
+import { requestMediaLibraryPermissions, requestCameraPermissions } from '../../utils/permissions';
+import StatusDisplay from '../../components/StatusDisplay';
+import PhotoSourceSheet from '../../components/PhotoSourceSheet';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Animatable from 'react-native-animatable';
 
-const GCASH_QR_IMAGE = require('../assets/images/gcashqr.png');
-const GCASH_LOGO_IMAGE = require('../assets/images/gcash.png');
-const CASH_LOGO_IMAGE = require('../assets/images/cod.png');
+const GCASH_QR_IMAGE = require('../../assets/images/gcashqr.png');
+const GCASH_LOGO_IMAGE = require('../../assets/images/gcash.png');
+const CASH_LOGO_IMAGE = require('../../assets/images/cod.png');
 
 const EMPTY_STATES_CONFIG = (theme, navigation) => ({
   pending_installation: { icon: 'build-outline', color: theme.warning, title: 'Awaiting Installation', text: 'Your bills will appear here once your modem installation is complete.' },
@@ -262,7 +262,7 @@ export default function PayBillsScreen() {
 
   const renderEmptyState = () => {
     if (pendingBill) {
-      return <ScrollView contentContainerStyle={styles.fullScreenScroll} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} tintColor={theme.primary} />}><StatusDisplay illustration={require('../assets/images/completedplan.png')} title="Payment Under Review" text={`We are verifying your payment of ₱${pendingBill.amount.toFixed(2)}. This may take up to 24 hours.`} /></ScrollView>;
+      return <ScrollView contentContainerStyle={styles.fullScreenScroll} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} tintColor={theme.primary} />}><StatusDisplay illustration={require('../../assets/images/completedplan.png')} title="Payment Under Review" text={`We are verifying your payment of ₱${pendingBill.amount.toFixed(2)}. This may take up to 24 hours.`} /></ScrollView>;
     }
     const stateConfig = EMPTY_STATES_CONFIG(theme, navigation);
     const state = stateConfig[subscriptionStatus] || stateConfig.active;

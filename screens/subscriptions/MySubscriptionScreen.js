@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useSubscription, useTheme, useAlert, useMessage } from '../contexts';
+import { useSubscription, useTheme, useAlert, useMessage } from '../../contexts';
 import { AnimatedCircularProgress } from 'react-native-circular-progress';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { formatDistanceToNowStrict } from 'date-fns';

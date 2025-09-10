@@ -15,9 +15,9 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { useSubscription, useTheme, useAuth } from '../contexts';
+import { useSubscription, useTheme, useAuth } from '../../contexts';
 import * as Animatable from 'react-native-animatable';
-import { BottomNavBar } from '../components/BottomNavBar';
+import { BottomNavBar } from '../../components/BottomNavBar';
 
 // --- SECTION 1: CONSTANTS & HELPERS ---
 
@@ -320,7 +320,7 @@ export default function MyBillsScreen() {
              return (
                 <ScrollView contentContainerStyle={styles.scrollContent} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} tintColor={theme.primary} />}>
                     <EmptyStateView
-                        illustration={require('../assets/images/cancelled.png')}
+                        illustration={require('../../assets/images/cancelled.png')}
                         title="Subscription Cancelled"
                         text="You can still view your past billing history or subscribe to a new plan."
                         buttonText="SUBSCRIBE AGAIN"
@@ -337,11 +337,11 @@ export default function MyBillsScreen() {
 
         const EMPTY_STATES = {
             null: { icon: 'document-text-outline', title: 'No Active Plan', text: 'You need an active subscription to view or pay bills.', buttonText: 'Subscribe Now', action: async () => { await clearSubscription(); handleNavigate('Subscription'); }},
-            pending_installation: { illustration: require('../assets/images/technician.png'), title: 'Awaiting Installation', text: 'Your bills will appear here once your plan is activated.', buttonText: 'Check Status', action: () => handleNavigate('Subscription') },
-            pending_verification: { illustration: require('../assets/images/completedplan.png'), title: 'Verification in Progress', text: 'Your first bill will appear here once your plan is active.', buttonText: 'Check Status', action: () => handleNavigate('Subscription') },
-            pending_change: { illustration: require('../assets/images/completedplan.png'), title: 'Plan Change Pending', text: 'You cannot view or pay bills while your plan change is being reviewed.', buttonText: 'VIEW STATUS', action: () => handleNavigate('Subscription') },
-            declined: { illustration: require('../assets/images/declined.png'), title: 'Submission Declined', text: 'Your recent subscription payment was not approved.', buttonText: 'TRY AGAIN', action: async () => { await clearSubscription(); handleNavigate('Subscription'); }, reason: subscriptionData?.declineReason },
-            cancelled: { illustration: require('../assets/images/cancelled.png'), title: 'Subscription Cancelled', text: 'Your subscription is no longer active. Subscribe to a new plan to continue.', buttonText: 'SUBSCRIBE AGAIN', action: async () => { await clearSubscription(); handleNavigate('Subscription'); }},
+            pending_installation: { illustration: require('../../assets/images/technician.png'), title: 'Awaiting Installation', text: 'Your bills will appear here once your plan is activated.', buttonText: 'Check Status', action: () => handleNavigate('Subscription') },
+            pending_verification: { illustration: require('../../assets/images/completedplan.png'), title: 'Verification in Progress', text: 'Your first bill will appear here once your plan is active.', buttonText: 'Check Status', action: () => handleNavigate('Subscription') },
+            pending_change: { illustration: require('../../assets/images/completedplan.png'), title: 'Plan Change Pending', text: 'You cannot view or pay bills while your plan change is being reviewed.', buttonText: 'VIEW STATUS', action: () => handleNavigate('Subscription') },
+            declined: { illustration: require('../../assets/images/declined.png'), title: 'Submission Declined', text: 'Your recent subscription payment was not approved.', buttonText: 'TRY AGAIN', action: async () => { await clearSubscription(); handleNavigate('Subscription'); }, reason: subscriptionData?.declineReason },
+            cancelled: { illustration: require('../../assets/images/cancelled.png'), title: 'Subscription Cancelled', text: 'Your subscription is no longer active. Subscribe to a new plan to continue.', buttonText: 'SUBSCRIBE AGAIN', action: async () => { await clearSubscription(); handleNavigate('Subscription'); }},
         };
         const state = EMPTY_STATES[subscriptionStatus] || EMPTY_STATES.null;
         return <EmptyStateView {...state} />;

@@ -15,13 +15,13 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
-import { useAuth, useTheme, useAlert, useMessage } from '../contexts';
+import { useAuth, useTheme, useAlert, useMessage } from '../../contexts';
 import {
   registerForPushNotificationsAsync,
   unregisterForPushNotificationsAsync,
-} from '../services/notificationService';
-import TermsOfServiceText from '../texts/Terms of Services';
-import PrivacyPolicyText from '../texts/Privacy Policy';
+} from '../../services/notificationService';
+import TermsOfServiceText from '../../texts/Terms of Services';
+import PrivacyPolicyText from '../../texts/Privacy Policy';
 
 // --- Sub-Components (Memoized for Performance) ---
 

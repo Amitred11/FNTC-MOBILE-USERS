@@ -16,9 +16,9 @@ import {
 import * as Animatable from 'react-native-animatable';
 import { useNavigation } from '@react-navigation/native';
 // --- CHANGE 1: Import lightTheme directly, remove useTheme ---
-import { lightTheme } from '../constants/colors';
-import TermsOfServiceText from '../texts/Terms of Services.js';
-import PrivacyPolicyText from '../texts/Privacy Policy.js';
+import { lightTheme } from '../../constants/colors.js';
+import TermsOfServiceText from '../../texts/Terms of Services.js';
+import PrivacyPolicyText from '../../texts/Privacy Policy.js';
 
 // --- Constants ---
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -80,12 +80,12 @@ export default function GetStartedScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Image
-        source={require('../assets/images/logo.png')}
+        source={require('../../assets/images/logo.png')}
         style={styles.logo}
         resizeMode="contain"
       />
       <View style={styles.mainContent}>
-        <Image source={require('../assets/images/getstarted.jpg')} style={styles.backgroundImage} />
+        <Image source={require('../../assets/images/getstarted.jpg')} style={styles.backgroundImage} />
         <View style={styles.blueOverlay} />
 
         <Animatable.View

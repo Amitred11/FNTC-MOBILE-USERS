@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
-import { useTheme, useAuth, useAlert } from '../contexts';
+import { useTheme, useAuth, useAlert } from '../../contexts';
 import * as Animatable from 'react-native-animatable';
 
 // --- Constants ---

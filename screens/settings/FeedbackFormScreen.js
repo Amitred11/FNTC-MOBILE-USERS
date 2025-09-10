@@ -19,7 +19,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import * as Animatable from 'react-native-animatable';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAuth, useTheme, useMessage, useAlert } from '../contexts';
+import { useAuth, useTheme, useMessage, useAlert } from '../../contexts';
 
 // --- Constants ---
 const MAX_CHARACTERS = 500;
@@ -100,7 +100,7 @@ const TagSelector = React.memo(({ rating, selectedTags, onTagPress }) => {
 
 
 // --- Main Screen Component ---
-export default function CustomerFeedbackScreen() {
+export default function FeedbackFormScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { theme } = useTheme();

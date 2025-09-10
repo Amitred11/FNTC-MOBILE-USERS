@@ -21,20 +21,20 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Animatable from 'react-native-animatable';
 
 import MySubscriptionScreen from './MySubscriptionScreen';
-import { useSubscription, useAuth, useTheme, useMessage, useAlert } from '../contexts';
-import { BottomNavBar } from '../components/BottomNavBar';
-import { requestMediaLibraryPermissions, requestCameraPermissions } from '../utils/permissions';
-import PhotoSourceSheet from '../components/PhotoSourceSheet';
+import { useSubscription, useAuth, useTheme, useMessage, useAlert } from '../../contexts';
+import { BottomNavBar } from '../../components/BottomNavBar';
+import { requestMediaLibraryPermissions, requestCameraPermissions } from '../../utils/permissions';
+import PhotoSourceSheet from '../../components/PhotoSourceSheet';
 
 // --- Static Assets ---
-const GCASH_LOGO_IMAGE = require('../assets/images/gcash.png');
-const GCASH_QR_IMAGE = require('../assets/images/gcashqr.png');
-const COD_LOGO_IMAGE = require('../assets/images/cod.png');
+const GCASH_LOGO_IMAGE = require('../../assets/images/gcash.png');
+const GCASH_QR_IMAGE = require('../../assets/images/gcashqr.png');
+const COD_LOGO_IMAGE = require('../../assets/images/cod.png');
 const ILLUSTRATIONS = {
-  INSTALLATION: require('../assets/images/technician.png'),
-  VERIFICATION: require('../assets/images/completedplan.png'),
-  DECLINED: require('../assets/images/declined.png'),
-  SUSPENDED: require('../assets/images/declined.png'),
+  INSTALLATION: require('../../assets/images/technician.png'),
+  VERIFICATION: require('../../assets/images/completedplan.png'),
+  DECLINED: require('../../assets/images/declined.png'),
+  SUSPENDED: require('../../assets/images/declined.png'),
 };
 
 

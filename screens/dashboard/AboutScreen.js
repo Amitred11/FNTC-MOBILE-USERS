@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Image, ImageBackground } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useTheme } from '../contexts';
+import { useTheme } from '../../contexts';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Animatable from 'react-native-animatable';
 
@@ -55,7 +55,7 @@ const HeroHeader = React.memo(({ onBackPress }) => {
     const styles = getStyles(useTheme().theme);
     return (
         <ImageBackground 
-            source={require('../assets/images/network.jpg')}
+            source={require('../../assets/images/network.jpg')}
             style={styles.heroBanner}
         >
             <View style={styles.heroOverlay} />
@@ -66,7 +66,7 @@ const HeroHeader = React.memo(({ onBackPress }) => {
                 <Animatable.Image
                     animation="zoomIn"
                     duration={800}
-                    source={require('../assets/images/logo.png')}
+                    source={require('../../assets/images/logo.png')}
                     style={styles.logo}
                 />
                 <Animatable.Text

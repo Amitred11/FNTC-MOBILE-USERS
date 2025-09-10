@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useCallback, Fragment } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Platform } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useTheme } from '../contexts';
+import { useTheme } from '../../contexts';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Animatable from 'react-native-animatable';
 

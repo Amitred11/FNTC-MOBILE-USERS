@@ -7,13 +7,12 @@ import { useTheme } from '../contexts/ThemeContext';
 
 // This is the full component, now in its own file.
 // Modified to accept 'icon' and 'color' props alongside 'illustration'
-const StatusDisplay = ({ illustration, icon, color, title, text, buttonText, action }) => { // <--- Added icon, color, changed onButtonPress to action for consistency
+const StatusDisplay = ({ illustration, icon, color, title, text, buttonText, action }) => {
   const { theme } = useTheme();
   const styles = getStyles(theme);
 
   return (
     <View style={styles.container}>
-      {/* Conditionally render Illustration OR Icon */}
       {illustration ? (
         <Animatable.Image
           animation="fadeInUp"
@@ -22,20 +21,20 @@ const StatusDisplay = ({ illustration, icon, color, title, text, buttonText, act
           source={illustration}
           style={styles.illustration}
         />
-      ) : icon ? ( // <--- Render Ionicons if 'icon' prop is provided
+      ) : icon ? (
         <Animatable.View
           animation="fadeInUp"
           duration={600}
           delay={100}
-          style={styles.iconContainer} // Add a style for the icon wrapper
+          style={styles.iconContainer}
         >
           <Ionicons
             name={icon}
-            size={80} // <--- Set a good size for the icon (e.g., 60-80)
-            color={color || theme.textSecondary} // Use provided color or a default
+            size={80}
+            color={color || theme.textSecondary}
           />
         </Animatable.View>
-      ) : null} {/* If neither, render nothing for the visual */}
+      ) : null}
 
       <Animatable.View animation="fadeInUp" duration={600} delay={200}>
         <Text style={styles.title}>{title}</Text>
@@ -44,8 +43,8 @@ const StatusDisplay = ({ illustration, icon, color, title, text, buttonText, act
         <Text style={styles.text}>{text}</Text>
       </Animatable.View>
 
-      {buttonText && action && ( // <--- Changed onButtonPress to action for consistency with your PayBillsScreen
-        <Animatable.View animation="fadeInUp" duration={600} delay={400} style={styles.buttonWrapper}> {/* Added a wrapper for button positioning */}
+      {buttonText && action && (
+        <Animatable.View animation="fadeInUp" duration={600} delay={400} style={styles.buttonWrapper}>
           <TouchableOpacity style={styles.button} onPress={action}>
             <Text style={styles.buttonText}>{buttonText}</Text>
           </TouchableOpacity>

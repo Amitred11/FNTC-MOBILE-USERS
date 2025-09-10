@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
-import { lightTheme } from '../constants/colors';
+import { lightTheme } from '../../constants/colors';
 import * as Animatable from 'react-native-animatable';
 
 const CONTACT_INFO = {

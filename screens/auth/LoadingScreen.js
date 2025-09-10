@@ -4,10 +4,10 @@ import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Image, StatusBar, Platform } from 'react-native';
 import * as Animatable from 'react-native-animatable';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useTheme } from '../contexts';
+import { useTheme } from '../../contexts';
 
 // --- Constants for Animations and Assets ---
-const LOGO_IMAGE = require('../assets/images/logo.png');
+const LOGO_IMAGE = require('../../assets/images/logo.png');
 
 const LOGO_ANIMATION = {
   from: { opacity: 0, scale: 0.5, rotate: '-15deg' },

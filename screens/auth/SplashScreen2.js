@@ -173,7 +173,7 @@ export default function SplashScreen2() {
   return (
     <View style={styles.container}>
       <AnimatedImageBackground
-        source={require('../assets/images/bgimage.jpg')}
+        source={require('../../assets/images/bgimage.jpg')}
         style={[styles.background, animatedBackgroundStyle]}
         resizeMode="cover"
       />
@@ -184,7 +184,7 @@ export default function SplashScreen2() {
         <Animated.Text style={[styles.welcomeText, animatedWelcomeStyle]}>Welcome</Animated.Text>
 
         <Animated.Image
-          source={require('../assets/images/logo.png')}
+          source={require('../../assets/images/logo.png')}
           style={[styles.logo, animatedLogoStyle]}
           resizeMode="contain"
         />

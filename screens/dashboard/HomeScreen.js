@@ -20,9 +20,9 @@ import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as Animatable from 'react-native-animatable';
-import { useSubscription, useAlert, useAuth, useTheme } from '../contexts';
+import { useSubscription, useAlert, useAuth, useTheme } from '../../contexts';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { BottomNavBar } from '../components/BottomNavBar';
+import { BottomNavBar } from '../../components/BottomNavBar';
 
 // --- Sub-Components (Memoized for Performance) ---
 
@@ -30,14 +30,14 @@ const DrawerMenu = React.memo(({ isVisible, onClose, onNavigate, onLogout }) => 
     const { theme } = useTheme();
     const { user: profile } = useAuth();
     const styles = getStyles(theme);
-    const photoSource = profile?.photoUrl ? { uri: profile.photoUrl } : require('../assets/images/profilepic.jpg');
+    const photoSource = profile?.photoUrl ? { uri: profile.photoUrl } : require('../../assets/images/profilepic.jpg');
 
     return (
         <Modal animation="fade" transparent={true} visible={isVisible} onRequestClose={onClose}>
             <View style={styles.drawerOverlay}>
                 <Animatable.View animation="slideInLeft" duration={400} style={styles.drawerContainer}>
-                    <LinearGradient 
-                        colors={theme.isDarkMode ? [theme.textBe, theme.primary ] : [theme.primary, theme.textBe ]} 
+                    <LinearGradient
+                        colors={theme.isDarkMode ? [theme.textBe, theme.primary ] : [theme.primary, theme.textBe ]}
                         style={styles.fullGradient}
                     >
                         <View style={styles.drawerHeader}>
@@ -51,10 +51,10 @@ const DrawerMenu = React.memo(({ isVisible, onClose, onNavigate, onLogout }) => 
                         </View>
                         <ScrollView contentContainerStyle={styles.drawerMenu}>
                             <DrawerItem icon="person-outline" label="My Profile" onPress={() => onNavigate('Profile')} />
-                            <DrawerItem icon="notifications-outline" label="Notifications" onPress={() => onNavigate('Notif')} />
                             <DrawerItem icon="settings-outline" label="App Settings" onPress={() => onNavigate('Settings')} />
-                            <DrawerItem icon="chatbubbles-outline" label="Customer Feedback" onPress={() => onNavigate('CustomerFeedbackScreen')} />
+                            <DrawerItem icon="headset-outline" label="Contact Support" onPress={() => onNavigate('Support')} />
                             <DrawerItem icon="information-circle-outline" label="About Us" onPress={() => onNavigate('About')} />
+                            <DrawerItem icon="chatbubbles-outline" label="Customer Feedback" onPress={() => onNavigate('CustomerFeedbackScreen')} />
                         </ScrollView>
                         <TouchableOpacity style={styles.drawerLogoutButton} onPress={onLogout}>
                             <Feather name="log-out" size={20} color={theme.danger} />
@@ -73,7 +73,7 @@ const DrawerMenu = React.memo(({ isVisible, onClose, onNavigate, onLogout }) => 
 const DrawerItem = React.memo(({ icon, label, onPress }) => {
     const { theme } = useTheme();
     const styles = getStyles(theme);
-    const itemColor = theme.textOnPrimary; 
+    const itemColor = theme.textOnPrimary;
     return (
         <TouchableOpacity style={styles.drawerMenuItem} onPress={onPress}>
             <Ionicons name={icon} size={24} color={itemColor} />
@@ -82,7 +82,6 @@ const DrawerItem = React.memo(({ icon, label, onPress }) => {
         </TouchableOpacity>
     );
 });
-
 
 const AccountInfoCard = React.memo(({ icon, label, value, color, onPress }) => {
     const { theme } = useTheme();
@@ -124,68 +123,6 @@ const ConfirmationModal = React.memo(({ isVisible, onClose, onConfirm, title, de
     );
 });
 
-const FeedbackCard = React.memo(({ item, profile, isActiveMenu, onToggleMenu, onEdit, onDelete, isExpanded, onToggleExpand }) => {
-    const { theme } = useTheme();
-    const styles = getStyles(theme);
-    
-    const photoUrl = item.userId?.photoUrl;
-    const displayName = item.userId?.displayName || 'Anonymous';
-    const feedbackOwnerId = item.userId?._id;
-    
-    const [isTextTruncated, setIsTextTruncated] = useState(false);
-    const MAX_LINES = 3;
-
-    const handleTextLayout = useCallback((event) => {
-        if (event.nativeEvent.lines.length > MAX_LINES) {
-            setIsTextTruncated(true);
-        }
-    }, []);
-
-    return (
-        <View style={styles.card}>
-            <View style={styles.cardHeader}>
-                <Image style={styles.avatar} source={photoUrl ? { uri: photoUrl } : require('../assets/images/profilepic.jpg')} />
-                <View>
-                    <Text style={styles.name}>{displayName}</Text>
-                    <View style={styles.stars}>
-                        {Array.from({ length: 5 }).map((_, i) => (
-                            <Ionicons key={i} name={i < item.rating ? 'star' : 'star-outline'} size={16} color="#FFD700" />
-                        ))}
-                    </View>
-                </View>
-            </View>
-
-            {profile?._id === feedbackOwnerId && (
-                <TouchableOpacity style={styles.menuButton} onPress={onToggleMenu}>
-                    <Ionicons name="ellipsis-vertical" size={20} color={theme.textSecondary} />
-                </TouchableOpacity>
-            )}
-
-            {isActiveMenu && (
-                <Animatable.View animation="fadeIn" duration={300} style={styles.popoverMenu}>
-                    <TouchableOpacity style={styles.popoverItem} onPress={onEdit}><Ionicons name="create-outline" size={18} color={theme.text} /><Text style={styles.popoverText}>Edit</Text></TouchableOpacity>
-                    <TouchableOpacity style={styles.popoverItem} onPress={onDelete}><Ionicons name="trash-outline" size={18} color={theme.danger} /><Text style={[styles.popoverText, { color: theme.danger }]}>Delete</Text></TouchableOpacity>
-                </Animatable.View>
-            )}
-            
-            <Text 
-                style={styles.feedback} 
-                numberOfLines={isExpanded ? undefined : MAX_LINES}
-                onTextLayout={!isExpanded ? handleTextLayout : undefined}
-            >
-                {item.text}
-            </Text>
-
-           
-            {isTextTruncated && (
-                <TouchableOpacity onPress={onToggleExpand} style={styles.seeMoreButton}>
-                    <Text style={styles.seeMoreText}>{isExpanded ? 'See Less' : 'See More'}</Text>
-                </TouchableOpacity>
-            )}
-        </View>
-    );
-});
-
 const QuickActionButton = ({ icon, label, onPress }) => {
     const { theme } = useTheme();
     const styles = getStyles(theme);
@@ -199,6 +136,31 @@ const QuickActionButton = ({ icon, label, onPress }) => {
     );
 };
 
+// New component for feedback prompt
+const FeedbackPromptCard = React.memo(({ onPress }) => {
+    const { theme } = useTheme();
+    const styles = getStyles(theme);
+    return (
+        <TouchableOpacity style={styles.feedbackPromptCard} onPress={onPress}>
+            <LinearGradient
+                colors={theme.isDarkMode ? [theme.accent, theme.primary] : [theme.primary, theme.accent]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.feedbackPromptGradient}
+            >
+                <View style={styles.feedbackPromptContent}>
+                    <Ionicons name="chatbubbles-outline" size={30} color={theme.textOnPrimary} />
+                    <View style={styles.feedbackPromptTextContainer}>
+                        <Text style={styles.feedbackPromptTitle}>Share Your Thoughts!</Text>
+                        <Text style={styles.feedbackPromptSubtitle}>Help us improve by leaving feedback.</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={24} color={theme.textOnPrimary} />
+                </View>
+            </LinearGradient>
+        </TouchableOpacity>
+    );
+});
+
 
 // --- Main Screen Component ---
 export default function HomePage() {
@@ -208,70 +170,41 @@ export default function HomePage() {
   const { showAlert } = useAlert();
   const { user: profile, refreshUser, signOut, api } = useAuth();
   const { subscriptionData, paymentHistory, subscriptionStatus, refreshSubscription, isLoading: isSubscriptionLoading } = useSubscription();
-  
-  const [uiState, setUiState] = useState({ isMenuVisible: false, isLogoutModalVisible: false, isExitModalVisible: false, activeMenuFeedbackId: null });
-  const [feedbacks, setFeedbacks] = useState([]);
-  const [expandedFeedbackId, setExpandedFeedbackId] = useState(null);
-  const [dataState, setDataState] = useState({ isFeedbackLoading: true, unreadCount: 0, refreshing: false });
+
+  const [uiState, setUiState] = useState({ isMenuVisible: false, isLogoutModalVisible: false, isExitModalVisible: false });
+  const [dataState, setDataState] = useState({ unreadCount: 0, refreshing: false });
   const hasDiscoveredScroll = useRef(false);
-  
+
   const showScrollIndicator = !hasDiscoveredScroll.current && subscriptionStatus === 'active';
 
   const fetchAllData = useCallback(async () => {
     if (!api) return;
     setDataState(prev => ({ ...prev, refreshing: true }));
     try {
-        const [feedbackRes, notificationsRes] = await Promise.all([
-            api.get('/feedback?limit=5'),
+        const [notificationsRes] = await Promise.all([
             api.get('/notifications'),
             refreshUser(),
             refreshSubscription(),
         ]);
-        if (feedbackRes?.data?.data) {
-            setFeedbacks(feedbackRes.data.data);
-            await AsyncStorage.setItem('cachedFeedbacks', JSON.stringify(feedbackRes.data.data));
-        }
         if (notificationsRes?.data?.data) {
             setDataState(prev => ({ ...prev, unreadCount: notificationsRes.data.data.filter(n => !n.read).length }));
         }
     } catch (error) {
         console.error("Error fetching homepage data:", error.message);
     } finally {
-        setDataState(prev => ({ ...prev, refreshing: false, isFeedbackLoading: false }));
+        setDataState(prev => ({ ...prev, refreshing: false }));
     }
   }, [api, refreshUser, refreshSubscription]);
 
   useFocusEffect(useCallback(() => { fetchAllData(); }, [fetchAllData]));
 
   const handleUiStateChange = useCallback((key, value) => setUiState(prev => ({ ...prev, [key]: value })), []);
-  const handleToggleExpand = useCallback((feedbackId) => setExpandedFeedbackId(prevId => (prevId === feedbackId ? null : feedbackId)), []);
   const onConfirmLogout = useCallback(() => { handleUiStateChange('isLogoutModalVisible', false); signOut(); }, [signOut, handleUiStateChange]);
   const navigateAndCloseDrawer = useCallback((screenName) => { navigation.navigate(screenName); handleUiStateChange('isMenuVisible', false); }, [navigation, handleUiStateChange]);
-
-  const handleDeleteFeedback = useCallback((feedbackId) => {
-    handleUiStateChange('activeMenuFeedbackId', null);
-    showAlert('Delete Feedback', <Text>Are you sure you want to permanently delete your feedback?</Text>, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => {
-          try { 
-            await api.delete(`/feedback/${feedbackId}`); 
-            setFeedbacks((prev) => prev.filter((f) => f._id !== feedbackId)); 
-          } catch (error) { 
-            showAlert('Error', <Text>Could not delete feedback.</Text>); 
-          }
-      }},
-    ]);
-  }, [api, showAlert, handleUiStateChange]);
-
-  const handleEditFeedback = useCallback((item) => {
-      handleUiStateChange('activeMenuFeedbackId', null);
-      navigation.navigate('CustomerFeedbackScreen', { feedbackItem: item });
-  }, [navigation, handleUiStateChange]);
 
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
-        if (uiState.activeMenuFeedbackId) { handleUiStateChange('activeMenuFeedbackId', null); return true; }
         if (uiState.isMenuVisible) { handleUiStateChange('isMenuVisible', false); return true; }
         if (uiState.isLogoutModalVisible || uiState.isExitModalVisible) { handleUiStateChange('isLogoutModalVisible', false); handleUiStateChange('isExitModalVisible', false); return true; }
         handleUiStateChange('isExitModalVisible', true);
@@ -281,12 +214,12 @@ export default function HomePage() {
       return () => subscription.remove();
     }, [uiState, handleUiStateChange])
   );
-  
+
   const renderDashboard = useMemo(() => {
     if (isSubscriptionLoading && !dataState.refreshing) {
       return <View style={styles.dashboardLoader}><ActivityIndicator color={theme.primary} /></View>;
     }
-    
+
     const renderNoPlanCard = (title, subtitle, screen, iconName, isSuspended = false) => (
         <TouchableOpacity onPress={() => navigation.navigate(screen)}>
             <LinearGradient colors={isSuspended ? [theme.danger, '#a10a0a'] : [theme.primary, theme.accent]} style={styles.noPlanCard}>
@@ -307,10 +240,10 @@ export default function HomePage() {
     const renewalDate = subscriptionData.renewalDate;
     const pendingBill = paymentHistory.find(bill => bill.type === 'bill' && bill.status === 'Pending Verification');
     const dueBill = paymentHistory.find(bill => bill.type === 'bill' && (bill.status === 'Due' || bill.status === 'Overdue'));
-    
+
     let billAmount = 'All Paid', billColor = theme.success, billLabel = 'Current Bill', billOnPress = () => navigation.navigate('MyBills');
 
-    if (pendingBill) { billAmount = `₱${pendingBill.amount.toFixed(2)}`; billColor = theme.warning; billLabel = 'Payment Verifying'; } 
+    if (pendingBill) { billAmount = `₱${pendingBill.amount.toFixed(2)}`; billColor = theme.warning; billLabel = 'Payment Verifying'; }
     else if (dueBill) { billAmount = `₱${dueBill.amount.toFixed(2)}`; billColor = dueBill.status === 'Overdue' ? theme.danger : theme.warning; billOnPress = () => navigation.navigate('PayBills'); }
 
     const nextBillDate = dueBill ? new Date(dueBill.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : new Date(renewalDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -324,18 +257,18 @@ export default function HomePage() {
     );
   }, [isSubscriptionLoading, dataState.refreshing, subscriptionStatus, paymentHistory, subscriptionData, theme, navigation, styles]);
 
-  const photoSource = profile?.photoUrl ? { uri: profile.photoUrl } : require('../assets/images/profilepic.jpg');
+  const photoSource = profile?.photoUrl ? { uri: profile.photoUrl } : require('../../assets/images/profilepic.jpg');
 
   return (
     <SafeAreaView style={styles.container}>
         <DrawerMenu isVisible={uiState.isMenuVisible} onClose={() => handleUiStateChange('isMenuVisible', false)} onNavigate={navigateAndCloseDrawer} onLogout={() => { handleUiStateChange('isMenuVisible', false); handleUiStateChange('isLogoutModalVisible', true); }} />
-        <ConfirmationModal isVisible={uiState.isLogoutModalVisible} onClose={() => handleUiStateChange('isLogoutModalVisible', false)} onConfirm={onConfirmLogout} title="Logging Out" description="Are you sure you want to log out?" confirmText="Yes, Log Out" imageSource={require('../assets/images/logoutpic.png')} />
-        <ConfirmationModal isVisible={uiState.isExitModalVisible} onClose={() => handleUiStateChange('isExitModalVisible', false)} onConfirm={() => BackHandler.exitApp()} title="Exit Application?" description="Are you sure you want to close the application?" confirmText="Yes, Exit" imageSource={require('../assets/images/logoutpic.png')} />
-        
+        <ConfirmationModal isVisible={uiState.isLogoutModalVisible} onClose={() => handleUiStateChange('isLogoutModalVisible', false)} onConfirm={onConfirmLogout} title="Logging Out" description="Are you sure you want to log out?" confirmText="Yes, Log Out" imageSource={require('../../assets/images/logoutpic.png')} />
+        <ConfirmationModal isVisible={uiState.isExitModalVisible} onClose={() => handleUiStateChange('isExitModalVisible', false)} onConfirm={() => BackHandler.exitApp()} title="Exit Application?" description="Are you sure you want to close the application?" confirmText="Yes, Exit" imageSource={require('../../assets/images/logoutpic.png')} />
+
         <View style={styles.headerContainer}>
             <BlurView intensity={Platform.OS === 'ios' ? 60 : 90} style={styles.header}>
                 <TouchableOpacity onPress={() => handleUiStateChange('isMenuVisible', true)} style={styles.headerIcon}><Ionicons name="menu" size={28} color={theme.text} /></TouchableOpacity>
-                <Image source={require('../assets/images/logo.png')} style={styles.headerLogo} />
+                <Image source={require('../../assets/images/logo.png')} style={styles.headerLogo} />
                 <TouchableOpacity onPress={() => navigation.navigate('Notif')} style={styles.headerIcon}>
                     {dataState.unreadCount > 0 && <View style={styles.notificationBadge} />}
                     <Ionicons name="notifications-outline" size={26} color={theme.text} />
@@ -343,12 +276,12 @@ export default function HomePage() {
             </BlurView>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={dataState.refreshing} onRefresh={fetchAllData} tintColor={theme.primary} progressViewOffset={120} />} contentContainerStyle={styles.scrollContent} onScrollBeginDrag={() => { if(showScrollIndicator) hasDiscoveredScroll.current = true; handleUiStateChange('activeMenuFeedbackId', null); }}>
+        <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={dataState.refreshing} onRefresh={fetchAllData} tintColor={theme.primary} progressViewOffset={120} />} contentContainerStyle={styles.scrollContent} onScrollBeginDrag={() => { if(showScrollIndicator) hasDiscoveredScroll.current = true; }}>
             <View style={styles.headerSpacer} />
-            
+
             <Animatable.View animation="slideInDown" duration={600} style={styles.welcomeCardWrapper}>
                 <LinearGradient colors={theme.isDarkMode ? [theme.primary, theme.accent] : [theme.accent, theme.primary]} style={styles.welcomeCard}>
-                    <Image source={require('../assets/images/welcome-bg.jpg')} style={styles.welcomeBg} />
+                    <Image source={require('../../assets/images/welcome-bg.jpg')} style={styles.welcomeBg} />
                     <View style={styles.welcomeContent}>
                         <View style={styles.welcomeTextContainer}>
                             <Text style={styles.welcomeTitle}>Welcome back,</Text>
@@ -374,28 +307,15 @@ export default function HomePage() {
                 <View style={styles.actionsGrid}>
                     <QuickActionButton icon="credit-card" label="Pay Bill" onPress={() => navigation.navigate('PayBills')} />
                     <QuickActionButton icon="layers" label="Services" onPress={() => navigation.navigate('OurServicesScreen')} />
-                    <QuickActionButton icon="info" label="About Us" onPress={() => navigation.navigate('About')} />
+                    <QuickActionButton icon="headphones" label="Support" onPress={() => navigation.navigate('Support')} />
                 </View>
             </View>
 
+            {/* New section for feedback prompt */}
             <View style={styles.section}>
-                <Text style={[styles.sectionTitle, {marginBottom: 10, left: 22}]}>Recent Feedback</Text>
-                {dataState.isFeedbackLoading ? (
-                    <ActivityIndicator style={{ height: 150 }} size="large" color={theme.primary} />
-                ) : (
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 10 }}>
-                    {feedbacks.length > 0 ? (
-                        feedbacks.map((item, index) => (
-                          <Animatable.View key={item._id} animation="fadeInRight" duration={500} delay={index * 150}>
-                            <FeedbackCard item={item} profile={profile} isActiveMenu={uiState.activeMenuFeedbackId === item._id} onToggleMenu={() => handleUiStateChange('activeMenuFeedbackId', uiState.activeMenuFeedbackId === item._id ? null : item._id)} onEdit={() => handleEditFeedback(item)} onDelete={() => handleDeleteFeedback(item._id)} isExpanded={expandedFeedbackId === item._id} onToggleExpand={() => handleToggleExpand(item._id)} />
-                          </Animatable.View>
-                        ))
-                    ) : (
-                        <View style={styles.noFeedbackCard}><Text style={styles.noFeedbackText}>Be the first to leave feedback!</Text></View>
-                    )}
-                    </ScrollView>
-                )}
+                <FeedbackPromptCard onPress={() => navigation.navigate('FeedbackFormScreen')} />
             </View>
+
         </ScrollView>
         <BottomNavBar activeScreen="Home" />
     </SafeAreaView>
@@ -411,7 +331,7 @@ const getStyles = (theme) =>
     headerIcon: { padding: 8 },
     headerLogo: { height: 35, width: 100, resizeMode: 'contain' },
     headerSpacer: { height: Platform.OS === 'ios' ? 100 : 80 },
-    
+
     welcomeCardWrapper: { marginHorizontal: 20, marginTop: 12, marginBottom: 40, borderRadius: 24, shadowColor: theme.primary, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 15, elevation: 12 },
     welcomeCard: { borderRadius: 24, overflow: 'hidden' },
     welcomeBg: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%', opacity: 0.2 },
@@ -420,45 +340,65 @@ const getStyles = (theme) =>
     welcomeTitle: { fontSize: 18, color: theme.textOnPrimary, opacity: 0.9 },
     welcomeName: { fontSize: 28, fontWeight: 'bold', color: theme.textOnPrimary },
     profilePic: { width: 64, height: 64, borderRadius: 32, borderWidth: 3, borderColor: 'rgba(255,255,255,0.8)' },
-    
+
     section: { marginBottom: 20 },
     sectionHeaderContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 15 },
     sectionTitle: { fontSize: 22, fontWeight: 'bold', color: theme.text },
     scrollIndicator: { flexDirection: 'row', alignItems: 'center', opacity: 0.7 },
     scrollIndicatorText: { color: theme.textSecondary, fontStyle: 'italic', marginRight: 2 },
-    
+
     horizontalScrollContainer: { paddingLeft: 20, paddingRight: 5, paddingBottom: 10 },
     accountCard: { backgroundColor: theme.surface, borderRadius: 20, width: 160, height: 160, padding: 16, marginRight: 15, justifyContent: 'space-between', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: theme.isDarkMode ? 0.2 : 0.05, shadowRadius: 8, elevation: 4, },
     accountCardIconContainer: { padding: 12, borderRadius: 14, alignSelf: 'flex-start' },
     accountCardLabel: { fontSize: 14, color: theme.textSecondary, marginBottom: 4 },
     accountCardValue: { fontSize: 18, fontWeight: 'bold', color: theme.text },
-    
+
     noPlanCard: { flexDirection: 'row', alignItems: 'center', borderRadius: 24, paddingHorizontal: 24, paddingVertical: 30, marginHorizontal: 20 },
     noPlanCardContent: { flex: 1, marginHorizontal: 20 },
     noPlanTitle: { fontSize: 18, fontWeight: 'bold', color: theme.textOnPrimary },
     noPlanSubtitle: { fontSize: 14, color: theme.textOnPrimary, marginTop: 4, opacity: 0.9 },
     dashboardLoader: { height: 160, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.surface, borderRadius: 20, marginHorizontal: 20 },
 
-    actionsGrid: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 20 },
-    quickActionContainer: { alignItems: 'center', flex: 1 },
+    actionsGrid: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 20, marginBottom: 15 },
+    quickActionContainer: { alignItems: 'center', flex: 1, marginHorizontal: 5 },
     quickActionIconCircle: { backgroundColor: theme.surface, width: 70, height: 70, borderRadius: 35, alignItems: 'center', justifyContent: 'center', marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: theme.isDarkMode ? 0.2 : 0.08, shadowRadius: 8, elevation: 5, },
-    quickActionText: { fontSize: 14, fontWeight: '600', color: theme.text },
+    quickActionText: { fontSize: 14, fontWeight: '600', color: theme.text, textAlign: 'center' },
 
-    card: { backgroundColor: theme.surface, width: 300, borderRadius: 20, padding: 20, marginRight: 15, borderWidth: 1, borderColor: theme.border, position: 'relative' },
-    cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    avatar: { width: 44, height: 44, borderRadius: 22 },
-    name: { fontSize: 16, fontWeight: 'bold', color: theme.text },
-    menuButton: { position: 'absolute', top: 10, right: 10, padding: 8, zIndex: 10 },
-    popoverMenu: { position: 'absolute', top: 50, right: 18, backgroundColor: theme.surface, borderRadius: 12, borderWidth: 1, borderColor: theme.border, elevation: 10, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 15, zIndex: 9, overflow: 'hidden' },
-    popoverItem: { flexDirection: 'row', alignItems: 'center', padding: 12, width: 130 },
-    popoverText: { fontSize: 15, color: theme.text, marginLeft: 12 },
-    stars: { flexDirection: 'row', marginTop: 2 },
-    feedback: { fontSize: 15, color: theme.textSecondary, lineHeight: 24, marginTop: 16, fontStyle: 'italic' },
-    seeMoreButton: { alignSelf: 'flex-end', marginTop: 10, padding: 5 },
-    seeMoreText: { color: theme.primary, fontSize: 15, fontWeight: 'bold' },
-    noFeedbackCard: { width: 300, height: 150, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.surface, borderRadius: 20, borderWidth: 1, borderColor: theme.border },
-    noFeedbackText: { color: theme.textSecondary, fontStyle: 'italic', fontSize: 16 },
-    
+    // New styles for FeedbackPromptCard
+    feedbackPromptCard: {
+        marginHorizontal: 20,
+        borderRadius: 20,
+        overflow: 'hidden',
+        marginTop: 10,
+        shadowColor: theme.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 10,
+        elevation: 6,
+    },
+    feedbackPromptGradient: {
+        padding: 20,
+    },
+    feedbackPromptContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    feedbackPromptTextContainer: {
+        flex: 1,
+        marginLeft: 15,
+    },
+    feedbackPromptTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: theme.textOnPrimary,
+        marginBottom: 4,
+    },
+    feedbackPromptSubtitle: {
+        fontSize: 13,
+        color: theme.textOnPrimary,
+        opacity: 0.8,
+    },
+
     // --- Modals ---
     drawerOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', flexDirection: 'row' },
     drawerBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' },
@@ -471,8 +411,8 @@ const getStyles = (theme) =>
     drawerProfileImage: { width: 60, height: 60, borderRadius: 30, borderWidth: 2, borderColor: 'rgba(255, 255, 255, 0.5)' },
     drawerMenu: { padding: 10 },
     drawerMenuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 15, paddingHorizontal: 15, borderRadius: 10, marginBottom: 5 },
-    drawerMenuLabel: { fontSize: 16, marginLeft: 20, flex: 1, fontWeight: '500' }, // Color set inline now
-    drawerLogoutButton: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 20, marginBottom: 40, marginTop: 10, padding: 15, borderRadius: 12, backgroundColor: '#FFFFFF' }, // A light background for the button
+    drawerMenuLabel: { fontSize: 16, marginLeft: 20, flex: 1, fontWeight: '500' },
+    drawerLogoutButton: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 20, marginBottom: 40, marginTop: 10, padding: 15, borderRadius: 12, backgroundColor: '#FFFFFF' },
     drawerLogoutText: { color: theme.danger, fontSize: 16, fontWeight: 'bold', marginLeft: 20 },
 
     confirmModalOverlay: { flex: 1, backgroundColor: 'rgba(7, 7, 7, 0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },

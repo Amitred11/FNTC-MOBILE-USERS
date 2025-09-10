@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { useTheme, useAlert } from '../contexts';
+import { useTheme, useAlert } from '../../contexts';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import QRCode from 'react-native-qrcode-svg';
 import ViewShot from 'react-native-view-shot';
@@ -111,7 +111,7 @@ const Voucher = React.memo(({ bill, user }) => {
                         size={160}
                         backgroundColor={theme.background}
                         color={theme.text}
-                        logo={require('../assets/logo.png')}
+                        logo={require('../../assets/logo.jpg')}
                         logoSize={30}
                         logoBackgroundColor='white'
                         logoMargin={4}

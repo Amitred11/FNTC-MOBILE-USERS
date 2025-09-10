@@ -17,7 +17,7 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import EventSource from 'react-native-event-source';
-import { useAuth, useTheme, useAlert } from '../contexts';
+import { useAuth, useTheme, useAlert } from '../../contexts';
 
 // --- SECTION 1: REUSABLE UI COMPONENTS ---
 

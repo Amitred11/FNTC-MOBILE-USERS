@@ -8,7 +8,7 @@ import { MessageProvider } from './contexts/MessageContext';
 import { AlertProvider } from './contexts/AlertContext';
 import { SubscriptionProvider } from './contexts/SubscriptionContext';
 import { ThemeProvider } from './contexts/ThemeContext';
-import LoadingScreen from './screens/LoadingScreen';
+import LoadingScreen from './screens/auth/LoadingScreen';
 import * as Notifications from 'expo-notifications';
 import { LanguageProvider } from './contexts/LanguageContext';
 import {
@@ -17,31 +17,36 @@ import {
 } from './services/notificationService';
 
 // Import all your screens
-import SplashScreen2 from './screens/SplashScreen2';
-import GetStartedScreen from './screens/GetStartedScreen';
-import AboutScreen from './screens/AboutScreen';
-import SignUpScreen from './screens/SignUpScreen';
-import HomeScreen from './screens/HomeScreen';
-import Profile from './screens/Profile';
-import EditProfileScreen from './screens/EditProfileScreen';
-import Subscription from './screens/Subscription';
-import PaymentVoucherScreen from './screens/PaymentVoucherScreen';
-import MyBills from './screens/MyBills';
-import PayBills from './screens/PayBills';
-import Notif from './screens/Notif';
-import Settings from './screens/Settings';
-import OurServicesScreen from './screens/OurServiceScreen';
-import ChangePasswordScreen from './screens/ChangePasswordScreen';
-import Support from './screens/Support';
-import CustomerFeedbackScreen from './screens/CustomerFeedbackScreen';
-import LiveChatScreen from './screens/LiveChatScreen';
-import LegalDocumentScreen from './screens/LegalDocumentScreen';
-import MySubscriptionScreen from './screens/MySubscriptionScreen';
-import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
-import SupportHelpScreen from './screens/SupportHelpScreen';
-import DisplayRecoveryCodeScreen from './screens/DisplayRecoveryCodeScreen'; 
-import VerifyOtpScreen from './screens/VerifyOtpScreen';
-import HowToUseScreen from './screens/HowToUseScreen';
+import SplashScreen2 from './screens/auth/SplashScreen2';
+import GetStartedScreen from './screens/auth/GetStartedScreen';
+import AboutScreen from './screens/dashboard/AboutScreen';
+import SignUpScreen from './screens/auth/SignUpScreen';
+import HomeScreen from './screens/dashboard/HomeScreen';
+
+import Profile from './screens/dashboard/Profile';
+import EditProfileScreen from './screens/dashboard/EditProfileScreen';
+
+import Subscription from './screens/subscriptions/Subscription';
+import PaymentVoucherScreen from './screens/subscriptions/PaymentVoucherScreen';
+import MyBills from './screens/subscriptions/MyBills';
+import PayBills from './screens/subscriptions/PayBills';
+
+import Notif from './screens/dashboard/Notif';
+import Settings from './screens/settings/Settings';
+import OurServicesScreen from './screens/dashboard/OurServiceScreen';
+import ChangePasswordScreen from './screens/settings/ChangePasswordScreen';
+
+import Support from './screens/support/Support';
+import FeedbackFormScreen from './screens/settings/FeedbackFormScreen';
+import CustomerFeedbackScreen from './screens/settings/CustomerFeedbackScreen';
+import LiveChatScreen from './screens/support/LiveChatScreen';
+import LegalDocumentScreen from './screens/settings/LegalDocumentScreen';
+import MySubscriptionScreen from './screens/subscriptions/MySubscriptionScreen';
+import ForgotPasswordScreen from './screens/auth/ForgotPasswordScreen';
+import SupportHelpScreen from './screens/auth/SupportHelpScreen';
+import DisplayRecoveryCodeScreen from './screens/auth/DisplayRecoveryCodeScreen'; 
+import VerifyOtpScreen from './screens/auth/VerifyOtpScreen';
+import HowToUseScreen from './screens/support/HowToUseScreen';
 
 const Stack = createStackNavigator();
 
@@ -72,6 +77,7 @@ const AppNavigator = () => {
             <Stack.Screen name="LegalDocument" component={LegalDocumentScreen} />
             <Stack.Screen name="Support" component={Support} />
             <Stack.Screen name="OurServicesScreen" component={OurServicesScreen} />
+            <Stack.Screen name="FeedbackFormScreen" component={FeedbackFormScreen} />
             <Stack.Screen name="CustomerFeedbackScreen" component={CustomerFeedbackScreen} />
             <Stack.Screen name="LiveChatScreen" component={LiveChatScreen} />
             <Stack.Screen name="MySubscriptionScreen" component={MySubscriptionScreen} />
@@ -120,7 +126,7 @@ const AppContent = () => {
         Notifications.removeNotificationSubscription(responseListener.current);
       }
     };
-  }, []); // Empty dependency array means this runs once on mount
+  }, []);
 
   if (isLoading) {
     return <LoadingScreen />;
