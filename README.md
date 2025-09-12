@@ -1,6 +1,7 @@
 # 🐻 Fibear Network Technologies Corp. - A Full-Stack Capstone Project
 
-![Project Status: Educational Capstone](https://img.shields.io/badge/Status-Educational%20Capstone-blueviolet)
+![Project Status: Educational Capstone](https://img.shields.io/badge/Status-Educational%20Capstone-blueviolet) ![Partner: Fibear Network Technologies Corp.](https://img.shields.io/badge/Partner-Fibear%20Network%20Technologies%20Corp.-orange) ![License: All Rights Reserved](https://img.shields.io/badge/License-All%20Rights%20Reserved-red)
+
 
 This repository contains the full-stack source code for the **Fibear Internet Service** application, developed as a comprehensive educational capstone project. It serves as a practical demonstration of modern application development, from backend API design to a polished cross-platform mobile user experience.
 
