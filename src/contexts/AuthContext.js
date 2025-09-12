@@ -168,7 +168,7 @@ export const AuthProvider = ({ children }) => {
     }
   }, [updateUserStateAndCache]);
 
-  const handleBackendGoogleSignIn = useCallback(
+   const handleBackendGoogleSignIn = useCallback(
     async (googleIdToken) => {
       setIsLoading(true);
       setAuthAction('PENDING_GOOGLE_SIGNIN');
@@ -178,26 +178,43 @@ export const AuthProvider = ({ children }) => {
           accessToken: newAccessToken,
           refreshToken: newRefreshToken,
           user: backendUser,
+          recoveryCode, // Expect a recoveryCode from the backend for new users
         } = backendResponse.data;
 
         await updateAccessToken(newAccessToken);
-
         await updateUserStateAndCache(backendUser);
-        if (newRefreshToken) await AsyncStorage.setItem('refreshToken', newRefreshToken);
-        else await AsyncStorage.removeItem('refreshToken');
+        
+        if (newRefreshToken) {
+          await AsyncStorage.setItem('refreshToken', newRefreshToken);
+        } else {
+          await AsyncStorage.removeItem('refreshToken');
+        }
+
+        if (recoveryCode) {
+          setPendingRecoveryCode(recoveryCode);
+        }
 
         showMessage('Google Sign-In Successful!');
       } catch (error) {
+    if (error.response?.status === 409) {
+        const message = error.response.data.message || 'An account already exists with this email.';
+        showAlert(
+            'Account Linking Required', 
+            message,
+            [ { text: 'OK' } ]
+        );
+    } else {
         console.error('Backend Google Sign-In failed:', error.response?.data || error.message);
         showMessage('Google Sign-In failed. Please try again.');
-        await signOut(false);
+      }
+      await signOut(false); 
       } finally {
         setIsLoading(false);
         setAuthAction(null);
       }
-    },
-    [updateAccessToken, signOut, showMessage, updateUserStateAndCache]
-  );
+      },
+      [updateAccessToken, signOut, showMessage, updateUserStateAndCache]
+    );
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     androidClientId: Constants.expoConfig.extra.androidClientId,

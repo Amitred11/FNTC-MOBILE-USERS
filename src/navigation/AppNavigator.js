@@ -9,7 +9,7 @@ import AuthStack from './AuthStack';
 import MainStack from './MainStack';
 
 // Individual Screens for specific logic
-import DisplayRecoveryCodeScreen from '../screens/misc/DisplayRecoveryCodeScreen';
+import DisplayRecoveryCodeScreen from '../screens/auth/DisplayRecoveryCodeScreen';
 
 const Stack = createStackNavigator();
 

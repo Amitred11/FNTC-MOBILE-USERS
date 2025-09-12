@@ -129,6 +129,10 @@ const PendingChangeView = memo(() => {
 const GcashSheet = memo(({ isVisible, onClose, onSubmit, onImagePick, proofOfPayment, isSubmitting, plan }) => {
     const { theme } = useTheme();
     const styles = getStyles(theme);
+    const { user } = useAuth();
+    const INSTALLATION_FEE = 1500;
+    const isNewUser = user?.isModemInstalled !== true;
+    const totalDue = isNewUser ? (plan?.price || 0) + INSTALLATION_FEE : (plan?.price || 0);
     return (
         <Modal animationType="fade" transparent={true} visible={isVisible} onRequestClose={onClose}>
             <KeyboardAvoidingView 
@@ -154,7 +158,7 @@ const GcashSheet = memo(({ isVisible, onClose, onSubmit, onImagePick, proofOfPay
                                     {/* STEP 1 */}
                                     <View style={styles.stepContainer}>
                                         <Text style={styles.stepHeader}>Step 1: Send Payment</Text>
-                                        <Text style={styles.stepDescription}>Scan the QR code below or manually send ₱{plan?.price.toFixed(2)} to our official GCash account.</Text>
+                                        <Text style={styles.stepDescription}>Scan the QR code below or manually send <Text style={{fontWeight: 'bold'}}>₱{totalDue.toFixed(2)}</Text> to our official GCash account.{isNewUser && ` (This includes a one-time ₱${INSTALLATION_FEE} installation fee).`}</Text>
                                         <View style={styles.gcashInfoBox}>
                                             <Image source={GCASH_QR_IMAGE} style={styles.gCashQrImage} />
                                             <View style={styles.gCashDetails}>

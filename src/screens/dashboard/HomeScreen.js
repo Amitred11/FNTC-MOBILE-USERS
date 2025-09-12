@@ -176,9 +176,19 @@ export default function HomePage() {
     const [uiState, setUiState] = useState({ isMenuVisible: false, isLogoutModalVisible: false, isExitModalVisible: false });
     const [dataState, setDataState] = useState({ unreadCount: 0, refreshing: false });
     const hasDiscoveredScroll = useRef(false);
+    const statusConfig = useMemo(() => ({
+        'active': { text: 'Active', color: theme.success },
+        'pending_change': { text: 'Active (Change Pending)', color: theme.success },
+        'pending_installation': { text: 'Pending Installation', color: theme.warning },
+        'pending_verification': { text: 'Pending Verification', color: theme.warning },
+        'suspended': { text: 'Suspended', color: theme.danger },
+        'declined': { text: 'Declined', color: theme.danger },
+        'cancelled': { text: 'Cancelled', color: theme.textSecondary },
+    }), [theme]);
 
+    const currentStatus = statusConfig[subscriptionStatus] || { text: 'Not Subscribed', color: theme.disabled };
     const showScrollIndicator = !hasDiscoveredScroll.current && subscriptionStatus === 'active';
-
+    
     const fetchAllData = useCallback(async () => {
         if (!api) return;
         setDataState(prev => ({ ...prev, refreshing: true }));
@@ -294,10 +304,12 @@ export default function HomePage() {
                                         <Text style={styles.welcomeName} numberOfLines={1}>{profile?.displayName?.split(' ')[0] || 'User'}!</Text>
                                     </View>
                                     <View style={styles.statusContainer}>
-                                        <View style={styles.statusDot} />
-                                        <Text style={styles.statusText}>Plan Status: Active</Text>
+                                        <View style={[styles.statusDot, { backgroundColor: currentStatus.color }]} />
+                                        <Text style={styles.statusText}>
+                                            Plan Status: {currentStatus.text}
+                                        </Text>
                                     </View>
-                            </View>
+                                </View>
                         </LinearGradient>
                     </TouchableOpacity>
                 </View>
