@@ -14,8 +14,6 @@ export const setupNotificationHandler = () => {
   console.log('Notification handler set up.');
 };
 
-// This function is required for Android 8.0+ to create a "channel" for notifications.
-// It should be called once when the app starts (e.g., in App.js).
 export async function setupAndroidNotificationChannels() {
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {
@@ -40,11 +38,9 @@ export async function registerForPushNotificationsAsync(api) {
     const message =
       'Push notifications are not supported on simulators. Please use a physical device.';
     console.warn(message);
-    // Do not throw here, allow the app to run without push on simulator, but warn.
     return null; 
   }
 
-  // 1. Request permissions first
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
 
@@ -72,10 +68,6 @@ export async function registerForPushNotificationsAsync(api) {
     throw new Error('Push notification permission was not granted.');
   }
 
-  // NOTE: setupAndroidNotificationChannels is now expected to be called externally once,
-  // not repeatedly here. The duplicate call was removed.
-
-  // 3. Get the Expo push token
   try {
     const projectId = Constants.expoConfig?.extra?.eas?.projectId;
     if (!projectId) {
@@ -89,8 +81,7 @@ export async function registerForPushNotificationsAsync(api) {
 
     if (token) {
       console.log('Obtained Expo Push Token:', token);
-      // 4. Send the token to your backend using the provided API instance
-      await api.post('/users/push-token', { token }); // This sends the token to your backend
+      await api.post('/users/push-token', { token });
       console.log('Push token successfully sent to backend.');
       return token;
     } else {
@@ -99,8 +90,6 @@ export async function registerForPushNotificationsAsync(api) {
   } catch (error) {
     const errorMessage = error.response?.data?.message || error.message;
     console.error('Error getting or saving push token:', errorMessage);
-    // Do not re-throw if it's a non-critical error like device not registered
-    // Let the calling context decide how to handle this.
     throw new Error('Could not register for push notifications. Please try again.');
   }
 }

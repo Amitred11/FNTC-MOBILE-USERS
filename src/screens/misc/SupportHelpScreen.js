@@ -14,12 +14,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { lightTheme } from '../../constants/colors';
 import * as Animatable from 'react-native-animatable';
-
-const CONTACT_INFO = {
-  phone: '+63 945 220 3371',
-  email: 'rparreno@fibearnetwork.com',
-  facebook: 'https://www.facebook.com/FiBearNetworkTechnologiesCorpMontalban',
-};
+import { CONTACT_INFO } from '../../data/Constants-Data';
 
 // --- Sub-components ---
 

@@ -18,6 +18,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSubscription, useTheme, useAuth } from '../../contexts';
 import * as Animatable from 'react-native-animatable';
 import { BottomNavBar } from '../../components/BottomNavBar';
+import { ICONS } from '../../data/Constants-Data';
 
 // --- SECTION 1: CONSTANTS & HELPERS ---
 
@@ -31,21 +32,6 @@ const formatDate = (dateString, includeTime = false) => {
   }
   return new Date(dateString).toLocaleDateString('en-US', options);
 };
-
-const ICONS = {
-    bill_due: { component: Ionicons, name: 'alert-circle', colorKey: 'warning' },
-    bill_overdue: { component: Ionicons, name: 'close-circle', colorKey: 'danger' },
-    bill_paid: { component: Ionicons, name: 'checkmark-circle', colorKey: 'success' },
-    bill_pending: { component: Ionicons, name: 'hourglass', colorKey: 'warning' },
-    subscribed: { component: MaterialCommunityIcons, name: 'rocket-launch', colorKey: 'accent' },
-    cancelled: { component: MaterialCommunityIcons, name: 'close-circle-outline', colorKey: 'danger' },
-    payment_success: { component: MaterialCommunityIcons, name: 'check-decagram', colorKey: 'primary' },
-    submitted_payment: { component: MaterialCommunityIcons, name: 'file-upload', colorKey: 'accent' },
-    activated: { component: MaterialCommunityIcons, name: 'flash', colorKey: 'accent' },
-    plan_change_requested: { component: Ionicons, name: 'swap-horizontal', colorKey: 'accent' },
-    plan_change_cancelled: { component: Ionicons, name: 'arrow-undo-circle', colorKey: 'textSecondary' },
-};
-
 // --- SECTION 2: REFACTORED SUB-COMPONENTS ---
 
 const Header = React.memo(() => {

@@ -11,6 +11,7 @@ import {
   ScrollView,
   BackHandler,
   RefreshControl,
+  Modal,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -46,6 +47,7 @@ export default function ProfileScreen() {
   const styles = getStyles(theme);
   const { user: userProfile, isLoading, refreshUser } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
+  const [isImageModalVisible, setImageModalVisible] = useState(false);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -60,20 +62,22 @@ export default function ProfileScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      // Refresh user data every time the screen comes into focus
-      // to ensure it's up-to-date after an edit.
       refreshUser();
     }, [refreshUser])
   );
 
   useEffect(() => {
     const handleBackPress = () => {
+      if (isImageModalVisible) {
+        setImageModalVisible(false);
+        return true;
+      }
       navigation.navigate('Home');
       return true;
     };
     const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
     return () => backHandler.remove();
-  }, [navigation]);
+  }, [navigation, isImageModalVisible]);
 
   // 1. Initial Loading State
   if (isLoading && !userProfile) {
@@ -106,10 +110,14 @@ export default function ProfileScreen() {
     userProfile.profile?.province,
     userProfile.profile?.zipCode,
   ]
-    .filter(Boolean) // This correctly filters out any null/undefined values
+    .filter(Boolean)
     .join(', ');
 
   const formattedBirthday = formatDate(userProfile.profile?.birthday);
+
+  const profileImageSource = userProfile.photoUrl
+    ? { uri: userProfile.photoUrl }
+    : require('../../assets/images/avatars/profilepic.jpg');
 
   // 3. Successful Data Render State
   return (
@@ -124,14 +132,14 @@ export default function ProfileScreen() {
         >
           <Ionicons name="create-outline" size={28} color={theme.textOnPrimary} />
         </TouchableOpacity>
-        <Image
-          source={
-            userProfile.photoUrl
-              ? { uri: userProfile.photoUrl }
-              : require('../../assets/images/avatars/profilepic.jpg')
-          }
-          style={styles.profileImage}
-        />
+
+        {/* Make profile image clickable */}
+        <TouchableOpacity onPress={() => setImageModalVisible(true)} style={styles.profileImageContainer}>
+          <Image
+            source={profileImageSource}
+            style={styles.profileImage}
+          />
+        </TouchableOpacity>
         <Text style={styles.userName}>{userProfile.displayName || 'User'}</Text>
         <Text style={styles.userEmail}>{userProfile.email}</Text>
       </View>
@@ -149,14 +157,12 @@ export default function ProfileScreen() {
       >
         <View style={styles.infoSection}>
           <Text style={styles.sectionTitle}>Personal Information</Text>
-          {/* Display root-level data */}
           <InfoRow
             icon="person-outline"
             label="Full Name"
             value={userProfile.displayName}
             theme={theme}
           />
-          {/* Display nested data safely */}
           <InfoRow
             icon="calendar-outline"
             label="Birthday"
@@ -193,11 +199,31 @@ export default function ProfileScreen() {
           />
         </View>
       </ScrollView>
+
+      {/* Image Fullscreen Modal - MODIFIED HERE */}
+      <Modal
+        visible={isImageModalVisible}
+        transparent={true}
+        onRequestClose={() => setImageModalVisible(false)}
+        animationType="fade"
+      >
+        <TouchableOpacity // This TouchableOpacity now handles closing the modal
+          style={styles.modalBackground} // It covers the whole background
+          activeOpacity={1} // Prevents visual feedback on press to avoid highlighting the dark background
+          onPress={() => setImageModalVisible(false)}
+        >
+          <Image
+            source={profileImageSource}
+            style={styles.fullScreenImage}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
 
-// --- Styles (no changes needed) ---
+// --- Styles (Removed modalCloseButton) ---
 const getStyles = (theme) =>
   StyleSheet.create({
     backButton: { left: 20, padding: 5, position: 'absolute', top: 50, zIndex: 10 },
@@ -222,6 +248,11 @@ const getStyles = (theme) =>
       fontWeight: 'bold',
       marginBottom: 8,
       textAlign: 'center',
+    },
+    fullScreenImage: {
+      flex: 1, // Allow image to expand within its container
+      width: '80%', // Use 80% width
+      borderRadius: 100, // Rounded corners
     },
     header: {
       alignItems: 'center',
@@ -254,13 +285,32 @@ const getStyles = (theme) =>
       color: theme.textSecondary,
       marginTop: 10,
     },
+    modalBackground: {
+      alignItems: 'center',
+      backgroundColor: 'rgba(0,0,0,0.9)',
+      flex: 1,
+      justifyContent: 'center',
+      paddingVertical: 50,
+    },
+    // modalCloseButton style is removed as it's no longer needed
     profileImage: {
-      borderColor: theme.surface,
       borderRadius: 50,
-      borderWidth: 3,
       height: 100,
-      marginBottom: 15,
       width: 100,
+    },
+    profileImageContainer: {
+      borderColor: theme.surface,
+      borderRadius: 55,
+      borderWidth: 4,
+      elevation: 8,
+      marginBottom: 15,
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 4,
+      },
+      shadowOpacity: 0.3,
+      shadowRadius: 5,
     },
     retryButton: {
       backgroundColor: theme.primary,

@@ -17,15 +17,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme, useAuth, useAlert } from '../../contexts';
 import * as Animatable from 'react-native-animatable';
-
-// --- Constants ---
-const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+{}\[\]:;<>,.?~\\/-]).{8,}$/;
-const REQUIREMENTS = [
-    { id: 'length', text: 'At least 8 characters', regex: /.{8,}/ },
-    { id: 'uppercase', text: 'An uppercase letter', regex: /[A-Z]/ },
-    { id: 'number', text: 'A number', regex: /\d/ },
-    { id: 'special', text: 'A special character', regex: /[!@#$%^&*()_+{}\[\]:;<>,.?~\\/-]/ },
-];
+import {PASSWORD_REGEX, REQUIREMENTS} from '../../data/Constants-Data';
 
 // --- Sub-Components (Memoized for Performance) ---
 

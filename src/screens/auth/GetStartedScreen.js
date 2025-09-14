@@ -19,12 +19,9 @@ import { useNavigation } from '@react-navigation/native';
 import { lightTheme } from '../../constants/colors.js';
 import TermsOfServiceText from '../../data/TermsOfServices.js';
 import PrivacyPolicyText from '../../data/PrivacyPolicy.js';
-
+import { COMPANY_NAME, SUBTITLE_TEXT } from '../../data/Constants-Data.js';
 // --- Constants ---
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const COMPANY_NAME = 'FiBear Network Technologies Corp.';
-const SUBTITLE_TEXT = 'We are committed to keeping you connected. We provide fast, reliable, and stable internet service designed to meet your daily needs.';
-
 
 // --- Sub-Components (Memoized for Performance) ---
 const PolicyModal = React.memo(({ visible, title, content, onClose }) => {

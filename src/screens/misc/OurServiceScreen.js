@@ -16,7 +16,9 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme, useAuth, useSubscription } from '../../contexts';
 
-const servicesData = [
+//CONSTANTS
+
+export const servicesData = [
   {
     icon: 'git-network-outline',
     title: 'Fiber Optic Network Installation',

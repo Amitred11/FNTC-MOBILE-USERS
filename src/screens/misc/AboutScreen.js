@@ -6,23 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../contexts';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Animatable from 'react-native-animatable';
-
-// --- Constants for Content ---
-const COMPANY_NAME = 'FiBear Network Technologies Corp.';
-const VERSION = '4.0.56';
-const CEO_NAME = 'Prince Scoth E. Donato';
-const MISSION_POINTS = [
-  "Continue to improve our services by seeking new ways, means and technology that will adapt to the changing needs of the clients.",
-  "Create and cultivate long-term business relationships with clients and business partners.",
-  "Provide the best customer service possible.",
-  "Expand the company’s network by offering technology that is better than the existing competitors at a more affordable price."
-];
-const VISION_POINTS = [
-  "Become the leading affordable ICT service provider in the country.",
-  "Become the one-stop shop of all Information and Technology needs of clients.",
-  "Gain the confidence and trust of our clients and business partners in this businessfield.",
-  "Employ, Train and Produce talents that will work collaboratively and productively with the company towards mutual growth and development."
-];
+import { COMPANY_NAME, VERSION, CEO_NAME, MISSION_POINTS, VISION_POINTS } from '../../data/Constants-Data';
 
 // --- Sub-Components (Memoized for Performance) ---
 const BulletPoint = React.memo(({ text }) => {

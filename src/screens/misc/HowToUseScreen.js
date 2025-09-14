@@ -9,113 +9,11 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Animatable from 'react-native-animatable';
+import { howToUseData } from '../../data/Constants-Data';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
-
-const howToUseData = {
-  en: [
-    // ... existing data ...
-    {
-      title: 'Navigating the App',
-      content: 'Use the bottom navigation bar to easily switch between Home, Plan, Support, and Profile. Each section is tailored to help you manage your account efficiently.',
-      icon: 'compass-outline',
-      tags: ['general', 'navigation'],
-    },
-    {
-      title: 'Managing Your Subscription',
-      content: 'Visit the "Plan" screen to see your active subscription details, view your next billing date, or apply for a new plan. You can also submit requests to upgrade, downgrade, or cancel your service directly from this screen.',
-      icon: 'wifi-outline',
-      tags: ['plan', 'subscription', 'billing'],
-      navigateTo: 'Plan',
-    },
-    {
-      title: 'Troubleshooting Connection',
-      icon: 'build-outline',
-      tags: ['help', 'internet', 'slow'],
-      checklist: [
-        { id: '1', text: 'Restart your Wi-Fi router by unplugging it for 30 seconds.' },
-        { id: '2', text: 'Check that all cables are securely connected to the router.' },
-        { id: '3', text: 'Move closer to the router to check for signal strength issues.' },
-        { id: '4', text: 'If the issue persists, create a support ticket.' },
-      ],
-      navigateTo: 'Support',
-    },
-    {
-      title: 'Getting Help & Support',
-      content: 'Our Support team is here to help. For urgent issues, call our 24/7 hotline at 0945 220 3371. For other concerns, email us at rparreno@fibearnetwork.com or create a ticket in the app.',
-      icon: 'headset-outline',
-      tags: ['support', 'help', 'ticket', 'chat'],
-      navigateTo: 'Support',
-      isCopyable: true,
-    },
-    {
-      title: 'Updating Your Profile',
-      content: 'Keep your information current in the "Profile" screen. You can change your display name and profile picture. Most importantly, ensure your installation address and mobile number are always up-to-date for uninterrupted service.',
-      icon: 'person-circle-outline',
-      tags: ['profile', 'account', 'address'],
-      navigateTo: 'Profile',
-    },
-    {
-      title: 'Pro Tip: Checking for Outages',
-      content: 'Before troubleshooting, check our official Facebook Page for any service interruption announcements in your area. You can find the link in the Support screen.',
-      icon: 'megaphone-outline',
-      tags: ['pro-tip', 'outage', 'facebook'],
-      navigateTo: 'Support',
-    },
-  ],
-  tl: [
-    // ... Tagalog translations ...
-    {
-      title: 'Pag-navigate sa App',
-      content: 'Gamitin ang navigation bar sa ibaba para madaling lumipat sa pagitan ng Home, Plan, Support, at Profile. Ang bawat seksyon ay idinisenyo para tulungan kang pamahalaan ang iyong account nang mahusay.',
-      icon: 'compass-outline',
-      tags: ['pangkalahatan', 'nabigasyon'],
-    },
-    {
-      title: 'Pamamahala ng Subscription',
-      content: 'Bisitahin ang "Plan" screen para makita ang detalye ng iyong aktibong subscription, tingnan ang susunod na petsa ng iyong bill, o mag-apply para sa bagong plano. Maaari ka ring mag-request ng upgrade, downgrade, o kanselasyon ng serbisyo dito.',
-      icon: 'wifi-outline',
-      tags: ['plano', 'subscription', 'billing'],
-      navigateTo: 'Plan',
-    },
-    {
-      title: 'Pag-troubleshoot ng Koneksyon',
-      icon: 'build-outline',
-      tags: ['tulong', 'internet', 'mabagal'],
-      checklist: [
-        { id: '1', text: 'I-restart ang iyong Wi-Fi router sa pamamagitan ng pagbunot nito sa saksakan sa loob ng 30 segundo.' },
-        { id: '2', text: 'Suriin kung lahat ng kable ay mahigpit na nakakonekta sa router.' },
-        { id: '3', text: 'Lumapit sa router upang suriin kung may problema sa lakas ng signal.' },
-        { id: '4', text: 'Kung magpapatuloy ang isyu, gumawa ng support ticket.' },
-      ],
-      navigateTo: 'Support',
-    },
-    {
-      title: 'Paghahanap ng Tulong at Suporta',
-      content: 'Narito ang aming Support team para tumulong. Para sa mga agarang isyu, tawagan ang aming 24/7 hotline sa 0945 220 3371. Para sa iba pang alalahanin, mag-email sa amin sa rparreno@fibearnetwork.com o gumawa ng ticket sa app.',
-      icon: 'headset-outline',
-      tags: ['suporta', 'tulong', 'ticket', 'chat'],
-      navigateTo: 'Support',
-      isCopyable: true,
-    },
-    {
-      title: 'Pag-update ng Iyong Profile',
-      content: 'Panatilihing updated ang iyong impormasyon sa "Profile" screen. Maaari mong palitan ang iyong display name at profile picture. Pinakaimportante, siguraduhing laging tama ang iyong installation address at mobile number.',
-      icon: 'person-circle-outline',
-      tags: ['profile', 'account', 'address'],
-      navigateTo: 'Profile',
-    },
-    {
-      title: 'Pro Tip: Pagsuri ng Outages',
-      content: 'Bago mag-troubleshoot, suriin muna ang aming opisyal na Facebook Page para sa anumang anunsyo ng service interruption sa inyong lugar. Mahahanap ang link sa Support screen.',
-      icon: 'megaphone-outline',
-      tags: ['pro-tip', 'outage', 'facebook'],
-      navigateTo: 'Support',
-    },
-  ],
-};
 
 const HowToUseItem = ({ item, isExpanded, onToggle }) => {
     const { theme } = useTheme();

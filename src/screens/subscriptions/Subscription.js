@@ -25,6 +25,7 @@ import { useSubscription, useAuth, useTheme, useMessage, useAlert } from '../../
 import { BottomNavBar } from '../../components/BottomNavBar';
 import { requestMediaLibraryPermissions, requestCameraPermissions } from '../../utils/permissions';
 import PhotoSourceSheet from '../../components/PhotoSourceSheet';
+import Step1_5_ModemCheck from './Step1_5_ModemCheck';
 
 // --- Static Assets ---
 const GCASH_LOGO_IMAGE = require('../../assets/images/payments/gcash.png');
@@ -36,7 +37,6 @@ const ILLUSTRATIONS = {
   DECLINED: require('../../assets/images/status/declined.png'),
   SUSPENDED: require('../../assets/images/status/declined.png'),
 };
-
 
 // --- Generic UI Components ---
 const StatusDisplay = memo(({ theme, illustration, title, text, children, buttonText, onButtonPress, onCancel }) => {
@@ -83,7 +83,6 @@ const PlanInfoCard = memo(({ title, plan, theme }) => {
 
 // --- Status-Specific Views ---
 const PendingChangeView = memo(() => {
-    // ... (This component is well-structured and remains unchanged)
     const { theme } = useTheme();
     const { subscriptionData, cancelPlanChange, activePlan, isLoading } = useSubscription();
     const styles = getStyles(theme);
@@ -126,13 +125,13 @@ const PendingChangeView = memo(() => {
 
 
 // --- Core Subscription Flow Components ---
-const GcashSheet = memo(({ isVisible, onClose, onSubmit, onImagePick, proofOfPayment, isSubmitting, plan }) => {
+const GcashSheet = memo(({ isVisible, onClose, onSubmit, onImagePick, proofOfPayment, isSubmitting, plan, needsNewModem }) => {
     const { theme } = useTheme();
     const styles = getStyles(theme);
     const { user } = useAuth();
     const INSTALLATION_FEE = 1500;
-    const isNewUser = user?.isModemInstalled !== true;
-    const totalDue = isNewUser ? (plan?.price || 0) + INSTALLATION_FEE : (plan?.price || 0);
+    const totalDue = needsNewModem ? (plan?.price || 0) + INSTALLATION_FEE : (plan?.price || 0);
+
     return (
         <Modal animationType="fade" transparent={true} visible={isVisible} onRequestClose={onClose}>
             <KeyboardAvoidingView 
@@ -158,7 +157,7 @@ const GcashSheet = memo(({ isVisible, onClose, onSubmit, onImagePick, proofOfPay
                                     {/* STEP 1 */}
                                     <View style={styles.stepContainer}>
                                         <Text style={styles.stepHeader}>Step 1: Send Payment</Text>
-                                        <Text style={styles.stepDescription}>Scan the QR code below or manually send <Text style={{fontWeight: 'bold'}}>₱{totalDue.toFixed(2)}</Text> to our official GCash account.{isNewUser && ` (This includes a one-time ₱${INSTALLATION_FEE} installation fee).`}</Text>
+                                        <Text style={styles.stepDescription}>Scan the QR code below or manually send <Text style={{fontWeight: 'bold'}}>₱{totalDue.toFixed(2)}</Text> to our official GCash account.{needsNewModem && ` (This includes a one-time ₱${INSTALLATION_FEE} installation fee).`}</Text>
                                         <View style={styles.gcashInfoBox}>
                                             <Image source={GCASH_QR_IMAGE} style={styles.gCashQrImage} />
                                             <View style={styles.gCashDetails}>
@@ -232,10 +231,13 @@ const Step1_PlanSelection = memo(({ theme, plans, isLoading, selectedPlan, onSel
     );
 });
 
-const Step2_PaymentAndLocation = memo(({ theme, selectedPlan, address, selectedPaymentMethod, onSelectPaymentMethod, onSubmit, onBack }) => {
+const Step2_PaymentAndLocation = memo(({ theme, selectedPlan, address, selectedPaymentMethod, onSelectPaymentMethod, onSubmit, onBack, needsNewModem }) => {
     const styles = getStyles(theme);
     const navigation = useNavigation();
     const formattedAddress = [address.address, address.phase, address.city, address.province, address.zipCode].filter(Boolean).join(', ');
+    const INSTALLATION_FEE = 1500;
+    const showInstallationFee = needsNewModem; // Use the prop directly
+    const totalDue = showInstallationFee ? (selectedPlan?.price || 0) + INSTALLATION_FEE : (selectedPlan?.price || 0);
 
     const PaymentMethodCard = memo(({ method, logo, isSelected, onSelect }) => (
         <TouchableOpacity style={[styles.paymentOption, isSelected && styles.paymentOptionSelected]} onPress={onSelect}>
@@ -261,11 +263,23 @@ const Step2_PaymentAndLocation = memo(({ theme, selectedPlan, address, selectedP
                   <View style={[styles.stepIndicator, styles.stepIndicatorActive]}><Text style={styles.stepText}>2</Text></View>
                 </View>
                 <View style={styles.summaryCard}>
-                    <Text style={styles.summaryTitle}>Plan Summary</Text>
-                    <View style={styles.summaryRow}><Text style={styles.summaryLabel}>{selectedPlan?.name}</Text><Text style={styles.summaryValue}>₱{selectedPlan?.price.toFixed(2)}</Text></View>
-                     <View style={styles.summaryRow}><Text style={styles.summaryLabel}>One-time Fee</Text><Text style={styles.summaryValue}>FREE</Text></View>
-                    <View style={styles.summaryTotal}><Text style={styles.summaryTotalLabel}>Total Due Today</Text><Text style={styles.summaryTotalValue}>₱{selectedPlan?.price.toFixed(2)}</Text></View>
+            <Text style={styles.summaryTitle}>Plan Summary</Text>
+            <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>{selectedPlan?.name}</Text>
+                <Text style={styles.summaryValue}>₱{selectedPlan?.price.toFixed(2)}</Text>
+            </View>
+            {/* ✅ FIX: Conditionally render the installation fee row */}
+            {showInstallationFee && (
+                <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>New Modem & Installation</Text>
+                    <Text style={styles.summaryValue}>₱{INSTALLATION_FEE.toFixed(2)}</Text>
                 </View>
+            )}
+            <View style={styles.summaryTotal}>
+                <Text style={styles.summaryTotalLabel}>Total Due Today</Text>
+                <Text style={styles.summaryTotalValue}>₱{totalDue.toFixed(2)}</Text>
+            </View>
+        </View>
                 <View style={styles.inputGroup}>
                     <View style={styles.addressHeader}><Text style={styles.inputLabel}>Installation Address</Text><TouchableOpacity onPress={() => navigation.navigate('EditProfileScreen')}><Text style={styles.changeAddressText}>Change</Text></TouchableOpacity></View>
                     <View style={styles.addressDisplayBox}><Ionicons name="location-outline" size={24} color={theme.textSecondary} style={styles.addressIcon} /><Text style={styles.addressDisplayText}>{formattedAddress || "No address set in profile."}</Text></View>
@@ -336,7 +350,7 @@ const PlanSelectionFlow = memo(({ isChangingPlan = false, onFlowFinish }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isPhotoSheetVisible, setPhotoSheetVisible] = useState(false);
     const [installationAddress, setInstallationAddress] = useState({ address: '', phase: '', city: '', province: '', zipCode: '' });
-
+    const [needsNewModem, setNeedsNewModem] = useState(false);
     // Effects
     useEffect(() => {
         if (profile?.profile) setInstallationAddress({ address: profile.profile.address || '', phase: profile.profile.phase || '', city: profile.profile.city || '', province: profile.profile.province || '', zipCode: profile.profile.zipCode || '' });
@@ -352,16 +366,33 @@ const PlanSelectionFlow = memo(({ isChangingPlan = false, onFlowFinish }) => {
 
     // Callbacks
     const handleProceed = useCallback(() => {
-        if (!selectedPlan) { showAlert('Select a Plan', 'Please choose a subscription plan to continue.'); return; }
-        if (isChangingPlan) { setFlowStep(2); return; }
+        if (!selectedPlan) {
+            showAlert('Select a Plan', 'Please choose a subscription plan to continue.');
+            return;
+        }
+        if (isChangingPlan) {
+            setFlowStep(2); // No change for active users
+            return;
+        }
         if (!profile?.profile?.mobileNumber || !profile?.profile?.address) {
             showAlert('Profile Incomplete', 'Please complete your address and mobile number in your profile.',
                 [{ text: 'Cancel', style: 'cancel' }, { text: 'Go to Profile', onPress: () => navigation.navigate('EditProfileScreen') }]
             );
             return;
         }
-        setFlowStep(2);
+        if (!isChangingPlan && profile?.isModemInstalled) {
+            setFlowStep(1.5);
+        } else {
+            setNeedsNewModem(true); // Ensure fee is calculated correctly
+            setFlowStep(2);
+        }
+
     }, [selectedPlan, profile, showAlert, navigation, isChangingPlan]);
+
+    const handleModemCheckConfirm = useCallback(({ needsNewModem: newModemNeeded }) => {
+        setNeedsNewModem(newModemNeeded);
+        setFlowStep(2); // Proceed to the final step
+    }, []);
 
     const handleFinalSubmit = useCallback(async () => {
         if (!selectedPaymentMethod) { showAlert('Select Payment', 'Please choose a payment method.'); return; }
@@ -376,7 +407,8 @@ const PlanSelectionFlow = memo(({ isChangingPlan = false, onFlowFinish }) => {
     const handleNewSubscriptionSubmit = useCallback(async (method, proofBase64) => {
         setIsSubmitting(true);
         try {
-            await subscribeToPlan(selectedPlan, method, proofBase64, installationAddress);
+            // The needsNewModem flag is now passed in the options object
+            await subscribeToPlan(selectedPlan, method, proofBase64, installationAddress, { needsNewModem });
             showMessage('Submission Received!', 'Your application is now pending.');
             if (isGcashSheetVisible) setGcashSheetVisible(false);
             if (onFlowFinish) onFlowFinish();
@@ -385,7 +417,7 @@ const PlanSelectionFlow = memo(({ isChangingPlan = false, onFlowFinish }) => {
         } finally {
             setIsSubmitting(false);
         }
-    }, [subscribeToPlan, selectedPlan, installationAddress, isGcashSheetVisible, showMessage, showAlert, onFlowFinish]);
+    }, [subscribeToPlan, selectedPlan, installationAddress, isGcashSheetVisible, showMessage, showAlert, onFlowFinish, needsNewModem]);
 
     const handleChangePlanSubmit = useCallback(async () => {
         if (!selectedPlan) return;
@@ -423,18 +455,71 @@ const PlanSelectionFlow = memo(({ isChangingPlan = false, onFlowFinish }) => {
     // Render Logic
     const renderContent = () => {
         if (isChangingPlan) {
-            return flowStep === 1 ? (
-                <Step1_PlanSelection theme={theme} plans={plans} isLoading={isLoadingPlans} selectedPlan={selectedPlan} onSelectPlan={setSelectedPlan} onProceed={handleProceed} isChangingPlan={true}/>
-            ) : (
-                <ChangePlanConfirmation theme={theme} newPlan={selectedPlan} onConfirm={handleChangePlanSubmit} onCancel={() => setFlowStep(1)} isSubmitting={isSubmitting}/>
-            );
-        }
         return flowStep === 1 ? (
-            <Step1_PlanSelection theme={theme} plans={plans} isLoading={isLoadingPlans} selectedPlan={selectedPlan} onSelectPlan={setSelectedPlan} onProceed={handleProceed} isChangingPlan={false}/>
+            <Step1_PlanSelection 
+                theme={theme} 
+                plans={plans} 
+                isLoading={isLoadingPlans} 
+                selectedPlan={selectedPlan} 
+                onSelectPlan={setSelectedPlan} 
+                onProceed={handleProceed} 
+                isChangingPlan={true}
+            />
         ) : (
-            <Step2_PaymentAndLocation theme={theme} selectedPlan={selectedPlan} address={installationAddress} selectedPaymentMethod={selectedPaymentMethod} onSelectPaymentMethod={setSelectedPaymentMethod} onSubmit={handleFinalSubmit} onBack={() => setFlowStep(1)}/>
+            <ChangePlanConfirmation 
+                theme={theme} 
+                newPlan={selectedPlan} 
+                onConfirm={handleChangePlanSubmit} 
+                onCancel={() => setFlowStep(1)} 
+                isSubmitting={isSubmitting}
+            />
         );
-    };
+    }
+    switch (flowStep) {
+        case 1:
+            // Every new/returning user starts at the plan selection screen.
+            return (
+                <Step1_PlanSelection 
+                    theme={theme} 
+                    plans={plans} 
+                    isLoading={isLoadingPlans} 
+                    selectedPlan={selectedPlan} 
+                    onSelectPlan={setSelectedPlan} 
+                    onProceed={handleProceed} 
+                    isChangingPlan={false}
+                />
+            );
+
+        case 1.5: 
+            // ONLY returning users who might have a modem will see this step.
+            return (
+                <Step1_5_ModemCheck 
+                    onConfirm={handleModemCheckConfirm} 
+                    onBack={() => setFlowStep(1)} 
+                    theme={theme} 
+                />
+            );
+
+        case 2:
+            // This is the final confirmation/payment screen for all new/returning users.
+            return (
+                <Step2_PaymentAndLocation 
+                    theme={theme} 
+                    selectedPlan={selectedPlan} 
+                    address={installationAddress} 
+                    selectedPaymentMethod={selectedPaymentMethod} 
+                    onSelectPaymentMethod={setSelectedPaymentMethod} 
+                    onSubmit={handleFinalSubmit} 
+                    onBack={() => setFlowStep(1)} // From here, "back" should always go to plan selection
+                    needsNewModem={needsNewModem} 
+                />
+            );
+            
+        default:
+            // A fallback in case the flowStep state is ever invalid.
+            return null;
+    }
+};
 
     return (
         <>

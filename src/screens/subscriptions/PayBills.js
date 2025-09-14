@@ -26,22 +26,11 @@ import StatusDisplay from '../../components/StatusDisplay';
 import PhotoSourceSheet from '../../components/PhotoSourceSheet';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Animatable from 'react-native-animatable';
+import { EMPTY_STATES_CONFIG } from '../../data/Constants-Data';
 
 const GCASH_QR_IMAGE = require('../../assets/images/payments/gcashqr.png');
 const GCASH_LOGO_IMAGE = require('../../assets/images/payments/gcash.png');
 const CASH_LOGO_IMAGE = require('../../assets/images/payments/cod.png');
-
-const EMPTY_STATES_CONFIG = (theme, navigation) => ({
-  pending_installation: { icon: 'build-outline', color: theme.warning, title: 'Awaiting Installation', text: 'Your bills will appear here once your modem installation is complete.' },
-  pending_verification: { icon: 'hourglass-outline', color: theme.warning, title: 'Verification in Progress', text: 'Your first bill will appear here once your plan is active. Pull down to refresh.' },
-  pending_change: { icon: 'swap-horizontal-outline', color: theme.accent, title: 'Plan Change in Progress', text: 'You cannot pay bills while your plan change is being reviewed.', buttonText: 'View Status', action: () => navigation.navigate('Subscription') },
-  declined: { icon: 'close-circle-outline', color: theme.danger, title: 'Submission Declined', text: 'Your subscription payment was not approved. Please check your subscription details.', buttonText: 'View Status & Retry', action: () => navigation.navigate('Subscription') },
-  cancelled: { icon: 'close-circle-outline', color: theme.disabled, title: 'Subscription Cancelled', text: 'There are no outstanding bills to be paid.', buttonText: 'View Account Status', action: () => navigation.navigate('Subscription') },
-  null: { icon: 'document-text-outline', color: theme.disabled, title: 'No Active Plan', text: 'You need an active subscription to pay bills.', buttonText: 'Subscribe Now', action: () => navigation.navigate('Subscription') },
-  suspended: { icon: 'warning-outline', color: theme.danger, title: 'Account Suspended', text: 'Your account is suspended. Paying your overdue bill will reactivate your service.', buttonText: 'VIEW MY BILLS', action: () => navigation.navigate('MyBills') },
-  active: { icon: 'checkmark-done-circle-outline', color: theme.success, title: 'All Paid Up!', text: 'You have no outstanding bills. Great job!' },
-});
-
 
 const Header = React.memo(({ onBackPress }) => {
     const { theme } = useTheme();

@@ -3,25 +3,30 @@ import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 
 // Import Main App Screens
+// Home
 import HomeScreen from '../screens/dashboard/HomeScreen';
 import Profile from '../screens/dashboard/Profile';
 import EditProfileScreen from '../screens/dashboard/EditProfileScreen';
+// Subscription
 import Subscription from '../screens/subscriptions/Subscription';
+import MySubscriptionScreen from '../screens/subscriptions/MySubscriptionScreen';
 import PaymentVoucherScreen from '../screens/subscriptions/PaymentVoucherScreen';
 import MyBills from '../screens/subscriptions/MyBills';
 import PayBills from '../screens/subscriptions/PayBills';
+// Settings
 import Notif from '../screens/dashboard/Notif';
 import Settings from '../screens/settings/Settings';
 import OurServicesScreen from '../screens/misc/OurServiceScreen';
 import ChangePasswordScreen from '../screens/settings/ChangePasswordScreen';
-import Support from '../screens/support/Support';
 import FeedbackFormScreen from '../screens/settings/FeedbackFormScreen';
 import CustomerFeedbackScreen from '../screens/settings/CustomerFeedbackScreen';
-import LiveChatScreen from '../screens/support/LiveChatScreen';
-import LegalDocumentScreen from '../screens/misc/LegalDocumentScreen';
-import MySubscriptionScreen from '../screens/subscriptions/MySubscriptionScreen';
-import HowToUseScreen from '../screens/misc/HowToUseScreen';
 import AboutScreen from '../screens/misc/AboutScreen';
+// Support
+import Support from '../screens/support/Support';
+import LiveChatScreen from '../screens/support/LiveChatScreen';
+import HowToUseScreen from '../screens/misc/HowToUseScreen';
+// Others
+import LegalDocumentScreen from '../screens/misc/LegalDocumentScreen';
 
 const Stack = createStackNavigator();
 

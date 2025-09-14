@@ -18,7 +18,6 @@ import { useIsFocused } from '@react-navigation/native';
 import { Swipeable } from 'react-native-gesture-handler';
 import * as Animatable from 'react-native-animatable';
 
-
 import { useTheme, useAuth, useMessage, useAlert } from '../../contexts';
 
 // --- TICKET COMPONENTS ---

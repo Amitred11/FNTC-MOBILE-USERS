@@ -20,19 +20,7 @@ import * as Haptics from 'expo-haptics';
 import * as Animatable from 'react-native-animatable';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth, useTheme, useMessage, useAlert } from '../../contexts';
-
-// --- Constants ---
-const MAX_CHARACTERS = 500;
-const RATING_DESCRIPTIONS = {
-  0: { title: 'How was your experience?', subtitle: 'Your feedback helps us improve.' },
-  1: { title: 'Oh no! What went wrong?', subtitle: "We're sorry to hear that." },
-  2: { title: 'Room for improvement?', subtitle: 'We appreciate your feedback.' },
-  3: { title: 'Getting better!', subtitle: 'What can we do to make it great?' },
-  4: { title: 'Glad you liked it!', subtitle: 'Thanks for the positive feedback!' },
-  5: { title: 'Awesome! We love to hear it!', subtitle: 'Thank you for being a valued customer!' },
-};
-const POSITIVE_TAGS = ['Fast Speed', 'Reliable Connection', 'Good Customer Service', 'Affordable Price', 'Easy App'];
-const NEGATIVE_TAGS = ['Slow Speed', 'Connection Drops', 'Billing Issue', 'Poor Support', 'App is Confusing'];
+import { MAX_CHARACTERS, RATING_DESCRIPTIONS, POSITIVE_TAGS, NEGATIVE_TAGS } from '../../data/Constants-Data';
 
 // --- Sub-Components ---
 const StarRating = React.memo(({ currentRating, onRate, disabled }) => {
