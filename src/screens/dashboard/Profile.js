@@ -1,5 +1,4 @@
-// screens/ProfileScreen.js
-import React, { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,13 +10,16 @@ import {
   ScrollView,
   BackHandler,
   RefreshControl,
-  Modal,
+  // Modal, // Removed as it's now in its own component
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTheme, useAuth } from '../../contexts';
 
-// --- Reusable formatting function (no changes) ---
+// Import the separated components
+import InfoRowComponent from './components/InfoRowComponent.js';
+import ProfileImageModalComponent from './components/ProfileImageModalComponent.js';
+
 const formatDate = (dateString) => {
   if (!dateString) return null;
   return new Date(dateString).toLocaleDateString('en-US', {
@@ -27,19 +29,7 @@ const formatDate = (dateString) => {
   });
 };
 
-// --- Reusable InfoRow Component (no changes) ---
-const InfoRow = ({ icon, label, value, theme }) => {
-  const styles = getStyles(theme);
-  return (
-    <View style={styles.infoRow}>
-      <Ionicons name={icon} size={24} color={theme.primary} style={styles.infoIcon} />
-      <View style={{ flex: 1 }}>
-        <Text style={styles.infoLabel}>{label}</Text>
-        <Text style={value ? styles.infoValue : styles.infoValueNotSet}>{value || 'Not set'}</Text>
-      </View>
-    </View>
-  );
-};
+// InfoRow component definition removed from here
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
@@ -157,73 +147,58 @@ export default function ProfileScreen() {
       >
         <View style={styles.infoSection}>
           <Text style={styles.sectionTitle}>Personal Information</Text>
-          <InfoRow
+          <InfoRowComponent
             icon="person-outline"
             label="Full Name"
             value={userProfile.displayName}
-            theme={theme}
           />
-          <InfoRow
+          <InfoRowComponent
             icon="calendar-outline"
             label="Birthday"
             value={formattedBirthday}
-            theme={theme}
+            // theme={theme}
           />
-          <InfoRow
+          <InfoRowComponent
             icon="male-female-outline"
             label="Gender"
             value={userProfile.profile?.gender}
-            theme={theme}
+            // theme={theme}
           />
         </View>
 
         <View style={styles.infoSection}>
           <Text style={styles.sectionTitle}>Contact Information</Text>
-          <InfoRow
+          <InfoRowComponent
             icon="mail-outline"
             label="Email Address"
             value={userProfile.email}
-            theme={theme}
+            // theme={theme}
           />
-          <InfoRow
+          <InfoRowComponent
             icon="call-outline"
             label="Mobile Number"
             value={userProfile.profile?.mobileNumber}
-            theme={theme}
+            // theme={theme}
           />
-          <InfoRow
+          <InfoRowComponent
             icon="location-outline"
             label="Address"
             value={fullAddress}
-            theme={theme}
+            // theme={theme}
           />
         </View>
       </ScrollView>
 
-      {/* Image Fullscreen Modal - MODIFIED HERE */}
-      <Modal
-        visible={isImageModalVisible}
-        transparent={true}
-        onRequestClose={() => setImageModalVisible(false)}
-        animationType="fade"
-      >
-        <TouchableOpacity // This TouchableOpacity now handles closing the modal
-          style={styles.modalBackground} // It covers the whole background
-          activeOpacity={1} // Prevents visual feedback on press to avoid highlighting the dark background
-          onPress={() => setImageModalVisible(false)}
-        >
-          <Image
-            source={profileImageSource}
-            style={styles.fullScreenImage}
-            resizeMode="contain"
-          />
-        </TouchableOpacity>
-      </Modal>
+      <ProfileImageModalComponent
+        isVisible={isImageModalVisible}
+        onClose={() => setImageModalVisible(false)}
+        imageSource={profileImageSource}
+      />
     </SafeAreaView>
   );
 }
 
-// --- Styles (Removed modalCloseButton) ---
+// --- Styles (Removed InfoRow and Modal specific styles) ---
 const getStyles = (theme) =>
   StyleSheet.create({
     backButton: { left: 20, padding: 5, position: 'absolute', top: 50, zIndex: 10 },
@@ -249,11 +224,6 @@ const getStyles = (theme) =>
       marginBottom: 8,
       textAlign: 'center',
     },
-    fullScreenImage: {
-      flex: 1, // Allow image to expand within its container
-      width: '80%', // Use 80% width
-      borderRadius: 100, // Rounded corners
-    },
     header: {
       alignItems: 'center',
       backgroundColor: theme.primary,
@@ -262,9 +232,6 @@ const getStyles = (theme) =>
       paddingBottom: 70,
       paddingTop: 80,
     },
-    infoIcon: { marginRight: 15, marginTop: 2 },
-    infoLabel: { color: theme.textSecondary, fontSize: 12 },
-    infoRow: { alignItems: 'flex-start', flexDirection: 'row', marginBottom: 20 },
     infoSection: {
       backgroundColor: theme.surface,
       borderColor: theme.border,
@@ -274,25 +241,10 @@ const getStyles = (theme) =>
       marginBottom: 20,
       padding: 15,
     },
-    infoValue: { color: theme.text, fontSize: 16, fontWeight: '500' },
-    infoValueNotSet: {
-      color: theme.textSecondary,
-      fontSize: 16,
-      fontStyle: 'italic',
-      fontWeight: '500',
-    },
     loadingText: {
       color: theme.textSecondary,
       marginTop: 10,
     },
-    modalBackground: {
-      alignItems: 'center',
-      backgroundColor: 'rgba(0,0,0,0.9)',
-      flex: 1,
-      justifyContent: 'center',
-      paddingVertical: 50,
-    },
-    // modalCloseButton style is removed as it's no longer needed
     profileImage: {
       borderRadius: 50,
       height: 100,

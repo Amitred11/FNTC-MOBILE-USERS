@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../contexts/ThemeContext';
 import * as Animatable from 'react-native-animatable';
@@ -39,7 +39,6 @@ const PhotoSourceSheet = ({
           <TouchableOpacity style={styles.cancelOption} onPress={onClose}>
             <Text style={styles.cancelText}>Cancel</Text>
           </TouchableOpacity>
-          {Platform.OS === 'ios' && <View style={styles.safeAreaPadding} />}
         </Animatable.View>
       </TouchableOpacity>
     </Modal>
@@ -67,7 +66,7 @@ const getStyles = (theme) =>
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
       paddingHorizontal: 20,
-      paddingBottom: Platform.OS === 'ios' ? 20 : 0, // Compensate for iOS safe area
+      paddingBottom: 0, // Compensate for iOS safe area
       alignItems: 'center',
       shadowColor: '#000',
       shadowOffset: { width: 0, height: -5 },
@@ -104,9 +103,6 @@ const getStyles = (theme) =>
       backgroundColor: 'rgba(0, 0, 0, 0.6)',
       flex: 1,
       justifyContent: 'flex-end', // Aligns the modal content to the bottom
-    },
-    safeAreaPadding: {
-      height: Platform.OS === 'ios' ? 34 : 0, // Padding for bottom safe area on iOS devices
     },
     title: {
       color: theme.text,

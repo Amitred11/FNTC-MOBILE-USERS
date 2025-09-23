@@ -33,7 +33,6 @@ const { Config_INTERNAL_API_KEY, CHATBOT_API_ENDPOINT } = apiConfig;
 const HEADER_HEIGHT = Platform.select({ ios: 90, android: 70 });
 const RETRY_DELAY_MS = 5000;
 const INITIALIZATION_TIMEOUT_MS = 15000;
-const INITIAL_BOT_MESSAGE = `Hello! I'm FNTC Bot, your virtual assistant.\n\nHow can I help you today?`;
 const SUGGESTED_PROMPTS = [
     { title: "Billing Inquiry", question: "How can I pay my bill?" },
     { title: "Connection Issue", question: "My internet is slow, what should I do?" },
@@ -239,6 +238,16 @@ const ChatbotScreen = forwardRef(({ onRefresh, isRefreshing }, ref) => {
   
     const isSendActive = !isReplying && inputText.trim() !== '' && chatState.status === 'online';
   
+    // MODIFIED: Added effect to scroll to bottom when messages update
+    useEffect(() => {
+        if (messages.length > 0) {
+            const timer = setTimeout(() => {
+                flatListRef.current?.scrollToEnd({ animated: true });
+            }, 100); // Small delay to ensure UI has updated
+            return () => clearTimeout(timer);
+        }
+    }, [messages]);
+
     const clearAllTimers = useCallback(() => {
       if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
       if (initializationTimeoutRef.current) clearTimeout(initializationTimeoutRef.current);
@@ -286,8 +295,6 @@ const ChatbotScreen = forwardRef(({ onRefresh, isRefreshing }, ref) => {
   
         if (historyData?.length > 0) {
           setMessages(historyData.map((m, index) => ({ id: `hist-${m.id || index}`, text: m.parts[0].text, isUser: m.role === 'user', timestamp: m.timestamp || new Date() })));
-        } else {
-          setMessages([{ id: `initial-${Date.now()}`, text: INITIAL_BOT_MESSAGE, isUser: false, timestamp: new Date() }]);
         }
       } catch (error) {
         const currentDelay = backoffDelayRef.current;
@@ -349,7 +356,7 @@ const ChatbotScreen = forwardRef(({ onRefresh, isRefreshing }, ref) => {
           parts: [{ text: msg.text }],
         }));
   
-      const eventSource = new EventSource(`${CHATBOT_API_ENDPOINT}/chat`, {
+      const eventSource = new EventSource(`${CHATBOT_API_ENDPOINT}/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-API-Key': Config_INTERNAL_API_KEY },
         body: JSON.stringify({ history: historyForApi, userId: profile._id }),
@@ -480,36 +487,28 @@ const ChatbotScreen = forwardRef(({ onRefresh, isRefreshing }, ref) => {
 
         <FlatList
           ref={flatListRef}
-          inverted
-          data={[...messages].reverse()}
+          data={messages}
           keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item, index }) => {
-            const originalMessages = messages;
-            const reversedIndex = originalMessages.length - 1 - index;
-            return (
-              <TouchableOpacity onLongPress={() => handleLongPress(item)} activeOpacity={0.9}>
-                <MessageBubble 
-                  message={item} 
-                  theme={theme} 
-                  profile={profile} 
-                  previousMessage={originalMessages[reversedIndex + 1]} 
-                  nextMessage={originalMessages[reversedIndex - 1]} 
-                />
-              </TouchableOpacity>
-            )
-          }}
+          renderItem={({ item, index }) => ( 
+            <TouchableOpacity onLongPress={() => handleLongPress(item)} activeOpacity={0.9}>
+              <MessageBubble 
+                message={item} 
+                theme={theme} 
+                profile={profile} 
+                previousMessage={messages[index - 1]} 
+                nextMessage={messages[index + 1]} 
+              />
+            </TouchableOpacity>
+          )}
           contentContainerStyle={styles.scrollContentContainer}
-          ListFooterComponent={null}
-          ListHeaderComponent={
+          // REMOVED: The header is no longer needed here.
+          // ListHeaderComponent={messages.length > 1 ? <ChatSeparator theme={theme} /> : null}
+          ListFooterComponent={
             <>
-              {/* This is now the bottom of the list */}
-              {showPrompts && (
-                <>
-                  {messages.length > 1 && <ChatSeparator theme={theme} />}
-                  <SuggestedPrompts onPromptSelect={handlePromptSelect} />
-                </>
-              )}
               {isReplying && <TypingIndicator theme={theme} />}
+              {/* MODIFIED: The separator is now in the footer, and will only show when there are messages AND the prompts are visible. */}
+              {messages.length > 1 && showPrompts && <ChatSeparator theme={theme} />}
+              {showPrompts && <SuggestedPrompts onPromptSelect={handlePromptSelect} />}
             </>
           }
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[theme.primary]} tintColor={theme.primary} />}
@@ -563,10 +562,10 @@ export default ChatbotScreen;
 // --- STYLESHEET ---
 const getStyles = (theme) => StyleSheet.create({
     scrollContentContainer: { 
-      paddingBottom: 10, 
+      paddingTop: 10, // MODIFIED: Changed from paddingBottom to paddingTop
       paddingHorizontal: 10,
       flexGrow: 1, 
-      justifyContent: 'flex-end'
+      justifyContent: 'flex-start' // MODIFIED: Changed from flex-end to flex-start
     },
     messageRow: { 
         flexDirection: 'row', 
@@ -632,6 +631,7 @@ const getStyles = (theme) => StyleSheet.create({
         fontSize: 11,
         color: theme.textSecondary,
         marginTop: 5,
+
     },
     userTimestamp: {
         textAlign: 'right',

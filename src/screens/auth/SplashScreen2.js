@@ -7,7 +7,6 @@ import {
   Dimensions,
   View,
   ImageBackground,
-  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Easing } from 'react-native';
@@ -141,17 +140,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: width * 0.18,
     paddingVertical: height * 0.018,
     marginTop: height * 0.04,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 5,
-      },
-      android: {
-        elevation: 8,
-      },
-    }),
+    elevation: 8,
   },
   getStartedText: {
     color: '#fff',

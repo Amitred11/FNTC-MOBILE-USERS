@@ -9,7 +9,6 @@ import {
   TouchableOpacity,
   ScrollView,
   BackHandler,
-  Platform,
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -198,7 +197,7 @@ const getStyles = (theme) =>
       fontWeight: '600',
       color: theme.primary,
       letterSpacing: 2,
-      fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+      fontFamily: 'monospace'
     },
     warningBox: {
         flexDirection: 'row',
@@ -245,7 +244,7 @@ const getStyles = (theme) =>
       right: 0,
       backgroundColor: theme.background,
       padding: 24,
-      paddingBottom: Platform.OS === 'ios' ? 34 : 24,
+      paddingBottom: 24,
       borderTopWidth: 1,
       borderTopColor: theme.border,
     },

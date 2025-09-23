@@ -1,19 +1,22 @@
-// screens/LegalDocumentScreen.js (REFURBISHED)
+// screens/LegalDocumentScreen.js (VISUALLY STUNNING VERSION)
 
-import React, { useEffect, useMemo, useCallback, Fragment } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Platform } from 'react-native';
+import React, { useEffect, useMemo, useCallback, Fragment, useRef, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Animated, Dimensions } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../../contexts';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Animatable from 'react-native-animatable';
+import { LinearGradient } from 'expo-linear-gradient'; // For the animated background
 
-// --- Sub-Components (Memoized for Performance) ---
+const { height } = Dimensions.get('window');
+
+// --- Reusable Sub-Components ---
 
 const Footer = React.memo(({ onAgreePress }) => {
     const { theme } = useTheme();
     const styles = getStyles(theme);
     return (
-        <View style={styles.footer}>
+        <View style={[styles.footer, styles.glassEffect]}>
             <TouchableOpacity style={styles.agreeButton} onPress={onAgreePress}>
                 <Text style={styles.agreeButtonText}>I Understand and Agree</Text>
             </TouchableOpacity>
@@ -21,52 +24,124 @@ const Footer = React.memo(({ onAgreePress }) => {
     );
 });
 
-
-// --- NEW Markdown-Style Content Parser ---
-const ParsedContent = React.memo(({ text }) => {
+// --- NEW: Scroll Progress Bar Component ---
+const ScrollProgressBar = ({ scrollY, contentHeight }) => {
     const { theme } = useTheme();
     const styles = getStyles(theme);
 
-    const contentElements = useMemo(() => {
-        if (!text) return [];
+    const progress = scrollY.interpolate({
+        inputRange: [0, contentHeight - height],
+        outputRange: ['0%', '100%'],
+        extrapolate: 'clamp',
+    });
 
-        const lines = text.split('\n');
+    return (
+        <View style={styles.progressBarContainer}>
+            <Animated.View style={[styles.progressBar, { width: progress }]} />
+        </View>
+    );
+};
 
-        return lines.map((line, index) => {
-            const trimmedLine = line.trim();
-            
-            // Render H2 style for lines starting with '##'
-            if (trimmedLine.startsWith('## ')) {
-                return (
-                    <Animatable.View key={index} animation="fadeInUp" delay={index * 20} duration={300}>
-                        <Text style={styles.heading2}>{trimmedLine.substring(3)}</Text>
-                    </Animatable.View>
-                );
-            }
-            // Render H3 style for lines starting with '###'
-            if (trimmedLine.startsWith('### ')) {
-                 return (
-                    <Animatable.View key={index} animation="fadeInUp" delay={index * 20} duration={300}>
-                        <Text style={styles.heading3}>{trimmedLine.substring(4)}</Text>
-                    </Animatable.View>
-                );
-            }
-            // Render a spacer for empty lines to create paragraph breaks
-            if (trimmedLine === '') {
-                return <View key={index} style={styles.spacer} />;
-            }
-            // Render a standard paragraph
-            return (
-                <Animatable.View key={index} animation="fadeInUp" delay={index * 20} duration={300}>
-                    <Text style={styles.paragraph}>{trimmedLine}</Text>
-                </Animatable.View>
-            );
-        });
-    }, [text, styles]);
+// --- ENHANCED: Section Component with Parallax Icon ---
+const Section = React.memo(({ title, icon, children, index, scrollY }) => {
+    const { theme } = useTheme();
+    const styles = getStyles(theme);
+    const [layoutY, setLayoutY] = useState(0);
 
-    return <Fragment>{contentElements}</Fragment>;
+    const parallaxTranslate = scrollY.interpolate({
+        inputRange: [layoutY - height, layoutY + height],
+        outputRange: [-20, 20], // Move the icon up and down
+        extrapolate: 'clamp',
+    });
+
+    return (
+        <Animatable.View 
+            animation="fadeInUp" 
+            duration={500} 
+            delay={index * 100} 
+            style={styles.sectionContainer}
+            onLayout={(event) => setLayoutY(event.nativeEvent.layout.y)}
+        >
+            <View style={styles.sectionHeader}>
+                <Animated.View style={{ transform: [{ translateY: parallaxTranslate }] }}>
+                    <Ionicons name={icon} size={28} color={theme.primary} style={styles.sectionIcon} />
+                </Animated.View>
+                <Text style={styles.sectionTitle}>{title}</Text>
+            </View>
+            <View style={styles.sectionBody}>
+                {children}
+            </View>
+        </Animatable.View>
+    );
 });
 
+// --- Advanced Content Parser (Unchanged from previous version) ---
+const ParsedContent = React.memo(({ text, scrollY }) => {
+    const { theme } = useTheme();
+    const styles = getStyles(theme);
+
+    const getIconForTitle = (title) => {
+        // (Icon mapping logic remains the same)
+        const lowerCaseTitle = title.toLowerCase();
+        if (lowerCaseTitle.includes('agreement') || lowerCaseTitle.includes('terms')) return 'document-text-outline';
+        if (lowerCaseTitle.includes('service')) return 'wifi-outline';
+        if (lowerCaseTitle.includes('payment') || lowerCaseTitle.includes('billing')) return 'card-outline';
+        if (lowerCaseTitle.includes('conduct') || lowerCaseTitle.includes('choices')) return 'options-outline';
+        if (lowerCaseTitle.includes('equipment')) return 'hardware-chip-outline';
+        if (lowerCaseTitle.includes('liability')) return 'alert-circle-outline';
+        if (lowerCaseTitle.includes('termination')) return 'close-circle-outline';
+        if (lowerCaseTitle.includes('information')) return 'person-circle-outline';
+        if (lowerCaseTitle.includes('how we use')) return 'settings-outline';
+        if (lowerCaseTitle.includes('disclosure')) return 'share-social-outline';
+        if (lowerCaseTitle.includes('security')) return 'lock-closed-outline';
+        if (lowerCaseTitle.includes('contact')) return 'mail-outline';
+        return 'shield-checkmark-outline';
+    };
+
+    const sections = useMemo(() => {
+        if (!text) return [];
+        const lines = text.split('\n');
+        const parsedSections = [];
+        let currentSection = null;
+
+        lines.forEach(line => {
+            const trimmedLine = line.trim();
+            if (trimmedLine.startsWith('## ')) {
+                if (currentSection) parsedSections.push(currentSection);
+                currentSection = { title: trimmedLine.substring(3), content: [] };
+            } else if (currentSection) {
+                currentSection.content.push(trimmedLine);
+            }
+        });
+        if (currentSection) parsedSections.push(currentSection);
+
+        return parsedSections.map((section, sectionIndex) => (
+            <Section 
+                key={sectionIndex} 
+                index={sectionIndex} 
+                title={section.title} 
+                icon={getIconForTitle(section.title)}
+                scrollY={scrollY}
+            >
+                {section.content.map((line, lineIndex) => {
+                    if (line.startsWith('### ')) return <Text key={lineIndex} style={styles.heading3}>{line.substring(4)}</Text>;
+                    if (line.startsWith('* ') || line.startsWith('- ')) {
+                        return (
+                            <View key={lineIndex} style={styles.bulletItem}>
+                                <Text style={styles.bulletPoint}>•</Text>
+                                <Text style={styles.paragraph}>{line.substring(2)}</Text>
+                            </View>
+                        );
+                    }
+                    if (line === '') return <View key={lineIndex} style={styles.spacer} />;
+                    return <Text key={lineIndex} style={styles.paragraph}>{line}</Text>;
+                })}
+            </Section>
+        ));
+    }, [text, styles, scrollY]);
+
+    return <Fragment>{sections}</Fragment>;
+});
 
 // --- Main Screen Component ---
 export default function LegalDocumentScreen() {
@@ -75,21 +150,24 @@ export default function LegalDocumentScreen() {
   const { theme } = useTheme();
   const styles = getStyles(theme);
 
-  const { title, content } = route.params;
+  const { title = 'Legal Document', content = '' } = route.params || {};
 
-  // Configure the header using React Navigation's options
+  // --- NEW: Refs and State for Animations ---
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const [contentHeight, setContentHeight] = useState(0);
+
   useEffect(() => {
     navigation.setOptions({
         headerShown: true,
-        headerTransparent: true, // Make header background transparent
-        headerTitle: '', // Hide the title text in the header bar
+        headerTransparent: true,
+        headerTitle: '',
         headerLeft: () => (
-             <TouchableOpacity onPress={handleGoBack} style={styles.backButton}>
-                <Ionicons name="close-circle" size={32} color={theme.textSecondary} />
+             <TouchableOpacity onPress={handleGoBack} style={[styles.backButton, styles.glassEffect]}>
+                <Ionicons name="close-outline" size={28} color={theme.text} />
             </TouchableOpacity>
         ),
     });
-  }, [navigation, theme]);
+  }, [navigation, theme, handleGoBack]);
 
   const handleGoBack = useCallback(() => {
     navigation.goBack();
@@ -97,17 +175,30 @@ export default function LegalDocumentScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
-        <Animatable.View animation="fadeInDown" duration={500} style={styles.documentHeader}>
-            <Ionicons name="shield-checkmark-outline" size={48} color={theme.primary} style={styles.documentIcon} />
-            <Text style={styles.documentTitle}>{title}</Text>
-        </Animatable.View>
-        
-        <View style={styles.divider} />
+        <LinearGradient
+            colors={theme.isDarkMode ? ['#2C3E50', '#1C2833'] : ['#E0EAFC', '#CFDEF3']}
+            style={StyleSheet.absoluteFill}
+        />
+      
+        <ScrollProgressBar scrollY={scrollY} contentHeight={contentHeight} />
 
-        <ParsedContent text={content} />
-      </ScrollView>
+        <Animated.ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            onScroll={Animated.event(
+                [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+                { useNativeDriver: true }
+            )}
+            onContentSizeChange={(w, h) => setContentHeight(h)}
+            scrollEventThrottle={16}
+        >
+            <Animatable.View animation="fadeInDown" duration={500} style={styles.documentHeader}>
+                <Text style={styles.documentTitle}>{title}</Text>
+                <Text style={styles.documentSubtitle}>{content.split('\n')[0]}</Text>
+            </Animatable.View>
+            
+            <ParsedContent text={content} scrollY={scrollY} />
+        </Animated.ScrollView>
 
       <Footer onAgreePress={handleGoBack} />
     </SafeAreaView>
@@ -116,79 +207,89 @@ export default function LegalDocumentScreen() {
 
 const getStyles = (theme) =>
   StyleSheet.create({
-    container: { flex: 1, backgroundColor: theme.background },
+    container: { flex: 1 },
+    glassEffect: {
+        backgroundColor: theme.isDarkMode ? 'rgba(44, 44, 46, 0.7)' : 'rgba(255, 255, 255, 0.6)',
+        // Add backdrop filter for blur if possible (requires a library like @react-native-community/blur)
+    },
     backButton: { 
         marginLeft: 15,
-        backgroundColor: 'rgba(255, 255, 255, 0.7)',
-        borderRadius: 16,
-    },
-    scrollContent: { 
-        paddingHorizontal: 25,
-        paddingTop: 80, 
-        paddingBottom: 40,
-    },
-    documentHeader: {
+        borderRadius: 20,
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 25,
     },
-    documentIcon: {
-        marginBottom: 15,
+    scrollContent: { paddingHorizontal: 20, paddingTop: 100, paddingBottom: 150 },
+    
+    // Progress Bar
+    progressBarContainer: {
+        position: 'absolute',
+        top: 60, // Adjust based on your header's safe area
+        left: 0,
+        right: 0,
+        height: 3,
+        backgroundColor: `${theme.primary}30`,
+        zIndex: 10,
     },
-    documentTitle: {
-      fontSize: 28,
-      fontWeight: '700',
-      color: theme.text,
-      textAlign: 'center',
+    progressBar: {
+        height: 3,
+        backgroundColor: theme.primary,
     },
-    divider: {
-        height: 1,
-        backgroundColor: theme.border,
-        marginVertical: 15,
+    
+    // Document Header
+    documentHeader: { alignItems: 'center', marginBottom: 30, paddingHorizontal: 10 },
+    documentTitle: { fontSize: 32, fontWeight: '800', color: theme.text, textAlign: 'center' },
+    documentSubtitle: { fontSize: 15, color: theme.textSecondary, marginTop: 8, textAlign: 'center' },
+    
+    // Section Styling
+    sectionContainer: {
+        backgroundColor: theme.surface,
+        borderRadius: 20,
+        padding: 20,
+        marginBottom: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+        elevation: 5,
+        borderWidth: 1,
+        borderColor: 'transparent', // Can be theme.border for more definition
     },
-    heading2: {
-      fontSize: 20,
-      fontWeight: 'bold',
-      color: theme.text,
-      marginBottom: 12,
-      marginTop: 10,
-      lineHeight: 28,
-    },
-    heading3: {
-      fontSize: 17,
-      fontWeight: '600',
-      color: theme.textSecondary,
-      marginBottom: 8,
-      marginTop: 8,
-    },
-    paragraph: {
-      fontSize: 16,
-      color: theme.textSecondary,
-      lineHeight: 26,
-      textAlign: 'left',
-    },
-    spacer: {
-        height: 15,
-    },
+    sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
+    sectionIcon: { marginRight: 15, width: 30 }, // Fixed width for alignment
+    sectionTitle: { fontSize: 22, fontWeight: '700', color: theme.text, flex: 1 },
+    sectionBody: { borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 15 },
+    
+    // Text Content Styling
+    heading3: { fontSize: 18, fontWeight: '600', color: theme.text, marginBottom: 12, marginTop: 5 },
+    paragraph: { fontSize: 16, color: theme.textSecondary, lineHeight: 28, flex: 1 },
+    bulletItem: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
+    bulletPoint: { fontSize: 16, color: theme.primary, marginRight: 12, lineHeight: 28, fontWeight: 'bold' },
+    spacer: { height: 16 },
+    
+    // Footer
     footer: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
       paddingHorizontal: 20,
       paddingTop: 15,
-      paddingBottom: Platform.OS === 'ios' ? 34 : 20,
-      backgroundColor: theme.surface,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: -2 },
-      shadowOpacity: 0.05,
-      shadowRadius: 4,
-      elevation: 5,
+      paddingBottom: 30,
+      borderTopWidth: 1,
+      borderTopColor: 'transparent',
     },
-    agreeButton: {
-      backgroundColor: theme.primary,
-      borderRadius: 12,
-      padding: 16,
-      alignItems: 'center',
+    agreeButton: { 
+        backgroundColor: theme.primary, 
+        borderRadius: 14, 
+        paddingVertical: 18, 
+        alignItems: 'center',
+        shadowColor: theme.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
+        elevation: 8,
     },
-    agreeButtonText: {
-      color: theme.textOnPrimary,
-      fontSize: 16,
-      fontWeight: 'bold',
-    },
+    agreeButtonText: { color: theme.textOnPrimary, fontSize: 17, fontWeight: 'bold' },
   });

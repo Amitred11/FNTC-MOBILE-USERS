@@ -13,8 +13,6 @@ import {
   BackHandler,
   RefreshControl,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
   TouchableWithoutFeedback,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -347,7 +345,7 @@ const getStyles = (theme) =>
       borderTopColor: theme.border,
       borderTopWidth: 1,
       padding: 20,
-      paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+      paddingBottom: 20,
     },
     button: { alignItems: 'center', backgroundColor: theme.primary, borderRadius: 14, height: 54, justifyContent: 'center' },
     buttonDisabled: { backgroundColor: theme.disabled, opacity: 0.7 },

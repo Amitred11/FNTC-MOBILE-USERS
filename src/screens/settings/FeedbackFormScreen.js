@@ -1,4 +1,4 @@
-// screens/CustomerFeedbackScreen.js (Refactored with Submission Fix)
+// screens/CustomerFeedbackScreen.js (Refactored for a Smoother Experience)
 
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import {
@@ -9,9 +9,7 @@ import {
   TextInput,
   SafeAreaView,
   ActivityIndicator,
-  Platform,
   ScrollView,
-  Keyboard,
   KeyboardAvoidingView,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -30,7 +28,9 @@ const StarRating = React.memo(({ currentRating, onRate, disabled }) => {
 
   const handlePress = (star) => {
     onRate(star);
-    starRefs.current[star-1]?.pulse(600);
+    for (let i = 0; i < star; i++) {
+      setTimeout(() => starRefs.current[i]?.pulse(800), i * 60);
+    }
   }
 
   return (
@@ -62,10 +62,10 @@ const TagSelector = React.memo(({ rating, selectedTags, onTagPress }) => {
         return rating >= 4 ? POSITIVE_TAGS : NEGATIVE_TAGS;
     }, [rating]);
 
-    if (rating === 0) return null;
+    if (!relevantTags.length) return null;
 
     return (
-        <Animatable.View animation="fadeIn" duration={400} style={styles.tagsSection}>
+        <Animatable.View animation="fadeInUp" duration={400} delay={100} style={styles.tagsSection} key={rating}>
             <Text style={styles.sectionTitle}>What stood out?</Text>
             <View style={styles.tagsContainer}>
             {relevantTags.map((tag, index) => (
@@ -99,6 +99,10 @@ export default function FeedbackFormScreen() {
 
   const feedbackToEdit = route.params?.feedbackItem;
   const isEditMode = Boolean(feedbackToEdit);
+  
+  // --- ENHANCEMENT: Added a ref for the submit button animation ---
+  const submitButtonRef = useRef(null);
+  const prevCanSubmitRef = useRef(false);
 
   const [rating, setRating] = useState(0);
   const [feedbackText, setFeedbackText] = useState('');
@@ -156,6 +160,13 @@ export default function FeedbackFormScreen() {
 
   useLayoutEffect(() => {
     const canSubmit = rating > 0 && !isLoading;
+    
+    if (canSubmit && !prevCanSubmitRef.current) {
+        submitButtonRef.current?.pulse(800);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    prevCanSubmitRef.current = canSubmit;
+
     navigation.setOptions({
       headerShown: true,
       title: isEditMode ? 'Edit Feedback' : 'Give Feedback',
@@ -167,20 +178,22 @@ export default function FeedbackFormScreen() {
         </TouchableOpacity>
       ),
       headerRight: () => (
-        <TouchableOpacity
-          onPress={handleSubmit}
-          disabled={!canSubmit}
-          style={[styles.headerButton, !canSubmit && styles.headerButtonDisabled]}
-        >
-          {isLoading ? (
-            <ActivityIndicator size="small" color={theme.textOnPrimary} />
-          ) : (
-            <>
-              <Ionicons name={isEditMode ? "checkmark-done" : "send"} size={16} color={theme.textOnPrimary} style={{marginRight: 6}} />
-              <Text style={styles.headerButtonText}>{isEditMode ? 'Update' : 'Send'}</Text>
-            </>
-          )}
-        </TouchableOpacity>
+        <Animatable.View ref={submitButtonRef}>
+            <TouchableOpacity
+                onPress={handleSubmit}
+                disabled={!canSubmit}
+                style={[styles.headerButton, !canSubmit && styles.headerButtonDisabled]}
+            >
+                {isLoading ? (
+                    <ActivityIndicator size="small" color={theme.textOnPrimary} />
+                ) : (
+                    <>
+                    <Ionicons name={isEditMode ? "checkmark-done" : "send"} size={16} color={theme.textOnPrimary} style={{marginRight: 6}} />
+                    <Text style={styles.headerButtonText}>{isEditMode ? 'Update' : 'Send'}</Text>
+                    </>
+                )}
+            </TouchableOpacity>
+        </Animatable.View>
       ),
     });
   }, [navigation, isLoading, rating, theme, isEditMode, handleSubmit, styles]);
@@ -188,6 +201,9 @@ export default function FeedbackFormScreen() {
   const handleRatingPress = useCallback((star) => {
     const newRating = rating === star ? 0 : star;
     setRating(newRating);
+    if ((rating >= 4 && newRating < 4 && newRating !== 0) || (rating < 4 && rating !== 0 && newRating >= 4)) {
+        setSelectedTags(new Set());
+    }
     if (newRating > 0) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
@@ -197,11 +213,7 @@ export default function FeedbackFormScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedTags(prevTags => {
         const newTags = new Set(prevTags);
-        if (newTags.has(tag)) {
-            newTags.delete(tag);
-        } else {
-            newTags.add(tag);
-        }
+        newTags.has(tag) ? newTags.delete(tag) : newTags.add(tag);
         return newTags;
     });
   }, []);
@@ -215,22 +227,23 @@ export default function FeedbackFormScreen() {
     >
       <SafeAreaView style={styles.container}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior="height"
           style={styles.kavContainer}
         >
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           >
             <View style={styles.contentWrapper}>
-                <Animatable.Text animation="fadeInUp" duration={600} style={styles.title} key={title}>
-                {title}
+                <Animatable.Text animation="fadeInUp" duration={500} style={styles.title} key={`title-${rating}`}>
+                    {title}
                 </Animatable.Text>
-                <Animatable.Text animation="fadeInUp" duration={600} delay={100} style={styles.subtitle} key={subtitle}>
-                {subtitle}
+                <Animatable.Text animation="fadeInUp" duration={500} delay={50} style={styles.subtitle} key={`subtitle-${rating}`}>
+                    {subtitle}
                 </Animatable.Text>
 
-                <Animatable.View animation="fadeInUp" delay={200}>
+                <Animatable.View animation="fadeInUp" delay={100}>
                     <StarRating currentRating={rating} onRate={handleRatingPress} disabled={isLoading} />
                 </Animatable.View>
                 

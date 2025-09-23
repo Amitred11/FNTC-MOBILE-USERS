@@ -33,7 +33,7 @@ const AppContent = () => {
     setupAndroidNotificationChannels();
 
     notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
-      console.log('Notification Received (Foreground):', notification);
+      console.log('Notification Received:', notification);
     });
 
     responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {

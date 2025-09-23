@@ -11,7 +11,6 @@ import {
   Modal,
   ActivityIndicator,
   KeyboardAvoidingView,
-  Platform,
   TouchableWithoutFeedback,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -25,8 +24,7 @@ import { useSubscription, useAuth, useTheme, useMessage, useAlert } from '../../
 import { BottomNavBar } from '../../components/BottomNavBar';
 import { requestMediaLibraryPermissions, requestCameraPermissions } from '../../utils/permissions';
 import PhotoSourceSheet from '../../components/PhotoSourceSheet';
-import Step1_5_ModemCheck from './Step1_5_ModemCheck';
-
+import Step1_5_ModemCheck from './components/Step1_5_ModemCheck';
 // --- Static Assets ---
 const GCASH_LOGO_IMAGE = require('../../assets/images/payments/gcash.png');
 const GCASH_QR_IMAGE = require('../../assets/images/payments/gcashqr.png');
@@ -135,7 +133,7 @@ const GcashSheet = memo(({ isVisible, onClose, onSubmit, onImagePick, proofOfPay
     return (
         <Modal animationType="fade" transparent={true} visible={isVisible} onRequestClose={onClose}>
             <KeyboardAvoidingView 
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
+                behavior="height"
                 style={styles.sheetOverlay}
             >
                 {/* The overlay now handles the dismissal */}
@@ -253,7 +251,7 @@ const Step2_PaymentAndLocation = memo(({ theme, selectedPlan, address, selectedP
     ));
 
     return (
-        <KeyboardAvoidingView style={styles.flowContainer} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <KeyboardAvoidingView style={styles.flowContainer} behavior="height">
             <ScrollView contentContainerStyle={styles.contentContainer}>
                 <Text style={styles.screenTitle}>Final Step</Text>
                 <Text style={styles.screenSubtitle}>Confirm your details to get connected.</Text>
@@ -780,6 +778,6 @@ changeImageButton: { flexDirection: 'row', alignItems: 'center', justifyContent:
 changeImageButtonText: { color: theme.textOnPrimary, fontWeight: 'bold', marginLeft: 8 },
 sheetActions: { 
     marginTop: 16,
-    paddingBottom: Platform.OS === 'ios' ? 10 : 0,
+    paddingBottom: 0,
 },
 });

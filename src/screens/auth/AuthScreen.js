@@ -10,12 +10,10 @@ import {
   Dimensions,
   ImageBackground,
   TouchableOpacity,
-  Platform,
   Modal,
   Keyboard,
   ScrollView,
   BackHandler,
-  Alert,
   ActivityIndicator,
   Clipboard,
 } from 'react-native';
@@ -58,9 +56,9 @@ export default function SignUpScreen() {
     signIn,
     register,
     googleSignIn,
-    isLoading: isAuthLoading,
     setAuthAction,
     completeAuthAction,
+    pendingRecoveryCode,
   } = useAuth();
   const [isLogin, setIsLogin] = useState(route.params?.screen === 'Login' || false);
   const [checked, setChecked] = useState(false);
@@ -245,11 +243,7 @@ export default function SignUpScreen() {
 
     try {
         await register({ displayName: Name, email, password });
-            
-            // On success, show a message and navigate to the VerifyOtpScreen
-            showMessage('Registration successful! Please verify your email.');
-            navigation.navigate('VerifyOtp', { email }); // Pass the email to the next screen
-
+            navigation.navigate('VerifyOtp', { email });
         } catch (error) {
             console.error('Sign-up API call failed:', error.response?.data?.message || error.message);
             const errorMsg = error.response?.data?.message || 'An unexpected error occurred.';
@@ -281,21 +275,14 @@ export default function SignUpScreen() {
         await AsyncStorage.removeItem('savedPassword');
         await AsyncStorage.setItem('rememberCredentials', 'false');
       }
-
-      showMessage('Login Successful!', () => {
-        completeAuthAction();
-      });
     } catch (error) {
-      console.log('LOGIN FAILED on SignUpScreen');
+      console.log('LoginScreen: Login FAILED.');
       if (error.response) {
-        console.error('Error Data:', error.response.data);
+        console.error('LoginScreen: Error Data from Axios response:', error.response.data);
       } else {
-        console.error('Error Message:', error.message);
+        console.error('LoginScreen: Error Message:', error.message);
       }
-      const errorMessage =
-        error.response?.data?.message ||
-        'Login failed. The server may be unavailable. Please try again later.';
-      showMessage(errorMessage);
+      showMessage(error.message);
       completeAuthAction();
     } finally {
       setIsLoading(false);
@@ -308,14 +295,18 @@ export default function SignUpScreen() {
       await googleSignIn();
     } catch (error) {
       console.error('Google Sign-In initiation failed:', error);
-      Alert.alert(
-        'Google Sign-In Error',
-        'Could not start Google sign-in process. Please try again.'
-      );
+      showAlert('Google Sign-In Failed');
     } finally {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (pendingRecoveryCode) {
+      console.log('SignUpScreen: Detected pending recovery code from AuthContext, navigating to DisplayRecoveryCodeScreen.');
+      navigation.navigate('DisplayRecoveryCodeScreen');
+    }
+  }, [pendingRecoveryCode, navigation]); 
 
   const cardY = cardAnim.interpolate({
     inputRange: [0, 1],

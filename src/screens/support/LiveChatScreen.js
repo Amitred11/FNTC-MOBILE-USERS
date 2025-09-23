@@ -8,11 +8,9 @@ import {
   FlatList,
   TouchableOpacity,
   KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
   SafeAreaView,
   BackHandler,
-  Image,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -221,8 +219,8 @@ export default function LiveChatScreen() {
       <ChatHeader onBackPress={() => navigation.goBack()} status={serverStatus} theme={theme}/>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
+        behavior="undefined"
+        keyboardVerticalOffset={0}
       >
         <FlatList
           ref={flatListRef}
@@ -323,7 +321,7 @@ const getStyles = (theme) =>
     },
     input: {
       color: theme.text, fontSize: 16, maxHeight: 120,
-      paddingHorizontal: 15, paddingVertical: Platform.OS === 'ios' ? 12 : 8,
+      paddingHorizontal: 15, paddingVertical: 8,
       minHeight: 44,
     },
     sendButton: {

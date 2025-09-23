@@ -11,7 +11,6 @@ import {
   ActivityIndicator,
   ScrollView,
   KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
@@ -271,7 +270,7 @@ export default function ForgotPasswordScreen() {
             </Animatable.View>
           ) : null}
         </ScrollView>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
+        <KeyboardAvoidingView behavior="height" keyboardVerticalOffset={20}>
         {showButton && (
             <View style={styles.buttonContainer}>
             <TouchableOpacity style={styles.button} onPress={getButtonAction()} disabled={isLoading} activeOpacity={0.7}>
@@ -347,7 +346,7 @@ const getStyles = (theme) =>
     buttonContainer: {
       paddingHorizontal: 24,
       paddingVertical: 20,
-      paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+      paddingBottom: 20,
       backgroundColor: theme.background,
       borderTopColor: theme.border,
       borderTopWidth: 1,

@@ -7,11 +7,11 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
-  Platform,
   TouchableOpacity,
   Modal,
   Image,
   FlatList,
+  TextInput 
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useIsFocused } from '@react-navigation/native';
@@ -71,6 +71,11 @@ const TicketListScreen = forwardRef(({ onCreate, isRefreshing, onRefresh }, ref)
     const [isImageViewerVisible, setImageViewerVisible] = useState(false);
     const [viewerImageUrl, setViewerImageUrl] = useState(null);
 
+    const [isEditing, setIsEditing] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [editableSubject, setEditableSubject] = useState('');
+    const [editableDescription, setEditableDescription] = useState('');
+
     const handleOpenImageViewer = (url) => {
         setViewerImageUrl(url);
         setImageViewerVisible(true);
@@ -118,12 +123,17 @@ const TicketListScreen = forwardRef(({ onCreate, isRefreshing, onRefresh }, ref)
     };
   
     const handleViewTicket = async (ticketId) => {
+      // --- MODIFIED: Reset editing state when opening a ticket ---
+      setIsEditing(false); 
       setSelectedTicket(null);
       setIsLoadingDetail(true);
       setDetailVisible(true);
       try {
         const { data } = await api.get(`/support/tickets/${ticketId}`);
         setSelectedTicket(data);
+        // --- NEW: Populate editable fields when data is loaded ---
+        setEditableSubject(data.subject);
+        setEditableDescription(data.description);
       } catch (error) {
         showAlert('Error', 'Could not load ticket details.');
         setDetailVisible(false);
@@ -131,12 +141,38 @@ const TicketListScreen = forwardRef(({ onCreate, isRefreshing, onRefresh }, ref)
         setIsLoadingDetail(false);
       }
     };
+
+    // --- NEW: Function to handle saving changes ---
+    const handleSaveChanges = async () => {
+        if (!editableSubject.trim() || !editableDescription.trim()) {
+            showAlert('Missing Info', 'Subject and description cannot be empty.');
+            return;
+        }
+        setIsSaving(true);
+        try {
+            const payload = {
+                subject: editableSubject,
+                description: editableDescription,
+            };
+            const { data } = await api.put(`/support/tickets/${selectedTicket._id}`, payload);
+            
+            setSelectedTicket(data.ticket); 
+            showMessage('Ticket Updated Successfully');
+            setIsEditing(false);
+            fetchTickets(true);
+        } catch (error) {
+            const errorMsg = error.response?.data?.message || 'Could not update the ticket.';
+            showAlert('Error', errorMsg);
+        } finally {
+            setIsSaving(false);
+        }
+    };
   
     const handleCloseTicket = () => {
-      showAlert('Close Ticket', 'Are you sure you want to close this ticket?', [
+      showAlert('Close Ticket', 'Are you sure you want to close this ticket? You will not be able to reopen it or add further replies. This action should only be taken if your issue is fully resolved.', [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Yes, Close It',
+          text: 'Close It',
           onPress: async () => {
             if (!selectedTicket?._id) return;
             try {
@@ -178,6 +214,13 @@ const TicketListScreen = forwardRef(({ onCreate, isRefreshing, onRefresh }, ref)
             <Text style={styles.replyTimestamp}>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
         </View>
     );
+
+    const cancelEditing = () => {
+        // Reset fields to original state
+        setEditableSubject(selectedTicket.subject);
+        setEditableDescription(selectedTicket.description);
+        setIsEditing(false);
+    };
 
     return (
       <View style={styles.container}>
@@ -223,11 +266,15 @@ const TicketListScreen = forwardRef(({ onCreate, isRefreshing, onRefresh }, ref)
                         <View style={styles.modalHeader}>
                             <View style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
                                 <Ionicons name="ticket" size={26} color={theme.primary} />
-                                <Text style={styles.modalTitle}>Ticket Details</Text>
+                                <Text style={styles.modalTitle}>{isEditing ? 'Edit Ticket' : 'Ticket Details'}</Text>
                             </View>
-                            <TouchableOpacity onPress={() => setDetailVisible(false)}>
-                                <Ionicons name="close-circle" size={28} color={theme.textSecondary} />
-                            </TouchableOpacity>
+                            
+                            {/* --- MODIFIED: Show Edit/Cancel button --- */}
+                            {!isLoadingDetail && selectedTicket && selectedTicket.status === 'Open' && (
+                                <TouchableOpacity onPress={isEditing ? cancelEditing : () => setIsEditing(true)}>
+                                    <Ionicons name={isEditing ? "close-circle" : "create-outline"} size={28} color={theme.textSecondary} />
+                                </TouchableOpacity>
+                            )}
                         </View>
 
                         {isLoadingDetail ? (
@@ -236,7 +283,17 @@ const TicketListScreen = forwardRef(({ onCreate, isRefreshing, onRefresh }, ref)
                         <View style={styles.modalBody}>
                             <ScrollView contentContainerStyle={styles.modalScrollView}>
                                 <View style={styles.detailCard}>
-                                    <Text style={styles.ticketDetailSubject}>{selectedTicket.subject}</Text>
+                                    {/* --- MODIFIED: Show TextInput on edit --- */}
+                                    {isEditing ? (
+                                        <TextInput
+                                            style={[styles.editableInput, styles.editableSubject]}
+                                            value={editableSubject}
+                                            onChangeText={setEditableSubject}
+                                            placeholder="Ticket Subject"
+                                        />
+                                    ) : (
+                                        <Text style={styles.ticketDetailSubject}>{selectedTicket.subject}</Text>
+                                    )}
                                     <View style={styles.idStatusContainer}>
                                         <Text style={styles.ticketDetailId}>ID: {selectedTicket._id}</Text>
                                         <View style={[styles.statusTag, { backgroundColor: {Open: theme.success, 'In Progress': theme.warning, Resolved: theme.primary, Closed: theme.textSecondary}[selectedTicket.status] || theme.disabled}]}>
@@ -247,7 +304,18 @@ const TicketListScreen = forwardRef(({ onCreate, isRefreshing, onRefresh }, ref)
                                 
                                 <View style={styles.detailCard}>
                                     <Text style={styles.sectionTitle}>Your Report</Text>
-                                    <Text style={styles.descriptionText}>{selectedTicket.description}</Text>
+                                    {/* --- MODIFIED: Show TextInput on edit --- */}
+                                    {isEditing ? (
+                                        <TextInput
+                                            style={[styles.editableInput, styles.editableDescription]}
+                                            value={editableDescription}
+                                            onChangeText={setEditableDescription}
+                                            placeholder="Describe your issue in detail..."
+                                            multiline
+                                        />
+                                    ) : (
+                                        <Text style={styles.descriptionText}>{selectedTicket.description}</Text>
+                                    )}
                                 </View>
 
                                 {selectedTicket.imageUrl && (
@@ -260,7 +328,7 @@ const TicketListScreen = forwardRef(({ onCreate, isRefreshing, onRefresh }, ref)
                                 )}
                                 
                                 <View style={styles.detailCard}>
-                                    <Text style={styles.sectionTitle}>Conversation</Text>
+                                    <Text style={styles.sectionTitle}>ADMIN'S MESSAGE</Text>
                                     {selectedTicket.messages && selectedTicket.messages.length > 0 ? (
                                         selectedTicket.messages.map(renderMessageItem)
                                     ) : (
@@ -271,9 +339,15 @@ const TicketListScreen = forwardRef(({ onCreate, isRefreshing, onRefresh }, ref)
 
                             {selectedTicket.status !== 'Closed' && (
                             <View style={styles.modalFooter}>
-                                <TouchableOpacity style={styles.closeTicketButton} onPress={handleCloseTicket}>
-                                <Text style={styles.closeTicketButtonText}>Close My Ticket</Text>
-                                </TouchableOpacity>
+                                {isEditing ? (
+                                    <TouchableOpacity style={[styles.saveChangesButton, isSaving && {backgroundColor: theme.disabled}]} onPress={handleSaveChanges} disabled={isSaving}>
+                                        {isSaving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.saveChangesButtonText}>Save Changes</Text>}
+                                    </TouchableOpacity>
+                                ) : (
+                                    <TouchableOpacity style={styles.closeTicketButton} onPress={handleCloseTicket}>
+                                        <Text style={styles.closeTicketButtonText}>Close My Ticket</Text>
+                                    </TouchableOpacity>
+                                )}
                             </View>
                             )}
                         </View>
@@ -399,7 +473,7 @@ const getStyles = (theme) => StyleSheet.create({
     // --- Button Styles ---
     fixedButtonContainer: { 
         paddingHorizontal: 20, 
-        paddingBottom: Platform.OS === 'ios' ? 30 : 20,
+        paddingBottom: 20,
         paddingTop: 10,
         backgroundColor: theme.surface, 
         borderTopWidth: 1, 
@@ -473,7 +547,7 @@ const getStyles = (theme) => StyleSheet.create({
     ticketDetailId: {
         fontSize: 12,
         color: theme.textSecondary,
-        fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+        fontFamily: 'monospace',
     },
     sectionTitle: {
         fontSize: 13,
@@ -572,7 +646,39 @@ const getStyles = (theme) => StyleSheet.create({
     },
     imageViewerCloseButtonWrapper: {
         position: 'absolute',
-        top: Platform.OS === 'ios' ? 60 : 30,
+        top: 30,
         right: 20,
+    },
+// --- NEW STYLES for editable inputs ---
+    editableInput: {
+        fontSize: 16,
+        color: theme.text,
+        backgroundColor: theme.surface,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: theme.border,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+    },
+    editableSubject: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginBottom: 12,
+    },
+    editableDescription: {
+        minHeight: 120,
+        textAlignVertical: 'top',
+        lineHeight: 24,
+    },
+    saveChangesButton: {
+        padding: 14, 
+        borderRadius: 12, 
+        backgroundColor: theme.success, // Use a different color for save
+        alignItems: 'center',
+    },
+    saveChangesButtonText: {
+        fontSize: 16, 
+        fontWeight: 'bold', 
+        color: theme.textOnPrimary,
     },
 });

@@ -5,7 +5,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 // Import Auth Screens
 import SplashScreen2 from '../screens/auth/SplashScreen2';
 import GetStartedScreen from '../screens/auth/GetStartedScreen';
-import SignUpScreen from '../screens/auth/SignUpScreen';
+import SignUpScreen from '../screens/auth/AuthScreen';
 import VerifyOtpScreen from '../screens/auth/VerifyOtpScreen';
 import ForgotPasswordScreen from '../screens/misc/ForgotPasswordScreen';
 import SupportHelpScreen from '../screens/misc/SupportHelpScreen';

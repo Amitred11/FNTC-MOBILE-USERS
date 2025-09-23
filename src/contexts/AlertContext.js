@@ -22,7 +22,7 @@ export const AlertProvider = ({ children }) => {
       buttons: buttons.map((button) => ({
         ...button,
         onPress: () => {
-          setAlertState((prev) => ({ ...prev, visible: false })); // Hide alert first
+          setAlertState((prev) => ({ ...prev, visible: false }));
           if (button.onPress) {
             button.onPress();
           }

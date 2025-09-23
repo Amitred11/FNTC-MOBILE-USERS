@@ -1,5 +1,3 @@
-// screens/NotificationScreen.js (Refactored & Fixed)
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
@@ -10,119 +8,20 @@ import {
   SafeAreaView,
   ActivityIndicator,
   RefreshControl,
-  Modal,
-  ScrollView,
   BackHandler,
-  TouchableWithoutFeedback,
-  Linking,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as Animatable from 'react-native-animatable';
 import { useTheme, useAlert, useAuth, useMessage } from '../../contexts';
-import StatusDisplay from '../../components/StatusDisplay'; // Make sure this path is correct
+import StatusDisplay from '../../components/StatusDisplay'; 
 
-// --- Constants & Helpers ---
+// --- Import separated components ---
+import NotificationItemComponent from './components/NotificationItemComponent.js';
+import NotificationDetailModalComponent from './components/NotificationDetailModalComponent.js';
+
+// --- Helpers ---
 const NOTIFICATIONS_PER_PAGE = 20;
-
-const formatTimestamp = (timestamp) => {
-  if (!timestamp) return '';
-  const now = new Date();
-  const notifDate = new Date(timestamp);
-  const diffSeconds = Math.round((now - notifDate) / 1000);
-  if (diffSeconds < 60) return 'just now';
-  const diffMinutes = Math.round(diffSeconds / 60);
-  if (diffMinutes < 60) return `${diffMinutes}m ago`;
-  const diffHours = Math.round(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  const diffDays = Math.round(diffHours / 24);
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return notifDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-};
-
-// This ICON_MAP is fine, as it relies on properties that exist in the theme
-const ICON_MAP = (theme) => ({
-    payment: { name: 'wallet-outline', color: theme.success },
-    billing: { name: 'receipt-outline', color: theme.success },
-    billing_error: { name: 'alert-circle-outline', color: theme.warning },
-    subscription_activation: { name: 'sparkles-outline', color: theme.primary },
-    subscription_decline: { name: 'close-circle-outline', color: theme.danger },
-    ticket: { name: 'chatbox-ellipses-outline', color: theme.info },
-    ticket_update: { name: 'chatbox-ellipses-outline', color: theme.info },
-    chat: { name: 'chatbubbles-outline', color: theme.info },
-    promo: { name: 'megaphone-outline', color: theme.accent },
-    warning: { name: 'warning-outline', color: theme.warning },
-    default: { name: 'notifications-outline', color: theme.textSecondary },
-});
-
-// --- Sub-Components (No changes needed here) ---
-const NotificationItem = React.memo(({ item, onPress, onLongPress, isSelectionMode, isSelected }) => {
-    const { theme } = useTheme();
-    const styles = getStyles(theme);
-    const iconInfo = ICON_MAP(theme)[item.type] || ICON_MAP(theme).default;
-    const itemContainerStyle = [
-      styles.cardContainer,
-      !item.read && styles.unreadCard,
-      isSelected && styles.selectedItem
-    ];
-    
-    return (
-        <Animatable.View animation="fadeInUp" duration={500} useNativeDriver={true}>
-            <TouchableOpacity onPress={onPress} onLongPress={onLongPress} activeOpacity={0.8} style={itemContainerStyle}>
-                <View style={[styles.iconContainer, { backgroundColor: `${iconInfo.color}20` }]}>
-                    <Ionicons name={iconInfo.name} size={24} color={iconInfo.color} />
-                </View>
-                <View style={styles.textContainer}>
-                    <Text style={[styles.title, !item.read && styles.unreadTitle]} numberOfLines={2}>{item.title}</Text>
-                    <Text style={styles.message} numberOfLines={2}>{item.message}</Text>
-                    <Text style={styles.timestamp}>{formatTimestamp(item.createdAt)}</Text>
-                </View>
-                {isSelectionMode && (
-                    <Animatable.View animation="zoomIn" duration={200} style={styles.checkboxContainer}>
-                        <Ionicons name={isSelected ? 'checkmark-circle' : 'ellipse-outline'} size={28} color={isSelected ? theme.primary : theme.border} />
-                    </Animatable.View>
-                )}
-            </TouchableOpacity>
-        </Animatable.View>
-    );
-});
-
-const NotificationDetailModal = React.memo(({ notification, visible, onClose }) => {
-    const { theme } = useTheme();
-    const styles = getStyles(theme);
-    if (!notification) return null;
-
-    const iconInfo = ICON_MAP(theme)[notification.type] || ICON_MAP(theme).default;
-
-    return (
-        <Modal animationType="fade" transparent={true} visible={visible} onRequestClose={onClose}>
-            <TouchableWithoutFeedback onPress={onClose}>
-                <View style={styles.modalOverlay}>
-                    <Animatable.View animation="slideInUp" duration={400} style={styles.modalContent}>
-                       <TouchableWithoutFeedback>
-                            <View style={{width: '100%'}}>
-                                <View style={styles.gripper} />
-                                <View style={styles.modalHeader}>
-                                    <View style={[styles.modalIconContainer, {backgroundColor: `${iconInfo.color}20`}]}>
-                                         <Ionicons name={iconInfo.name} size={30} color={iconInfo.color} />
-                                    </View>
-                                    <Text style={styles.modalTitle}>{notification.title}</Text>
-                                </View>
-                                <ScrollView style={styles.modalScrollView} showsVerticalScrollIndicator={false}>
-                                    <Text style={styles.modalMessage}>{notification.message}</Text>
-                                </ScrollView>
-                                <Text style={styles.modalTimestamp}>{`Received ${formatTimestamp(notification.createdAt)}`}</Text>
-                                <TouchableOpacity style={styles.modalCloseButton} onPress={onClose}>
-                                    <Text style={styles.modalCloseButtonText}>Done</Text>
-                                </TouchableOpacity>
-                            </View>
-                       </TouchableWithoutFeedback>
-                    </Animatable.View>
-                </View>
-            </TouchableWithoutFeedback>
-        </Modal>
-    );
-});
 
 const Header = React.memo(({ isSelectionMode, onCancelSelection, selectedCount, onSelectAll, allSelected, onDelete, onMarkAllRead, onBackPress }) => {
     const { theme } = useTheme();
@@ -354,41 +253,36 @@ export default function NotificationScreen() {
         onBackPress={() => navigation.goBack()}
       />
       
-      {profile && !profile.pushToken ? (
-        <View style={styles.statusDisplayWrapper}>
-            <StatusDisplay 
-                illustration={require('../../assets/images/icons/notifications_disabled.png')} 
-                title="Notifications Disabled" 
-                text="Enable push notifications in your device settings to receive important updates." 
-                buttonText="Go to App Settings" 
-                onButtonPress={() => Linking.openSettings()} 
-            />
-        </View>
-      ) : (
-        <SectionList
-          sections={groupedNotifications}
-          keyExtractor={(item) => item._id}
-          renderItem={({ item }) => <NotificationItem item={item} onPress={() => handleItemTap(item)} onLongPress={() => handleItemLongPress(item)} isSelectionMode={isSelectionMode} isSelected={selectedIds.has(item._id)} />}
-          renderSectionHeader={({ section: { title } }) => <Text style={styles.sectionHeader}>{title}</Text>}
-          ListEmptyComponent={<View style={styles.statusDisplayWrapper}><StatusDisplay illustration={require('../../assets/images/icons/no_notifications.png')} title="All Caught Up!" text="You have no new notifications right now."/></View>}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
-          stickySectionHeadersEnabled={false}
-          onEndReached={() => { if (!loadingState.loadingMore && page < totalPages) fetchNotifications(false); }}
-          onEndReachedThreshold={0.5}
-          ListFooterComponent={loadingState.loadingMore ? <ActivityIndicator style={{ marginVertical: 20 }} color={theme.primary} /> : null}
-          refreshControl={<RefreshControl refreshing={loadingState.refreshing} onRefresh={onRefresh} colors={[theme.primary]} tintColor={theme.primary} />}
-        />
-      )}
-      <NotificationDetailModal notification={selectedNotification} visible={isDetailModalVisible} onClose={() => setDetailModalVisible(false)} />
+      <SectionList
+        sections={groupedNotifications}
+        keyExtractor={(item) => item._id}
+        renderItem={({ item }) => (
+          <NotificationItemComponent 
+            item={item} 
+            onPress={() => handleItemTap(item)} 
+            onLongPress={() => handleItemLongPress(item)} 
+            isSelectionMode={isSelectionMode} 
+            isSelected={selectedIds.has(item._id)} 
+          />
+        )}
+        renderSectionHeader={({ section: { title } }) => <Text style={styles.sectionHeader}>{title}</Text>}
+        ListEmptyComponent={<View style={styles.statusDisplayWrapper}><StatusDisplay illustration={require('../../assets/images/icons/no_notifications.png')} title="All Caught Up!" text="You have no new notifications right now."/></View>}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
+        stickySectionHeadersEnabled={false}
+        onEndReached={() => { if (!loadingState.loadingMore && page < totalPages) fetchNotifications(false); }}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={loadingState.loadingMore ? <ActivityIndicator style={{ marginVertical: 20 }} color={theme.primary} /> : null}
+        refreshControl={<RefreshControl refreshing={loadingState.refreshing} onRefresh={onRefresh} colors={[theme.primary]} tintColor={theme.primary} />}
+      />
+      
+      <NotificationDetailModalComponent notification={selectedNotification} visible={isDetailModalVisible} onClose={() => setDetailModalVisible(false)} />
     </SafeAreaView>
   );
 }
 
-// --- Styles (Fixed) ---
+// --- Styles (Only styles relevant to NotificationScreen itself and Header remain) ---
 const getStyles = (theme) => {
-  const isDarkMode = theme.background === '#000000';
-  const shadowColor = '#000000';
-
+  const isDarkMode = theme.background === '#000000'; // Define here as well for self-containment
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: theme.background },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -404,80 +298,7 @@ const getStyles = (theme) => {
     headerActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     headerButton: { padding: 8, borderRadius: 20 },
 
-    // --- List ---
+    // --- List specific styles ---
     sectionHeader: { color: theme.textSecondary, fontSize: 14, fontWeight: '600', paddingVertical: 12, textTransform: 'uppercase', letterSpacing: 0.8 },
-    
-    // --- Notification Item Card ---
-    cardContainer: {
-        backgroundColor: theme.surface,
-        borderRadius: 16,
-        padding: 16,
-        marginVertical: 8,
-        flexDirection: 'row',
-        alignItems: 'center',
-        boxShadow: `0 2px 4px rgba(0, 0, 0, 0.5)`,
-        borderWidth: 1,
-        borderColor: 'transparent',
-    },
-    // Use the inferred 'isDarkMode' boolean here
-    unreadCard: {
-        backgroundColor: isDarkMode ? theme.surface : '#ffffff',
-        borderColor: isDarkMode ? `${theme.primary}80` : `${theme.primary}50`,
-    },
-    selectedItem: {
-        borderColor: theme.primary,
-        borderWidth: 2,
-        transform: [{ scale: 1.02 }],
-    },
-    iconContainer: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 16,
-    },
-    textContainer: {
-        flex: 1,
-        justifyContent: 'center',
-    },
-    title: {
-        fontSize: 16,
-        fontWeight: '500',
-        color: theme.text,
-        marginBottom: 4,
-    },
-    unreadTitle: {
-        fontWeight: 'bold',
-    },
-    message: {
-        fontSize: 14,
-        color: theme.textSecondary,
-        lineHeight: 20,
-        marginBottom: 8,
-    },
-    timestamp: {
-        fontSize: 12,
-        color: theme.textSecondary,
-        fontWeight: '500',
-    },
-    checkboxContainer: {
-        position: 'absolute',
-        top: 12,
-        right: 12,
-    },
-    
-    // --- Modal ---
-    modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0, 0, 0, 0.6)' },
-    modalContent: { backgroundColor: theme.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 16, paddingTop: 12, maxHeight: '85%', elevation: 10 },
-    gripper: { width: 40, height: 5, backgroundColor: theme.border, borderRadius: 2.5, alignSelf: 'center', marginBottom: 16 },
-    modalHeader: { alignItems: 'center', marginBottom: 20 },
-    modalIconContainer: { width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-    modalTitle: { fontSize: 22, fontWeight: 'bold', color: theme.text, textAlign: 'center' },
-    modalScrollView: { maxHeight: '60%', marginBottom: 16 },
-    modalMessage: { fontSize: 16, color: theme.textSecondary, lineHeight: 24, textAlign: 'center' },
-    modalTimestamp: { fontSize: 13, color: theme.textSecondary, opacity: 0.8, textAlign: 'center', marginVertical: 16 },
-    modalCloseButton: { backgroundColor: theme.primary, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
-    modalCloseButtonText: { color: theme.textOnPrimary, fontSize: 16, fontWeight: 'bold' },
   });
 }

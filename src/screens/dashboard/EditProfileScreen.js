@@ -10,7 +10,6 @@ import {
   SafeAreaView,
   ActivityIndicator,
   BackHandler,
-  Platform,
   KeyboardAvoidingView,
   Modal,
 } from 'react-native';
@@ -52,16 +51,15 @@ const GENDER_OPTIONS = [
 ];
 
 const validateForm = (formData) => {
-  const { displayName, mobileNumber, address, phase, city, province, zipCode } = formData;
+  const { displayName, mobileNumber, address, phase, zipCode } = formData;
   if (!displayName || displayName.trim().length < 2) {
     return 'Display Name must be at least 2 characters.';
   }
   if (mobileNumber && mobileNumber.length > 0 && mobileNumber.length !== 13) {
     return 'Please enter a complete 11-digit mobile number or leave the field blank.';
   }
-  const isAddressingStarted = address || phase || zipCode;
-  if (isAddressingStarted && (!city || !province)) {
-    return 'City and Province are required if you provide an address.';
+  if ((address && address.trim().length < 5) || (phase && phase.trim().length < 1)) {
+    return 'Please provide a valid address (min 5 chars) and phase if filling this section.';
   }
   return null;
 };
@@ -78,7 +76,7 @@ export default function EditProfileScreen() {
   // State management
   const [formData, setFormData] = useState({
     displayName: '', mobileNumber: '', birthday: '', gender: '',
-    address: '', phase: '', city: 'Rodriguez', province: 'Rizal', zipCode: '',
+    address: '', phase: '', city: 'Rodriguez', province: 'Rizal', zipCode: '1860',
   });
   const [initialProfileState, setInitialProfileState] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -100,7 +98,7 @@ export default function EditProfileScreen() {
         phase: profile.profile?.phase || '',
         city: 'Rodriguez',
         province: 'Rizal',
-        zipCode: profile.profile?.zipCode || '',
+        zipCode: '1860',
       };
       setFormData(initialData);
       setInitialProfileState(initialData);
@@ -127,7 +125,7 @@ export default function EditProfileScreen() {
   }, [handleInputChange]);
 
   const onDateChange = useCallback((event, selectedDate) => {
-    setShowDatePicker(Platform.OS === 'ios');
+    setShowDatePicker(false);
     if (selectedDate) {
       handleInputChange('birthday', selectedDate.toISOString());
     }
@@ -215,7 +213,7 @@ export default function EditProfileScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior="height" style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           
           <View style={styles.profileHeader}>
@@ -271,7 +269,14 @@ export default function EditProfileScreen() {
               </TouchableOpacity>
             </FormField>
             <FormField label="Zip Code" iconName="mail-outline">
-              <TextInput style={styles.input} value={formData.zipCode} onChangeText={(val) => handleInputChange('zipCode', val)} placeholder="e.g., 1860" placeholderTextColor={theme.textSecondary} keyboardType="number-pad" maxLength={4} />
+              <Text style={styles.displayText}>1860</Text>
+              <TouchableOpacity 
+                onPress={() => setNotEditableModalVisible(true)} 
+                style={styles.infoIcon}
+                accessibilityLabel="Why is this not editable?"
+              >
+                <Ionicons name="information-circle-outline" size={24} color={theme.primary} />
+              </TouchableOpacity>
             </FormField>
           </View>
 
@@ -321,7 +326,7 @@ const getStyles = (theme) =>
   StyleSheet.create({
     centered: { alignItems: 'center', flex: 1, justifyContent: 'center' },
     container: { backgroundColor: theme.surface, flex: 1 },
-    scrollContent: { paddingBottom: 120 },
+    scrollContent: { paddingBottom: 20 },
     header: {
       alignItems: 'center',
       borderBottomColor: theme.border,
@@ -428,7 +433,7 @@ const getStyles = (theme) =>
       borderTopColor: theme.border,
       borderTopWidth: StyleSheet.hairlineWidth,
       padding: 16,
-      paddingBottom: Platform.OS === 'ios' ? 32 : 16,
+      paddingBottom: 16,
     },
     saveButton: {
       alignItems: 'center',

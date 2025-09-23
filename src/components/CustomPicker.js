@@ -10,7 +10,6 @@ import {
   FlatList,
   SafeAreaView,
   TouchableWithoutFeedback,
-  Platform,
 } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -168,7 +167,7 @@ const getStyles = (theme) =>
         borderTopLeftRadius: 24, 
         borderTopRightRadius: 24, 
         maxHeight: '60%', 
-        paddingBottom: Platform.OS === 'ios' ? 20 : 0 
+        paddingBottom: 0 
     },
     modalHandle: { 
         width: 40, 

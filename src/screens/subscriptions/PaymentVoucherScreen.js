@@ -13,7 +13,6 @@ import {
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useTheme, useAlert } from '../../contexts';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import QRCode from 'react-native-qrcode-svg';
 import ViewShot from 'react-native-view-shot';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
@@ -64,15 +63,16 @@ const Voucher = React.memo(({ bill, user }) => {
     const { theme } = useTheme();
     const styles = getStyles(theme);
 
+    const paymentCode = bill.id.toString().slice(-12).toUpperCase();
+
     return (
       <Animatable.View animation="fadeInUp" duration={600} style={styles.voucher}>
-        {/* Top half of the voucher */}
         <View style={styles.voucherTop}>
             <View style={styles.voucherHeader}>
               <Ionicons name="receipt" size={32} color={theme.primary} />
               <Text style={styles.voucherTitle}>Fibear Internet</Text>
             </View>
-            <Text style={styles.instructionText}>Present this QR code to any authorized payment center.</Text>
+            <Text style={styles.instructionText}>Present this code to any authorized payment center for manual input.</Text>
 
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Account Name</Text>
@@ -84,14 +84,12 @@ const Voucher = React.memo(({ bill, user }) => {
             </View>
         </View>
 
-        {/* Dashed Separator */}
         <View style={styles.separatorContainer}>
             <View style={[styles.cutout, { left: -15 }]} />
             <View style={styles.dashedLine} />
             <View style={[styles.cutout, { right: -15 }]} />
         </View>
 
-        {/* Bottom half of the voucher */}
         <View style={styles.voucherBottom}>
             <View style={styles.amountContainer}>
               <View>
@@ -104,21 +102,10 @@ const Voucher = React.memo(({ bill, user }) => {
               </View>
             </View>
 
-            <View style={styles.qrCodeSection}>
-                <View style={styles.qrCodeBackground}>
-                    <QRCode
-                        value={JSON.stringify({type: 'bill',id: bill.id.toString()})}
-                        size={160}
-                        backgroundColor={theme.background}
-                        color={theme.text}
-                        logo={require('../../assets/images/logos/logo.png')}
-                        logoSize={30}
-                        logoBackgroundColor='white'
-                        logoMargin={4}
-                        logoBorderRadius={8}
-                    />
-                </View>
-                <Text style={styles.statementId}>Statement ID: {bill.id.toString().slice(-12).toUpperCase()}</Text>
+            <View style={styles.paymentCodeSection}>
+                <Text style={styles.paymentCodeLabel}>PAYMENT CODE</Text>
+                <Text style={styles.paymentCodeValue}>{paymentCode}</Text>
+                <Text style={styles.paymentCodeInstruction}>Use this code for your payment transaction.</Text>
             </View>
         </View>
       </Animatable.View>
@@ -227,7 +214,7 @@ const getStyles = (theme) =>
     voucherBottom: { padding: 25 },
     voucherHeader: { alignItems: 'center', flexDirection: 'row', marginBottom: 8 },
     voucherTitle: { color: theme.text, fontSize: 22, fontWeight: 'bold', marginLeft: 12 },
-    instructionText: { color: theme.textSecondary, fontSize: 15, marginTop: 4, marginBottom: 24, lineHeight: 22 },
+    instructionText: { color: theme.textSecondary, fontSize: 15, marginTop: 4, marginBottom: 24, lineHeight: 22, textAlign: 'center' }, // Added textAlign: 'center'
     detailRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
     detailLabel: { color: theme.textSecondary, fontSize: 15 },
     detailValue: { color: theme.text, fontSize: 16, fontWeight: '600', maxWidth: '60%' },
@@ -248,19 +235,40 @@ const getStyles = (theme) =>
       marginHorizontal: 20,
     },
 
-    // --- QR Code ---
-    qrCodeSection: { alignItems: 'center', marginTop: 10 },
-    qrCodeBackground: {
-      backgroundColor: theme.background,
+    // --- Payment Code (replaces QR Code) ---
+    paymentCodeSection: { 
+      alignItems: 'center', 
+      marginTop: 20,
+      backgroundColor: theme.background, // Match old qrCodeBackground feel
       borderRadius: 20,
-      padding: 16,
+      padding: 20,
       shadowColor: theme.primary,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.3,
       shadowRadius: 8,
       elevation: 8,
+      width: '100%', // Take full width
     },
-    statementId: { color: theme.textSecondary, fontSize: 13, marginTop: 16 },
+    paymentCodeLabel: {
+        color: theme.textSecondary,
+        fontSize: 14,
+        fontWeight: '600',
+        textTransform: 'uppercase',
+        marginBottom: 8,
+    },
+    paymentCodeValue: {
+        color: theme.text,
+        fontSize: 32, // Large font for readability
+        fontWeight: 'bold',
+        letterSpacing: 2, // Space out characters for easier reading
+        marginBottom: 10,
+    },
+    paymentCodeInstruction: {
+        color: theme.textSecondary,
+        fontSize: 14,
+        textAlign: 'center',
+        lineHeight: 20,
+    },
 
     // --- Action Buttons ---
     actionsContainer: { flexDirection: 'row', justifyContent: 'center', marginTop: 10, paddingHorizontal: 20, gap: 15 },

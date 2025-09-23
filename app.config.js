@@ -7,10 +7,10 @@ export default ({ config }) => ({
   scheme: "fibear",
   version: "1.0.0",
   orientation: "portrait",
-  icon: "./src/assets/logo.jpg",
+  icon: "./src/assets/logo.png",
   userInterfaceStyle: "light",
   splash: {
-    image: "./src/assets/logo.jpg",
+    image: "./src/assets/logo.png",
     resizeMode: "contain",
     backgroundColor: "#ffffff"
   },
@@ -31,7 +31,7 @@ export default ({ config }) => ({
     googleServicesFile: "./google-services.json",
     newArchEnabled: true,
     adaptiveIcon: {
-      foregroundImage: "./src/assets/logo.jpg",
+      foregroundImage: "./src/assets/logo.png",
       backgroundColor: "#ffffff"
     },
     permissions: [
@@ -44,7 +44,7 @@ export default ({ config }) => ({
     ]
   },
   web: {
-    favicon: "./src/assets/logo.jpg"
+    favicon: "./src/assets/logo.png"
   },
   extra: {
     eas: {

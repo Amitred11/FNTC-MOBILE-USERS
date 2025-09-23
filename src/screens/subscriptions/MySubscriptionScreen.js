@@ -396,7 +396,7 @@ const getStyles = (theme) =>
     },
     dateInfo: { alignItems: 'center', flex: 1 },
     dateLabel: { color: theme.textSecondary, fontSize: 13, marginBottom: 4 },
-    dateValue: { color: theme.text, fontSize: 15, fontWeight: '600' },
+    dateValue: { color: theme.text, fontSize: 12, fontWeight: '600' },
 
     // Features Card
     featuresCard: {

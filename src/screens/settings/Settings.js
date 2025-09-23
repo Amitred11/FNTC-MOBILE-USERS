@@ -9,19 +9,15 @@ import {
   TouchableOpacity,
   Switch,
   SafeAreaView,
-  Linking,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth, useTheme, useAlert, useMessage } from '../../contexts';
-import {
-  registerForPushNotificationsAsync,
-  unregisterForPushNotificationsAsync,
-} from '../../services/notificationService';
 import TermsOfServiceText from '../../data/TermsOfServices';
 import PrivacyPolicyText from '../../data/PrivacyPolicy';
 
-// --- Sub-Components (Memoized for Performance) ---
+// --- Sub-Components (Memoized for Performance & Improved Logic) ---
 
 const Header = React.memo(({ onBackPress }) => {
     const { theme } = useTheme();
@@ -37,9 +33,14 @@ const Header = React.memo(({ onBackPress }) => {
     );
 });
 
-const SettingItem = React.memo(({ icon, name, isNavigate = true, value, onValueChange, onPress, disabled = false, isDestructive = false }) => {
+// IMPROVEMENT: Simplified the SettingItem component API.
+// It now intelligently decides whether to show a switch or a chevron
+// based on whether the `onValueChange` prop is provided.
+const SettingItem = React.memo(({ icon, name, value, onValueChange, onPress, disabled = false, isDestructive = false }) => {
   const { theme } = useTheme();
   const styles = getStyles(theme);
+  
+  const isSwitch = typeof onValueChange === 'function';
   const itemColor = isDestructive ? theme.danger : theme.text;
   const iconColor = isDestructive ? theme.danger : theme.primary;
   const iconBgColor = isDestructive ? `${theme.danger}20` : (theme.isDarkMode ? '#2C2C2E' : '#EFEFF4');
@@ -50,9 +51,7 @@ const SettingItem = React.memo(({ icon, name, isNavigate = true, value, onValueC
         <Ionicons name={icon} size={20} color={iconColor} />
       </View>
       <Text style={[styles.settingText, { color: itemColor }]}>{name}</Text>
-      {isNavigate ? (
-        <Ionicons name="chevron-forward" size={22} color={theme.textSecondary} />
-      ) : (
+      {isSwitch ? (
         <Switch
           trackColor={{ false: theme.disabled, true: theme.primary }}
           thumbColor={theme.isDarkMode ? theme.primary : '#f4f3f4'}
@@ -60,18 +59,29 @@ const SettingItem = React.memo(({ icon, name, isNavigate = true, value, onValueC
           value={value}
           disabled={disabled}
         />
+      ) : (
+        <Ionicons name="chevron-forward" size={22} color={theme.textSecondary} />
       )}
     </TouchableOpacity>
   );
 });
 
+// IMPROVEMENT: Styling logic for separators is now handled inside the Section,
+// making the main component's layout cleaner and removing manual <View> separators.
 const SettingsSection = React.memo(({ title, children }) => {
     const { theme } = useTheme();
     const styles = getStyles(theme);
     return (
         <View style={styles.section}>
             {title && <Text style={styles.sectionHeader}>{title}</Text>}
-            <View style={styles.card}>{children}</View>
+            <View style={styles.card}>
+                {React.Children.map(children, (child, index) => (
+                    <>
+                        {child}
+                        {index < React.Children.count(children) - 1 && <View style={styles.separator} />}
+                    </>
+                ))}
+            </View>
         </View>
     );
 });
@@ -81,46 +91,37 @@ const SettingsSection = React.memo(({ title, children }) => {
 export default function SettingsScreen() {
   const navigation = useNavigation();
   const { theme, isDarkMode, toggleTheme } = useTheme();
-  const { user: profile, signOut, api, refreshUser } = useAuth();
+  const { signOut } = useAuth();
   const { showAlert } = useAlert();
   const { showMessage } = useMessage();
 
-  const [notificationsEnabled, setNotificationsEnabled] = useState(!!profile?.pushToken);
-  const [isLoadingToggle, setIsLoadingToggle] = useState(false);
+  const [dndEnabled, setDndEnabled] = useState(false);
   const [isPolicyLoading, setIsPolicyLoading] = useState(false);
 
+  // Load DND setting from persistent storage on component mount
   useEffect(() => {
-    if (!isLoadingToggle) {
-      setNotificationsEnabled(!!profile?.pushToken);
-    }
-  }, [profile?.pushToken, isLoadingToggle]);
-  
-  const handleToggleNotifications = useCallback(async (newValue) => {
-    setIsLoadingToggle(true);
-    setNotificationsEnabled(newValue); 
+    const loadDndSetting = async () => {
+      try {
+        const storedValue = await AsyncStorage.getItem('dnd_enabled');
+        setDndEnabled(storedValue === 'true');
+      } catch (error) {
+        console.error("Failed to load DND setting:", error);
+      }
+    };
+    loadDndSetting();
+  }, []);
+
+  const handleToggleDnd = useCallback(async (newValue) => {
+    setDndEnabled(newValue);
     try {
-      if (newValue) {
-        const token = await registerForPushNotificationsAsync(api); 
-        if (token) {
-            showMessage('Notifications have been enabled.');
-        } else {
-            setNotificationsEnabled(false); 
-        }
-      } else {
-        await unregisterForPushNotificationsAsync(api); 
-        showMessage('Notifications have been disabled.');
-      }
+      await AsyncStorage.setItem('dnd_enabled', String(newValue));
+      showMessage(newValue ? 'Do Not Disturb has been enabled.' : 'Do Not Disturb has been disabled.');
     } catch (error) {
-      console.error('Failed to toggle notifications:', error.message);
-      setNotificationsEnabled(prev => !prev); 
-      if (!error.message?.toLowerCase().includes('permission')) {
-          showAlert('Error', 'Could not update notification settings.');
-      }
-    } finally {
-      setIsLoadingToggle(false);
-      refreshUser(); 
+      console.error('Failed to save DND setting:', error.message);
+      setDndEnabled(prev => !prev); // Revert on failure
+      showAlert('Error', 'Could not save your Do Not Disturb preference.');
     }
-  }, [api, showMessage, showAlert, refreshUser]);
+  }, [showMessage, showAlert]);
 
   const handleLogout = useCallback(() => {
     showAlert('Logging Out', 'Are you sure you want to log out?', [
@@ -155,29 +156,29 @@ export default function SettingsScreen() {
     <SafeAreaView style={getStyles(theme).container}>
       <Header onBackPress={handleGoBack} />
       <ScrollView contentContainerStyle={getStyles(theme).scrollContainer} showsVerticalScrollIndicator={false}>
+        
         <SettingsSection title="Account">
           <SettingItem icon="key-outline" name="Change Password" onPress={() => handleNavigate('ChangePassword')} />
         </SettingsSection>
 
         <SettingsSection title="Preferences">
-          <SettingItem icon="moon-outline" name="Dark Mode" isNavigate={false} value={isDarkMode} onValueChange={toggleTheme} />
-          <View style={getStyles(theme).separator} />
-          <SettingItem icon="notifications-outline" name="Push Notifications" isNavigate={false} value={notificationsEnabled} onValueChange={handleToggleNotifications} disabled={isLoadingToggle} />
+          <SettingItem icon="moon-outline" name="Dark Mode" value={isDarkMode} onValueChange={toggleTheme} />
+          <SettingItem icon="notifications-off-outline" name="Do Not Disturb" value={dndEnabled} onValueChange={handleToggleDnd} />
         </SettingsSection>
-
-        <SettingsSection title="Support & About">
+        
+        {/* FIX: Merged "Help" and "Support & About" into a single, more logical section. */}
+        <SettingsSection title="About & Support">
           <SettingItem icon="help-circle-outline" name="Help & Support" onPress={() => handleNavigate('Support')} />
-          <View style={getStyles(theme).separator} />
+          <SettingItem icon="book-outline" name="How to Use This App" onPress={() => handleNavigate('HowToUseScreen')} />
           <SettingItem icon="document-text-outline" name="Terms and Conditions" onPress={() => openPolicy('terms')} />
-          <View style={getStyles(theme).separator} />
           <SettingItem icon="shield-checkmark-outline" name="Privacy Policy" onPress={() => openPolicy('privacy')} />
-          <View style={getStyles(theme).separator} />
           <SettingItem icon="information-circle-outline" name="About This App" onPress={() => handleNavigate('About')} />
         </SettingsSection>
 
         <SettingsSection>
           <SettingItem icon="log-out-outline" name="Log Out" isDestructive={true} onPress={handleLogout} />
         </SettingsSection>
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -196,5 +197,6 @@ const getStyles = (theme) =>
     settingItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
     iconContainer: { width: 36, height: 36, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 16 },
     settingText: { flex: 1, fontSize: 16, fontWeight: '500' },
+    // IMPROVEMENT: Centralized separator style
     separator: { height: 1, backgroundColor: theme.border, marginLeft: 68 },
   });

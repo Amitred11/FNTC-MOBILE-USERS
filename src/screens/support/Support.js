@@ -5,7 +5,6 @@ import {
   Text,
   View,
   ScrollView,
-  Platform,
   TouchableOpacity,
   BackHandler,
   SafeAreaView,
@@ -24,7 +23,6 @@ import TicketCreateScreen from './TicketCreateScreen'; // Adjust path if needed
 
 // --- Constants ---
 const CHARACTER_NAME = 'FNTC Bot';
-const HEADER_HEIGHT = Platform.select({ ios: 90, android: 70 });
 
 // --- HELPER & HUB COMPONENTS ---
 const BotAvatar = ({ theme, inHeader = false }) => {
@@ -78,14 +76,6 @@ const SupportHub = ({ onNavigate }) => {
             title="My Support Tickets"
             description="View existing tickets or create a new one."
             onPress={() => onNavigate('ticket_list')}
-          />
-        </Animatable.View>
-        <Animatable.View animation="fadeInUp" duration={500} delay={400}>
-          <SupportCard
-            icon="help-circle-outline"
-            title="How to Use This App"
-            description="Find answers to common questions and learn the basics."
-            onPress={() => navigation.navigate('HowToUseScreen')}
           />
         </Animatable.View>
       </ScrollView>
@@ -188,10 +178,10 @@ const getStyles = (theme) => StyleSheet.create({
       borderBottomColor: theme.border,
       borderBottomWidth: 1,
       flexDirection: 'row',
-      height: HEADER_HEIGHT,
+      height: 70,
       justifyContent: 'space-between',
       paddingHorizontal: 15,
-      paddingTop: Platform.OS === 'ios' ? 40 : 10,
+      paddingTop: 10,
     },
     headerBackIcon: { padding: 5, marginRight: 10 },
     chatHeaderContent: {
@@ -203,7 +193,7 @@ const getStyles = (theme) => StyleSheet.create({
     },
     standardHeaderContent: { flex: 1, alignItems: 'center' },
     headerTitle: { color: theme.text, fontSize: 18, fontWeight: '600' },
-    hubContainer: { padding: 20, paddingTop: Platform.OS === 'ios' ? 20 : 40, paddingBottom: 120 },
+    hubContainer: { padding: 20, paddingTop: 40, paddingBottom: 120 },
     screenTitle: { color: theme.text, fontSize: 32, fontWeight: 'bold', marginBottom: 8 },
     screenSubtitle: { color: theme.textSecondary, fontSize: 18, lineHeight: 26, marginBottom: 30 },
     supportCard: {

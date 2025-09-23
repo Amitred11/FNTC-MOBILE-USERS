@@ -10,25 +10,18 @@ import {
   Modal,
   ScrollView,
   SafeAreaView,
-  Platform,
-  Dimensions,
 } from 'react-native';
 import * as Animatable from 'react-native-animatable';
 import { useNavigation } from '@react-navigation/native';
-// --- CHANGE 1: Import lightTheme directly, remove useTheme ---
 import { lightTheme } from '../../constants/colors.js';
 import TermsOfServiceText from '../../data/TermsOfServices.js';
 import PrivacyPolicyText from '../../data/PrivacyPolicy.js';
 import { COMPANY_NAME, SUBTITLE_TEXT } from '../../data/Constants-Data.js';
-// --- Constants ---
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// --- Sub-Components (Memoized for Performance) ---
+// --- Sub-Components ---
 const PolicyModal = React.memo(({ visible, title, content, onClose }) => {
-  // --- CHANGE 2: Use the imported lightTheme object directly ---
   const styles = getStyles(lightTheme);
 
-  // Replace placeholder at render time
   const formattedContent = useMemo(() => {
     const formattedDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
     return content.replace('{{LAST_UPDATED}}', formattedDate);
@@ -55,7 +48,6 @@ const PolicyModal = React.memo(({ visible, title, content, onClose }) => {
 // --- Main Screen Component ---
 export default function GetStartedScreen() {
   const navigation = useNavigation();
-  // --- CHANGE 3: Use the imported lightTheme object directly ---
   const styles = getStyles(lightTheme);
 
   const [isPolicyModalVisible, setPolicyModalVisible] = useState(false);
@@ -123,7 +115,6 @@ export default function GetStartedScreen() {
   );
 }
 
-// --- OPTIMIZATION: Styles are now a function that uses the theme object ---
 const getStyles = (theme) =>
   StyleSheet.create({
     container: { backgroundColor: '#fff', flex: 1 },
@@ -131,7 +122,7 @@ const getStyles = (theme) =>
       height: 35,
       left: 25,
       position: 'absolute',
-      top: Platform.OS === 'android' ? 20 : 60,
+      top: 20,
       width: 90,
       zIndex: 10,
     },
@@ -153,7 +144,6 @@ const getStyles = (theme) =>
     },
     overlayContainer: {
       alignItems: 'center',
-      // Explicitly set surface color from the light theme
       backgroundColor: lightTheme.surface, 
       borderTopLeftRadius: 50,
       borderTopRightRadius: 50,
@@ -205,7 +195,6 @@ const getStyles = (theme) =>
     secondaryButton: {
       backgroundColor: theme.surface,
       borderColor: theme.primary,
-      // borderColor: '#00BBD6', // This was a duplicate, removed
       borderRadius: 10,
       borderWidth: 1.5,
       boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.6)',

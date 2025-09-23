@@ -11,7 +11,6 @@ import {
   ActivityIndicator,
   ScrollView,
   KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
@@ -163,7 +162,7 @@ export default function ChangePasswordScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="height">
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           
           <Animatable.View animation="fadeInDown" duration={600}>
@@ -268,7 +267,7 @@ const getStyles = (theme) =>
     buttonContainer: {
         paddingHorizontal: 20,
         paddingTop: 15,
-        paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+        paddingBottom: 20,
         backgroundColor: theme.background,
         borderTopWidth: 1,
         borderTopColor: theme.border,

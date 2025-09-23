@@ -1,6 +1,6 @@
 // -- SOME DATAS THAT IS --
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { MaterialCommunityIcons } from '@expo/vector-icons/MaterialCommunityIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 //About
 export const COMPANY_NAME = 'FiBear Network Technologies Corp.';
 export const VERSION = '4.0.56';
@@ -23,12 +23,15 @@ export const VISION_POINTS = [
 export const howToUseData = {
   en: [
     {
+      id: 'en-1',
       title: 'Navigating the App',
       content: 'Use the bottom navigation bar to easily switch between Home, Plan, Support, and Profile. Each section is tailored to help you manage your account efficiently.',
       icon: 'compass-outline',
       tags: ['general', 'navigation'],
+      navigateTo: 'Home',
     },
     {
+      id: 'en-2',
       title: 'Managing Your Subscription',
       content: 'Visit the "Plan" screen to see your active subscription details, view your next billing date, or apply for a new plan. You can also submit requests to upgrade, downgrade, or cancel your service directly from this screen.',
       icon: 'wifi-outline',
@@ -36,6 +39,7 @@ export const howToUseData = {
       navigateTo: 'Plan',
     },
     {
+      id: 'en-3',
       title: 'Troubleshooting Connection',
       icon: 'build-outline',
       tags: ['help', 'internet', 'slow'],
@@ -48,6 +52,7 @@ export const howToUseData = {
       navigateTo: 'Support',
     },
     {
+      id: 'en-4',
       title: 'Getting Help & Support',
       content: 'Our Support team is here to help. For urgent issues, call our 24/7 hotline at 0945 220 3371. For other concerns, email us at rparreno@fibearnetwork.com or create a ticket in the app.',
       icon: 'headset-outline',
@@ -56,6 +61,7 @@ export const howToUseData = {
       isCopyable: true,
     },
     {
+      id: 'en-5',
       title: 'Updating Your Profile',
       content: 'Keep your information current in the "Profile" screen. You can change your display name and profile picture. Most importantly, ensure your installation address and mobile number are always up-to-date for uninterrupted service.',
       icon: 'person-circle-outline',
@@ -63,6 +69,15 @@ export const howToUseData = {
       navigateTo: 'Profile',
     },
     {
+      id: 'en-6',
+      title: 'Notifications',
+      content: 'If you want to make the app less distracting, you can enable "Do Not Disturb" mode in the Settings screen. This will mute notification sounds while still allowing alerts to appear in your notification tray.',
+      icon: 'notifications-off-outline',
+      tags: ['notifications', 'dnd', 'alerts', 'settings'],
+      navigateTo: 'Settings',
+    },
+    {
+      id: 'en-7',
       title: 'Pro Tip: Checking for Outages',
       content: 'Before troubleshooting, check our official Facebook Page for any service interruption announcements in your area. You can find the link in the Support screen.',
       icon: 'megaphone-outline',
@@ -71,21 +86,23 @@ export const howToUseData = {
     },
   ],
   tl: [
-    // ... Tagalog translations ...
     {
+      id: 'tl-1',
       title: 'Pag-navigate sa App',
-      content: 'Gamitin ang navigation bar sa ibaba para madaling lumipat sa pagitan ng Home, Plan, Support, at Profile. Ang bawat seksyon ay idinisenyo para tulungan kang pamahalaan ang iyong account nang mahusay.',
+      content: 'Gamitin ang navigation bar sa ibaba para madaling lumipat sa pagitan ng Home, Plan, Support, at Profile. Ang bawat seksyon ay idinisenyo para tulungan kang gamitin ang iyong account nang maayos.',
       icon: 'compass-outline',
       tags: ['pangkalahatan', 'nabigasyon'],
     },
     {
-      title: 'Pamamahala ng Subscription',
+      id: 'tl-2',
+      title: 'Paggamit ng Subscription',
       content: 'Bisitahin ang "Plan" screen para makita ang detalye ng iyong aktibong subscription, tingnan ang susunod na petsa ng iyong bill, o mag-apply para sa bagong plano. Maaari ka ring mag-request ng upgrade, downgrade, o kanselasyon ng serbisyo dito.',
       icon: 'wifi-outline',
       tags: ['plano', 'subscription', 'billing'],
       navigateTo: 'Plan',
     },
     {
+      id: 'tl-3',
       title: 'Pag-troubleshoot ng Koneksyon',
       icon: 'build-outline',
       tags: ['tulong', 'internet', 'mabagal'],
@@ -98,6 +115,7 @@ export const howToUseData = {
       navigateTo: 'Support',
     },
     {
+      id: 'tl-4',
       title: 'Paghahanap ng Tulong at Suporta',
       content: 'Narito ang aming Support team para tumulong. Para sa mga agarang isyu, tawagan ang aming 24/7 hotline sa 0945 220 3371. Para sa iba pang alalahanin, mag-email sa amin sa rparreno@fibearnetwork.com o gumawa ng ticket sa app.',
       icon: 'headset-outline',
@@ -106,6 +124,7 @@ export const howToUseData = {
       isCopyable: true,
     },
     {
+      id: 'tl-5',
       title: 'Pag-update ng Iyong Profile',
       content: 'Panatilihing updated ang iyong impormasyon sa "Profile" screen. Maaari mong palitan ang iyong display name at profile picture. Pinakaimportante, siguraduhing laging tama ang iyong installation address at mobile number.',
       icon: 'person-circle-outline',
@@ -113,6 +132,15 @@ export const howToUseData = {
       navigateTo: 'Profile',
     },
     {
+      id: 'tl-6',
+      title: 'Mga Notipikasyon',
+      content: 'Kung gusto mong hindi masyadong istorbo ang app, puwede mong i-on ang "Do Not Disturb" mode sa Settings. Walang tunog ang maririnig sa mga notipikasyon pero lalabas pa rin ang mga alerto sa iyong notipikasyon.',
+      icon: 'notifications-off-outline',
+      tags: ['Notipikasyon', 'dnd', 'alerto', 'settings'],
+      navigateTo: 'Settings',
+    },
+    {
+      id: 'tl-7',
       title: 'Pro Tip: Pagsuri ng Outages',
       content: 'Bago mag-troubleshoot, suriin muna ang aming opisyal na Facebook Page para sa anumang anunsyo ng service interruption sa inyong lugar. Mahahanap ang link sa Support screen.',
       icon: 'megaphone-outline',
@@ -121,7 +149,6 @@ export const howToUseData = {
     },
   ],
 };
-
 
 //support screen
 
@@ -173,7 +200,6 @@ export const ICONS = {
     plan_change_cancelled: { component: Ionicons, name: 'arrow-undo-circle', colorKey: 'textSecondary' },
 };
 
-
 //PAY BILLS
 
 export const EMPTY_STATES_CONFIG = (theme, navigation) => ({
@@ -185,4 +211,20 @@ export const EMPTY_STATES_CONFIG = (theme, navigation) => ({
   null: { icon: 'document-text-outline', color: theme.disabled, title: 'No Active Plan', text: 'You need an active subscription to pay bills.', buttonText: 'Subscribe Now', action: () => navigation.navigate('Subscription') },
   suspended: { icon: 'warning-outline', color: theme.danger, title: 'Account Suspended', text: 'Your account is suspended. Paying your overdue bill will reactivate your service.', buttonText: 'VIEW MY BILLS', action: () => navigation.navigate('MyBills') },
   active: { icon: 'checkmark-done-circle-outline', color: theme.success, title: 'All Paid Up!', text: 'You have no outstanding bills. Great job!' },
+});
+
+//Notification
+
+export const ICON_MAP = (theme) => ({
+    payment: { name: 'wallet-outline', color: theme.success },
+    billing: { name: 'receipt-outline', color: theme.success },
+    billing_error: { name: 'alert-circle-outline', color: theme.warning },
+    subscription_activation: { name: 'sparkles-outline', color: theme.primary },
+    subscription_decline: { name: 'close-circle-outline', color: theme.danger },
+    ticket: { name: 'chatbox-ellipses-outline', color: theme.info },
+    ticket_update: { name: 'chatbox-ellipses-outline', color: theme.info },
+    chat: { name: 'chatbubbles-outline', color: theme.info },
+    promo: { name: 'megaphone-outline', color: theme.accent },
+    warning: { name: 'warning-outline', color: theme.warning },
+    default: { name: 'notifications-outline', color: theme.textSecondary },
 });

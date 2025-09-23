@@ -1,5 +1,4 @@
-// screens/HomePage.js
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import {
     View,
     Text,
@@ -7,13 +6,10 @@ import {
     Image,
     ScrollView,
     TouchableOpacity,
-    Modal,
-    TouchableWithoutFeedback,
     SafeAreaView,
     BackHandler,
     RefreshControl,
     ActivityIndicator,
-    Platform,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -24,64 +20,11 @@ import * as Animatable from 'react-native-animatable';
 import { useSubscription, useAlert, useAuth, useTheme } from '../../contexts';
 import { BottomNavBar } from '../../components/BottomNavBar';
 
+// --- Import separated components ---
+import DrawerMenuComponent from './components/DrawerMenuComponent.js';
+import ConfirmationModalComponent from './components/ConfirmationModalComponent.js';
+
 // --- Sub-Components (Memoized for Performance) ---
-
-const DrawerMenu = React.memo(({ isVisible, onClose, onNavigate, onLogout }) => {
-    const { theme } = useTheme();
-    const { user: profile } = useAuth();
-    const styles = getStyles(theme);
-    const photoSource = profile?.photoUrl ? { uri: profile.photoUrl } : require('../../assets/images/avatars/profilepic.jpg');
-
-    return (
-        <Modal animationType="fade" transparent={true} visible={isVisible} onRequestClose={onClose}>
-            <View style={styles.drawerOverlay}>
-                <Animatable.View animation="slideInLeft" duration={400} style={styles.drawerContainer}>
-                    <LinearGradient
-                        colors={theme.isDarkMode ? [theme.textBe, theme.primary] : [theme.primary, theme.textBe]}
-                        style={styles.fullGradient}
-                    >
-                        <View style={styles.drawerHeader}>
-                            <View style={styles.drawerProfileSection}>
-                                <Image source={photoSource} style={styles.drawerProfileImage} />
-                                <View style={{ flex: 1 }}>
-                                    <Text style={styles.drawerUsername} numberOfLines={1}>{profile?.displayName || 'User'}</Text>
-                                    <Text style={styles.drawerEmail} numberOfLines={1}>{profile?.email || 'No email'}</Text>
-                                </View>
-                            </View>
-                        </View>
-                        <ScrollView contentContainerStyle={styles.drawerMenu}>
-                            <DrawerItem icon="person-outline" label="My Profile" onPress={() => onNavigate('Profile')} />
-                            <DrawerItem icon="settings-outline" label="App Settings" onPress={() => onNavigate('Settings')} />
-                            <DrawerItem icon="headset-outline" label="Contact Support" onPress={() => onNavigate('Support')} />
-                            <DrawerItem icon="information-circle-outline" label="About Us" onPress={() => onNavigate('About')} />
-                            <DrawerItem icon="chatbubbles-outline" label="Customer Feedback" onPress={() => onNavigate('CustomerFeedbackScreen')} />
-                        </ScrollView>
-                        <TouchableOpacity style={styles.drawerLogoutButton} onPress={onLogout}>
-                            <Feather name="log-out" size={20} color={theme.danger} />
-                            <Text style={styles.drawerLogoutText}>Logout</Text>
-                        </TouchableOpacity>
-                    </LinearGradient>
-                </Animatable.View>
-                <TouchableWithoutFeedback onPress={onClose}>
-                    <Animatable.View animation="fadeIn" duration={300} style={styles.drawerBackdrop} />
-                </TouchableWithoutFeedback>
-            </View>
-        </Modal>
-    );
-});
-
-const DrawerItem = React.memo(({ icon, label, onPress }) => {
-    const { theme } = useTheme();
-    const styles = getStyles(theme);
-    const itemColor = theme.textOnPrimary;
-    return (
-        <TouchableOpacity style={styles.drawerMenuItem} onPress={onPress}>
-            <Ionicons name={icon} size={24} color={itemColor} />
-            <Text style={[styles.drawerMenuLabel, { color: itemColor }]}>{label}</Text>
-            <Ionicons name="chevron-forward" size={20} color={itemColor} />
-        </TouchableOpacity>
-    );
-});
 
 const AccountInfoCard = React.memo(({ icon, label, value, color, onPress }) => {
     const { theme } = useTheme();
@@ -102,30 +45,6 @@ const AccountInfoCard = React.memo(({ icon, label, value, color, onPress }) => {
     );
 });
 
-
-const ConfirmationModal = React.memo(({ isVisible, onClose, onConfirm, title, description, confirmText, imageSource }) => {
-    const { theme } = useTheme();
-    const styles = getStyles(theme);
-    return (
-        <Modal animationType="fade" transparent={true} visible={isVisible} onRequestClose={onClose}>
-            <View style={styles.confirmModalOverlay}>
-                <Animatable.View animation="zoomIn" duration={300} style={styles.confirmModalContent}>
-                    <Image source={imageSource} style={styles.confirmModalImage} />
-                    <Text style={styles.confirmModalTitle}>{title}</Text>
-                    <Text style={styles.confirmModalDescription}>{description}</Text>
-                    <View style={styles.confirmModalButtonContainer}>
-                        <TouchableOpacity style={styles.confirmModalCancelButton} onPress={onClose}>
-                            <Text style={styles.confirmModalCancelText}>Cancel</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.confirmModalConfirmButton, confirmText.includes('Exit') && { backgroundColor: theme.primary }]} onPress={onConfirm}>
-                            <Text style={styles.confirmModalConfirmText}>{confirmText}</Text>
-                        </TouchableOpacity>
-                    </View>
-                </Animatable.View>
-            </View>
-        </Modal>
-    );
-});
 
 const QuickActionButton = ({ icon, label, onPress }) => {
     const { theme } = useTheme();
@@ -273,12 +192,12 @@ export default function HomePage() {
 
     return (
         <SafeAreaView style={styles.container}>
-            <DrawerMenu isVisible={uiState.isMenuVisible} onClose={() => handleUiStateChange('isMenuVisible', false)} onNavigate={navigateAndCloseDrawer} onLogout={() => { handleUiStateChange('isMenuVisible', false); handleUiStateChange('isLogoutModalVisible', true); }} />
-            <ConfirmationModal isVisible={uiState.isLogoutModalVisible} onClose={() => handleUiStateChange('isLogoutModalVisible', false)} onConfirm={onConfirmLogout} title="Logging Out" description="Are you sure you want to log out?" confirmText="Yes, Log Out" imageSource={require('../../assets/images/icons/logoutpic.png')} />
-            <ConfirmationModal isVisible={uiState.isExitModalVisible} onClose={() => handleUiStateChange('isExitModalVisible', false)} onConfirm={() => BackHandler.exitApp()} title="Exit Application?" description="Are you sure you want to close the application?" confirmText="Yes, Exit" imageSource={require('../../assets/images/icons/logoutpic.png')} />
+            <DrawerMenuComponent isVisible={uiState.isMenuVisible} onClose={() => handleUiStateChange('isMenuVisible', false)} onNavigate={navigateAndCloseDrawer} onLogout={() => { handleUiStateChange('isMenuVisible', false); handleUiStateChange('isLogoutModalVisible', true); }} />
+            <ConfirmationModalComponent isVisible={uiState.isLogoutModalVisible} onClose={() => handleUiStateChange('isLogoutModalVisible', false)} onConfirm={onConfirmLogout} title="Logging Out" description="Are you sure you want to log out?" confirmText="Yes, Log Out" imageSource={require('../../assets/images/icons/logoutpic.png')} />
+            <ConfirmationModalComponent isVisible={uiState.isExitModalVisible} onClose={() => handleUiStateChange('isExitModalVisible', false)} onConfirm={() => BackHandler.exitApp()} title="Exit Application?" description="Are you sure you want to close the application?" confirmText="Yes, Exit" imageSource={require('../../assets/images/icons/logoutpic.png')} />
 
             <View style={styles.headerContainer}>
-                <BlurView intensity={Platform.OS === 'ios' ? 60 : 90} style={styles.header}>
+                <BlurView intensity={90} style={styles.header}>
                     <TouchableOpacity onPress={() => handleUiStateChange('isMenuVisible', true)} style={styles.headerIcon}><Ionicons name="menu" size={28} color={theme.text} /></TouchableOpacity>
                     <Image source={require('../../assets/images/logos/logo.png')} style={styles.headerLogo} />
                     <TouchableOpacity onPress={() => navigation.navigate('Notif')} style={styles.headerIcon}>
@@ -346,10 +265,10 @@ const getStyles = (theme) =>
         container: { backgroundColor: theme.background, flex: 1 },
         scrollContent: { paddingBottom: 120 },
         headerContainer: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 },
-        header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: Platform.OS === 'ios' ? 50 : 20, paddingBottom: 12 },
+        header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 20, paddingBottom: 12 },
         headerIcon: { padding: 8 },
         headerLogo: { height: 35, width: 100, resizeMode: 'contain' },
-        headerSpacer: { height: Platform.OS === 'ios' ? 100 : 80 },
+        headerSpacer: { height: 80 },
 
         // --- ANIMATED WelcomeCard Styles ---
         welcomeCardWrapper: { 
@@ -517,31 +436,5 @@ const getStyles = (theme) =>
         feedbackPromptTextContainer: { flex: 1, marginLeft: 15 },
         feedbackPromptTitle: { fontSize: 18, fontWeight: 'bold', color: theme.textOnPrimary, marginBottom: 4 },
         feedbackPromptSubtitle: { fontSize: 13, color: theme.textOnPrimary, opacity: 0.8 },
-
-        drawerOverlay: { flex: 1, backgroundColor: 'transparent', flexDirection: 'row' },
-        drawerBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' },
-        drawerContainer: { width: '85%', maxWidth: 320, elevation: 16, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 20, borderTopRightRadius: 20, borderBottomRightRadius: 20, overflow: 'hidden' },
-        fullGradient: { flex: 1 },
-        drawerHeader: { paddingHorizontal: 20, paddingTop: 60, paddingBottom: 30, borderBottomWidth: 1, borderBottomColor: 'rgba(255, 255, 255, 0.15)' },
-        drawerProfileSection: { flexDirection: 'row', alignItems: 'center', gap: 15 },
-        drawerUsername: { fontSize: 18, fontWeight: 'bold', color: theme.textOnPrimary },
-        drawerEmail: { fontSize: 14, color: theme.textOnPrimary, opacity: 0.8 },
-        drawerProfileImage: { width: 60, height: 60, borderRadius: 30, borderWidth: 2, borderColor: 'rgba(255, 255, 255, 0.5)' },
-        drawerMenu: { padding: 10 },
-        drawerMenuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 15, paddingHorizontal: 15, borderRadius: 10, marginBottom: 5 },
-        drawerMenuLabel: { fontSize: 16, marginLeft: 20, flex: 1, fontWeight: '500' },
-        drawerLogoutButton: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 20, marginBottom: 40, marginTop: 10, padding: 15, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.9)' },
-        drawerLogoutText: { color: theme.danger, fontSize: 16, fontWeight: 'bold', marginLeft: 20 },
-
-        confirmModalOverlay: { flex: 1, backgroundColor: 'rgba(7, 7, 7, 0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-        confirmModalContent: { backgroundColor: theme.background, borderRadius: 20, padding: 25, alignItems: 'center', width: '100%', maxWidth: 350 },
-        confirmModalImage: { width: 100, height: 100, resizeMode: 'contain', marginBottom: 20 },
-        confirmModalTitle: { fontSize: 22, fontWeight: 'bold', color: theme.primary, marginBottom: 10, textAlign: 'center' },
-        confirmModalDescription: { fontSize: 16, color: theme.textSecondary, textAlign: 'center', marginBottom: 30, lineHeight: 24 },
-        confirmModalButtonContainer: { flexDirection: 'row', gap: 10 },
-        confirmModalCancelButton: { backgroundColor: theme.isDarkMode ? theme.background : '#E9E9E9', borderRadius: 12, paddingVertical: 14, flex: 1, alignItems: 'center' },
-        confirmModalCancelText: { color: theme.textBe, fontSize: 16, fontWeight: '600' },
-        confirmModalConfirmButton: { backgroundColor: theme.danger, borderRadius: 12, paddingVertical: 14, flex: 1, alignItems: 'center' },
-        confirmModalConfirmText: { color: theme.textOnPrimary, fontSize: 16, fontWeight: '600' },
         notificationBadge: { position: 'absolute', top: 5, right: 5, backgroundColor: theme.danger, width: 10, height: 10, borderRadius: 5, borderWidth: 1.5, borderColor: theme.surface }
-    }); 
+    });

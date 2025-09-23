@@ -1,6 +1,6 @@
 // screens/VerifyOtpScreen.js
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,6 @@ import {
   Pressable,
   Animated,
   Dimensions,
-  Platform,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { lightTheme } from '../../constants/colors';
@@ -264,11 +263,11 @@ const getStyles = (theme) => StyleSheet.create({
     justifyContent: 'space-between',
   },
   mainContent: {
-    paddingTop: Platform.OS === 'ios' ? '10%' : '5%',
+    paddingTop: '5%',
     alignItems: 'center',
   },
   footer: {
-    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+    paddingBottom: 20,
     alignItems: 'center',
   },
   title: { 
