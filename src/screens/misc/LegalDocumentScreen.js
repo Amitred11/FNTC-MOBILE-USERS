@@ -1,4 +1,4 @@
-// screens/LegalDocumentScreen.js (VISUALLY STUNNING VERSION)
+// screens/LegalDocumentScreen.js (VISUALLY STUNNING VERSION - FIXED)
 
 import React, { useEffect, useMemo, useCallback, Fragment, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Animated, Dimensions } from 'react-native';
@@ -24,13 +24,15 @@ const Footer = React.memo(({ onAgreePress }) => {
     );
 });
 
-// --- NEW: Scroll Progress Bar Component ---
 const ScrollProgressBar = ({ scrollY, contentHeight }) => {
     const { theme } = useTheme();
     const styles = getStyles(theme);
 
+    // Ensure we don't divide by zero or a negative number
+    const scrollableHeight = Math.max(1, contentHeight - height);
+
     const progress = scrollY.interpolate({
-        inputRange: [0, contentHeight - height],
+        inputRange: [0, scrollableHeight],
         outputRange: ['0%', '100%'],
         extrapolate: 'clamp',
     });
@@ -55,14 +57,15 @@ const Section = React.memo(({ title, icon, children, index, scrollY }) => {
     });
 
     return (
-        <Animatable.View 
-            animation="fadeInUp" 
-            duration={500} 
-            delay={index * 100} 
+        <Animatable.View
+            animation="fadeInUp"
+            duration={500}
+            delay={index * 100}
             style={styles.sectionContainer}
             onLayout={(event) => setLayoutY(event.nativeEvent.layout.y)}
         >
             <View style={styles.sectionHeader}>
+                {/* Parallax is a transform, so it CAN use the native driver */}
                 <Animated.View style={{ transform: [{ translateY: parallaxTranslate }] }}>
                     <Ionicons name={icon} size={28} color={theme.primary} style={styles.sectionIcon} />
                 </Animated.View>
@@ -75,13 +78,12 @@ const Section = React.memo(({ title, icon, children, index, scrollY }) => {
     );
 });
 
-// --- Advanced Content Parser (Unchanged from previous version) ---
+// --- Advanced Content Parser ---
 const ParsedContent = React.memo(({ text, scrollY }) => {
     const { theme } = useTheme();
     const styles = getStyles(theme);
 
     const getIconForTitle = (title) => {
-        // (Icon mapping logic remains the same)
         const lowerCaseTitle = title.toLowerCase();
         if (lowerCaseTitle.includes('agreement') || lowerCaseTitle.includes('terms')) return 'document-text-outline';
         if (lowerCaseTitle.includes('service')) return 'wifi-outline';
@@ -116,10 +118,10 @@ const ParsedContent = React.memo(({ text, scrollY }) => {
         if (currentSection) parsedSections.push(currentSection);
 
         return parsedSections.map((section, sectionIndex) => (
-            <Section 
-                key={sectionIndex} 
-                index={sectionIndex} 
-                title={section.title} 
+            <Section
+                key={sectionIndex}
+                index={sectionIndex}
+                title={section.title}
                 icon={getIconForTitle(section.title)}
                 scrollY={scrollY}
             >
@@ -152,15 +154,19 @@ export default function LegalDocumentScreen() {
 
   const { title = 'Legal Document', content = '' } = route.params || {};
 
-  // --- NEW: Refs and State for Animations ---
   const scrollY = useRef(new Animated.Value(0)).current;
   const [contentHeight, setContentHeight] = useState(0);
+
+  const handleGoBack = useCallback(() => {
+    navigation.goBack();
+  }, [navigation]);
 
   useEffect(() => {
     navigation.setOptions({
         headerShown: true,
         headerTransparent: true,
-        headerTitle: '',
+        // --- FIX #2: Changed from headerTitle: '' to a function returning null ---
+        headerTitle: () => null,
         headerLeft: () => (
              <TouchableOpacity onPress={handleGoBack} style={[styles.backButton, styles.glassEffect]}>
                 <Ionicons name="close-outline" size={28} color={theme.text} />
@@ -169,17 +175,13 @@ export default function LegalDocumentScreen() {
     });
   }, [navigation, theme, handleGoBack]);
 
-  const handleGoBack = useCallback(() => {
-    navigation.goBack();
-  }, [navigation]);
-
   return (
     <SafeAreaView style={styles.container}>
         <LinearGradient
             colors={theme.isDarkMode ? ['#2C3E50', '#1C2833'] : ['#E0EAFC', '#CFDEF3']}
             style={StyleSheet.absoluteFill}
         />
-      
+
         <ScrollProgressBar scrollY={scrollY} contentHeight={contentHeight} />
 
         <Animated.ScrollView
@@ -187,7 +189,8 @@ export default function LegalDocumentScreen() {
             showsVerticalScrollIndicator={false}
             onScroll={Animated.event(
                 [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-                { useNativeDriver: true }
+                // --- FIX #1: Changed useNativeDriver to false as 'width' is a layout property ---
+                { useNativeDriver: false }
             )}
             onContentSizeChange={(w, h) => setContentHeight(h)}
             scrollEventThrottle={16}
@@ -196,7 +199,7 @@ export default function LegalDocumentScreen() {
                 <Text style={styles.documentTitle}>{title}</Text>
                 <Text style={styles.documentSubtitle}>{content.split('\n')[0]}</Text>
             </Animatable.View>
-            
+
             <ParsedContent text={content} scrollY={scrollY} />
         </Animated.ScrollView>
 
@@ -212,7 +215,7 @@ const getStyles = (theme) =>
         backgroundColor: theme.isDarkMode ? 'rgba(44, 44, 46, 0.7)' : 'rgba(255, 255, 255, 0.6)',
         // Add backdrop filter for blur if possible (requires a library like @react-native-community/blur)
     },
-    backButton: { 
+    backButton: {
         marginLeft: 15,
         borderRadius: 20,
         width: 40,
@@ -221,7 +224,7 @@ const getStyles = (theme) =>
         alignItems: 'center',
     },
     scrollContent: { paddingHorizontal: 20, paddingTop: 100, paddingBottom: 150 },
-    
+
     // Progress Bar
     progressBarContainer: {
         position: 'absolute',
@@ -236,12 +239,12 @@ const getStyles = (theme) =>
         height: 3,
         backgroundColor: theme.primary,
     },
-    
+
     // Document Header
     documentHeader: { alignItems: 'center', marginBottom: 30, paddingHorizontal: 10 },
     documentTitle: { fontSize: 32, fontWeight: '800', color: theme.text, textAlign: 'center' },
     documentSubtitle: { fontSize: 15, color: theme.textSecondary, marginTop: 8, textAlign: 'center' },
-    
+
     // Section Styling
     sectionContainer: {
         backgroundColor: theme.surface,
@@ -260,14 +263,14 @@ const getStyles = (theme) =>
     sectionIcon: { marginRight: 15, width: 30 }, // Fixed width for alignment
     sectionTitle: { fontSize: 22, fontWeight: '700', color: theme.text, flex: 1 },
     sectionBody: { borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 15 },
-    
+
     // Text Content Styling
     heading3: { fontSize: 18, fontWeight: '600', color: theme.text, marginBottom: 12, marginTop: 5 },
     paragraph: { fontSize: 16, color: theme.textSecondary, lineHeight: 28, flex: 1 },
     bulletItem: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
     bulletPoint: { fontSize: 16, color: theme.primary, marginRight: 12, lineHeight: 28, fontWeight: 'bold' },
     spacer: { height: 16 },
-    
+
     // Footer
     footer: {
       position: 'absolute',
@@ -280,10 +283,10 @@ const getStyles = (theme) =>
       borderTopWidth: 1,
       borderTopColor: 'transparent',
     },
-    agreeButton: { 
-        backgroundColor: theme.primary, 
-        borderRadius: 14, 
-        paddingVertical: 18, 
+    agreeButton: {
+        backgroundColor: theme.primary,
+        borderRadius: 14,
+        paddingVertical: 18,
         alignItems: 'center',
         shadowColor: theme.primary,
         shadowOffset: { width: 0, height: 4 },

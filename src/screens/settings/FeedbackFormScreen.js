@@ -1,4 +1,4 @@
-// screens/CustomerFeedbackScreen.js (Refactored for a Smoother Experience)
+// screens/FeedbackFormScreen.js (Corrected)
 
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import {
@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   ScrollView,
   KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -23,6 +24,7 @@ import { MAX_CHARACTERS, RATING_DESCRIPTIONS, POSITIVE_TAGS, NEGATIVE_TAGS } fro
 // --- Sub-Components ---
 const StarRating = React.memo(({ currentRating, onRate, disabled }) => {
   const { theme } = useTheme();
+  if (!theme) return null; // Guard against undefined theme
   const styles = getStyles(theme);
   const starRefs = useRef([]);
 
@@ -56,6 +58,7 @@ const StarRating = React.memo(({ currentRating, onRate, disabled }) => {
 
 const TagSelector = React.memo(({ rating, selectedTags, onTagPress }) => {
     const { theme } = useTheme();
+    if (!theme) return null; // Guard against undefined theme
     const styles = getStyles(theme);
     const relevantTags = useMemo(() => {
         if (rating === 0) return [];
@@ -95,12 +98,19 @@ export default function FeedbackFormScreen() {
   const { showMessage } = useMessage();
   const { api } = useAuth();
   const { showAlert } = useAlert();
-  const styles = getStyles(theme);
 
+  if (!theme) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  const styles = getStyles(theme);
   const feedbackToEdit = route.params?.feedbackItem;
   const isEditMode = Boolean(feedbackToEdit);
   
-  // --- ENHANCEMENT: Added a ref for the submit button animation ---
   const submitButtonRef = useRef(null);
   const prevCanSubmitRef = useRef(false);
 
@@ -171,7 +181,7 @@ export default function FeedbackFormScreen() {
       headerShown: true,
       title: isEditMode ? 'Edit Feedback' : 'Give Feedback',
       headerTransparent: true,
-      headerTitleStyle: { color: theme.text, fontWeight: '600' },
+      headerTitleStyle: {fontWeight: 'bold', fontSize: 18, color: theme.text},
       headerLeft: () => (
         <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginLeft: 10, padding: 5 }}>
           <Ionicons name="close" size={28} color={theme.text} />
@@ -227,7 +237,7 @@ export default function FeedbackFormScreen() {
     >
       <SafeAreaView style={styles.container}>
         <KeyboardAvoidingView
-          behavior="height"
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.kavContainer}
         >
           <ScrollView
@@ -282,7 +292,7 @@ export default function FeedbackFormScreen() {
 
 const getStyles = (theme) =>
   StyleSheet.create({
-    container: { backgroundColor: theme.background, flex: 1 },
+    container: { flex: 1 },
     kavContainer: { flex: 1 },
     scrollContent: { 
       flexGrow: 1, 
@@ -304,11 +314,11 @@ const getStyles = (theme) =>
       paddingVertical: 9,
     },
     headerButtonDisabled: { backgroundColor: theme.disabled },
-    headerButtonText: { color: theme.textOnPrimary, fontSize: 16, fontWeight: 'bold' },
+    headerButtonText: { color: theme.textOnPrimary, fontSize: 16, fontWeight: '600' },
     title: {
       color: theme.text,
       fontSize: 28,
-      fontWeight: 'bold',
+      fontWeight: '600',
       marginBottom: 8,
       textAlign: 'center',
     },

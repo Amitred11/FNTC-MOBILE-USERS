@@ -10,7 +10,6 @@ import {
   Switch,
   SafeAreaView,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth, useTheme, useAlert, useMessage } from '../../contexts';
@@ -33,9 +32,6 @@ const Header = React.memo(({ onBackPress }) => {
     );
 });
 
-// IMPROVEMENT: Simplified the SettingItem component API.
-// It now intelligently decides whether to show a switch or a chevron
-// based on whether the `onValueChange` prop is provided.
 const SettingItem = React.memo(({ icon, name, value, onValueChange, onPress, disabled = false, isDestructive = false }) => {
   const { theme } = useTheme();
   const styles = getStyles(theme);
@@ -66,8 +62,7 @@ const SettingItem = React.memo(({ icon, name, value, onValueChange, onPress, dis
   );
 });
 
-// IMPROVEMENT: Styling logic for separators is now handled inside the Section,
-// making the main component's layout cleaner and removing manual <View> separators.
+
 const SettingsSection = React.memo(({ title, children }) => {
     const { theme } = useTheme();
     const styles = getStyles(theme);
@@ -93,35 +88,8 @@ export default function SettingsScreen() {
   const { theme, isDarkMode, toggleTheme } = useTheme();
   const { signOut } = useAuth();
   const { showAlert } = useAlert();
-  const { showMessage } = useMessage();
 
-  const [dndEnabled, setDndEnabled] = useState(false);
   const [isPolicyLoading, setIsPolicyLoading] = useState(false);
-
-  // Load DND setting from persistent storage on component mount
-  useEffect(() => {
-    const loadDndSetting = async () => {
-      try {
-        const storedValue = await AsyncStorage.getItem('dnd_enabled');
-        setDndEnabled(storedValue === 'true');
-      } catch (error) {
-        console.error("Failed to load DND setting:", error);
-      }
-    };
-    loadDndSetting();
-  }, []);
-
-  const handleToggleDnd = useCallback(async (newValue) => {
-    setDndEnabled(newValue);
-    try {
-      await AsyncStorage.setItem('dnd_enabled', String(newValue));
-      showMessage(newValue ? 'Do Not Disturb has been enabled.' : 'Do Not Disturb has been disabled.');
-    } catch (error) {
-      console.error('Failed to save DND setting:', error.message);
-      setDndEnabled(prev => !prev); // Revert on failure
-      showAlert('Error', 'Could not save your Do Not Disturb preference.');
-    }
-  }, [showMessage, showAlert]);
 
   const handleLogout = useCallback(() => {
     showAlert('Logging Out', 'Are you sure you want to log out?', [
@@ -163,10 +131,8 @@ export default function SettingsScreen() {
 
         <SettingsSection title="Preferences">
           <SettingItem icon="moon-outline" name="Dark Mode" value={isDarkMode} onValueChange={toggleTheme} />
-          <SettingItem icon="notifications-off-outline" name="Do Not Disturb" value={dndEnabled} onValueChange={handleToggleDnd} />
         </SettingsSection>
         
-        {/* FIX: Merged "Help" and "Support & About" into a single, more logical section. */}
         <SettingsSection title="About & Support">
           <SettingItem icon="help-circle-outline" name="Help & Support" onPress={() => handleNavigate('Support')} />
           <SettingItem icon="book-outline" name="How to Use This App" onPress={() => handleNavigate('HowToUseScreen')} />
@@ -197,6 +163,5 @@ const getStyles = (theme) =>
     settingItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
     iconContainer: { width: 36, height: 36, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 16 },
     settingText: { flex: 1, fontSize: 16, fontWeight: '500' },
-    // IMPROVEMENT: Centralized separator style
     separator: { height: 1, backgroundColor: theme.border, marginLeft: 68 },
   });

@@ -165,8 +165,8 @@ export const generateInvoiceHtml = (invoiceData, userProfile, theme) => {
         <div class="sidebar">
           <div class="sidebar-section">
             <h1>FiBear Network</h1>
-            <p>Greenbreeze San Isidro, Rodriguez, Philippines</p>
-            <p>0945 220 3371</p>
+            <p>Block 18, Lot 95 Phase 1D, Kasiglahan Village, Brgy San Jose, Rodriguez, Rizal</p>
+            <p>09154283220 | 09707541724 | 09071049526</p>
           </div>
           <div class="sidebar-section">
             <h2>Invoice Details</h2>

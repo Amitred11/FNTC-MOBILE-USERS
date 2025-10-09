@@ -3,7 +3,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 //About
 export const COMPANY_NAME = 'FiBear Network Technologies Corp.';
-export const VERSION = '4.0.56';
+export const VERSION = '2.10.82';
 export const CEO_NAME = 'Prince Scoth E. Donato';
 export const MISSION_POINTS = [
   "Continue to improve our services by seeking new ways, means and technology that will adapt to the changing needs of the clients.",
@@ -153,9 +153,9 @@ export const howToUseData = {
 //support screen
 
 export const CONTACT_INFO = {
-  phone: '+63 945 220 3371',
-  email: 'rparreno@fibearnetwork.com',
-  facebook: 'https://www.facebook.com/FiBearNetworkTechnologiesCorpMontalban',
+  phone: '+639154283220 | 09707541724 | 09071049526',
+  email: 'support@fibear.com',
+  facebook: 'https://www.facebook.com/fntc.kasiglahanvillage2023',
 };
 
 //Feedbacks
@@ -191,6 +191,7 @@ export const ICONS = {
     bill_overdue: { component: Ionicons, name: 'close-circle', colorKey: 'danger' },
     bill_paid: { component: Ionicons, name: 'checkmark-circle', colorKey: 'success' },
     bill_pending: { component: Ionicons, name: 'hourglass', colorKey: 'warning' },
+    bill_upcoming: { component: Ionicons, name: 'timer-outline', colorKey: 'info' },
     subscribed: { component: MaterialCommunityIcons, name: 'rocket-launch', colorKey: 'accent' },
     cancelled: { component: MaterialCommunityIcons, name: 'close-circle-outline', colorKey: 'danger' },
     payment_success: { component: MaterialCommunityIcons, name: 'check-decagram', colorKey: 'primary' },
@@ -228,3 +229,70 @@ export const ICON_MAP = (theme) => ({
     warning: { name: 'warning-outline', color: theme.warning },
     default: { name: 'notifications-outline', color: theme.textSecondary },
 });
+
+//OurSupportScreen
+
+export const servicesData = [
+  {
+    icon: 'git-network-outline',
+    title: 'Fiber Optic Network Installation',
+    description: 'We offer fiber optic broadband connection to the community to provide high-speed internet services to residentials and commercials.',
+    screen: 'ContactScreen'
+  },
+  {
+    icon: 'wifi-outline',
+    title: 'Internet Packages',
+    description: 'We offer a variety of affordable internet plans to meet the needs of different customers, from basic plans for individual users to more advanced plans for businesses and organizations.',
+    screen: 'Subscription'
+  },
+  {
+    icon: 'build-outline',
+    title: 'Technical Support',
+    description: 'Our team of experienced professionals provides technical support to ensure that our networks are always running smoothly.',
+    screen: 'Support'
+  },
+  {
+    icon: 'headset-outline',
+    title: 'Customer Service',
+    description: 'We are committed to providing excellent customer service, and our support team is available 24/7 to answer questions and troubleshoot any issues.',
+    screen: 'OurServicesScreen'
+  },
+];
+
+export const plansData = [
+  {
+    _id: 'plan_bronze',
+    name: 'PLAN BRONZE',
+    price: '₱700',
+    speed: 'Up to 30Mbps',
+    features: ['No Data Capping', 'Fast Internet Speed', 'Quick Installation', 'P1000 Installation Fee'],
+  },
+  {
+    _id: 'plan_silver',
+    name: 'PLAN SILVER',
+    price: '₱800',
+    speed: 'Up to 35Mbps',
+    features: ['No Data Capping', 'Fast Internet Speed', 'Quick Installation', 'P1000 Installation Fee'],
+  },
+  {
+    _id: 'plan_gold',
+    name: 'PLAN GOLD',
+    price: '₱1000',
+    speed: 'Up to 50Mbps',
+    features: ['No Data Capping', 'Fast Internet Speed', 'Quick Installation', 'P1000 Installation Fee'],
+  },
+  {
+    _id: 'plan_platinum',
+    name: 'PLAN PLATINUM',
+    price: '₱1300',
+    speed: 'Up to 100Mbps',
+    features: ['No Data Capping', 'Fast Internet Speed', 'Quick Installation', 'P1000 Installation Fee'],
+  },
+  {
+    _id: 'plan_diamond',
+    name: 'PLAN DIAMOND',
+    price: '₱1500',
+    speed: 'Up to 100Mbps',
+    features: ['No Data Capping', 'Fast Internet Speed', 'Quick Installation', 'P1000 Installation Fee'],
+  },
+];

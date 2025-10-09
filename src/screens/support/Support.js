@@ -9,6 +9,7 @@ import {
   BackHandler,
   SafeAreaView,
   Image,
+  // Linking and Platform are no longer needed here
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
@@ -38,6 +39,7 @@ const SupportHub = ({ onNavigate }) => {
     const navigation = useNavigation();
     const { theme } = useTheme();
     const styles = getStyles(theme);
+
     const SupportCard = ({ icon, title, description, onPress }) => (
       <TouchableOpacity style={styles.supportCard} onPress={onPress} activeOpacity={0.7}>
         <View style={styles.cardIconContainer}>
@@ -77,6 +79,15 @@ const SupportHub = ({ onNavigate }) => {
             description="View existing tickets or create a new one."
             onPress={() => onNavigate('ticket_list')}
           />
+        </Animatable.View>
+        {/* --- MODIFIED CARD --- */}
+        <Animatable.View animation="fadeInUp" duration={500} delay={400}>
+            <SupportCard
+                icon="mail-outline"
+                title="Contact Us"
+                description="Email, call, or find us on social media."
+                onPress={() => navigation.navigate('ContactScreen')} // Navigate to the new screen
+            />
         </Animatable.View>
       </ScrollView>
     );
@@ -205,7 +216,7 @@ const getStyles = (theme) => StyleSheet.create({
       flexDirection: 'row',
       marginBottom: 15,
       padding: 20,
-      boxShadow: '2px 3px 5px rgba(0, 0, 0, 0.5)'
+      boxShadow: '2px 4px 2px rgba(0,0,0,0.4)'
     },
     cardIconContainer: { backgroundColor: `${theme.primary}20`, borderRadius: 14, marginRight: 20, padding: 14 },
     cardTextContainer: { flex: 1 },

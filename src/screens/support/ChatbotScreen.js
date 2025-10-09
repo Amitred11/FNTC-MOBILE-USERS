@@ -29,7 +29,7 @@ import EventSource from 'react-native-event-source';
 import apiConfig from '../../config/apiConfig';
 
 // --- Constants ---
-const { Config_INTERNAL_API_KEY, CHATBOT_API_ENDPOINT } = apiConfig;
+const { CHATBOT_API_ENDPOINT } = apiConfig;
 const HEADER_HEIGHT = Platform.select({ ios: 90, android: 70 });
 const RETRY_DELAY_MS = 5000;
 const INITIALIZATION_TIMEOUT_MS = 15000;
@@ -39,6 +39,8 @@ const SUGGESTED_PROMPTS = [
     { title: "Plan Details", question: "What internet plans do you offer?" },
     { title: "Contact Support", question: "How can I speak to a human agent?" },
 ];
+
+const CONFIG_INTERNAL_API_KEY="ba69a3fb71924f66aae20486d98e5a078db29da7108a283c5a5ee84b55307e74";
 
 // ====================================================================
 // --- CHILD & HELPER COMPONENTS
@@ -178,7 +180,7 @@ const SuggestedPrompts = ({ onPromptSelect }) => {
     const { theme } = useTheme();
     const styles = getStyles(theme);
     return (
-        <Animatable.View animation="fadeIn" duration={600} style={styles.promptsListContainer}>
+        <Animatable.View animationType="fade" duration={600} style={styles.promptsListContainer}>
             <Text style={styles.promptsTitle}>Try asking something like...</Text>
             <View style={styles.promptsContainer}>
                 {SUGGESTED_PROMPTS.map((prompt, index) => (
@@ -277,7 +279,7 @@ const ChatbotScreen = forwardRef(({ onRefresh, isRefreshing }, ref) => {
       }
   
       try {
-        const apiHeaders = { 'X-API-Key': Config_INTERNAL_API_KEY };
+        const apiHeaders = { 'X-API-Key': CONFIG_INTERNAL_API_KEY };
         const timeoutPromise = new Promise((_, reject) => {
           initializationTimeoutRef.current = setTimeout(() => reject(new Error('AI_TIMEOUT')), INITIALIZATION_TIMEOUT_MS);
         });
@@ -358,7 +360,7 @@ const ChatbotScreen = forwardRef(({ onRefresh, isRefreshing }, ref) => {
   
       const eventSource = new EventSource(`${CHATBOT_API_ENDPOINT}/stream`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-API-Key': Config_INTERNAL_API_KEY },
+        headers: { 'Content-Type': 'application/json', 'X-API-Key': CONFIG_INTERNAL_API_KEY },
         body: JSON.stringify({ history: historyForApi, userId: profile._id }),
       });
 
@@ -419,7 +421,7 @@ const ChatbotScreen = forwardRef(({ onRefresh, isRefreshing }, ref) => {
       try {
         const response = await fetch(`${CHATBOT_API_ENDPOINT}/history/message`, {
           method: 'DELETE',
-          headers: { 'Content-Type': 'application/json', 'X-API-Key': Config_INTERNAL_API_KEY },
+          headers: { 'Content-Type': 'application/json', 'X-API-Key': CONFIG_INTERNAL_API_KEY },
           body: JSON.stringify({ userId: profile._id, message: { text: selectedMessage.text, role: selectedMessage.isUser ? 'user' : 'model' } }),
         });
         if (!response.ok) throw new Error('Server failed to delete message.');
@@ -435,7 +437,7 @@ const ChatbotScreen = forwardRef(({ onRefresh, isRefreshing }, ref) => {
           text: 'Clear Chat', style: 'destructive',
           onPress: async () => {
             try {
-              await fetch(`${CHATBOT_API_ENDPOINT}/history/${profile._id}`, { method: 'DELETE', headers: { 'X-API-Key': Config_INTERNAL_API_KEY } });
+              await fetch(`${CHATBOT_API_ENDPOINT}/history/${profile._id}`, { method: 'DELETE', headers: { 'X-API-Key': CONFIG_INTERNAL_API_KEY } });
               handleManualRetry();
             } catch (error) { showAlert('Error', 'Could not clear chat history.'); }
           },
@@ -457,12 +459,12 @@ const ChatbotScreen = forwardRef(({ onRefresh, isRefreshing }, ref) => {
         <ConnectionStatusBanner state={chatState} countdown={countdown} />
         
         <Modal
-          animationType="slide"
+          animationType="fade"
           transparent={true}
           visible={isFaqVisible}
           onRequestClose={() => setIsFaqVisible(false)}>
             <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPressOut={() => setIsFaqVisible(false)}>
-                <Animatable.View animation="slideInUp" duration={300} style={styles.faqModalContent}>
+                <Animatable.View animationType="fade" duration={300} style={styles.faqModalContent}>
                     <View style={styles.modalHeader}>
                         <View style={styles.dragHandle} />
                         <Text style={styles.modalTitle}>Frequently Asked Questions</Text>
@@ -501,12 +503,9 @@ const ChatbotScreen = forwardRef(({ onRefresh, isRefreshing }, ref) => {
             </TouchableOpacity>
           )}
           contentContainerStyle={styles.scrollContentContainer}
-          // REMOVED: The header is no longer needed here.
-          // ListHeaderComponent={messages.length > 1 ? <ChatSeparator theme={theme} /> : null}
           ListFooterComponent={
             <>
               {isReplying && <TypingIndicator theme={theme} />}
-              {/* MODIFIED: The separator is now in the footer, and will only show when there are messages AND the prompts are visible. */}
               {messages.length > 1 && showPrompts && <ChatSeparator theme={theme} />}
               {showPrompts && <SuggestedPrompts onPromptSelect={handlePromptSelect} />}
             </>

@@ -1,4 +1,5 @@
-import React, { useState, useRef, useCallback, useMemo } from 'react';
+// screens/main/HomePage.js (Corrected)
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import {
     View,
     Text,
@@ -10,6 +11,9 @@ import {
     BackHandler,
     RefreshControl,
     ActivityIndicator,
+    Linking,
+    Platform,
+    Alert
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,6 +21,7 @@ import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as Animatable from 'react-native-animatable';
+import { WebView } from 'react-native-webview';
 import { useSubscription, useAlert, useAuth, useTheme } from '../../contexts';
 import { BottomNavBar } from '../../components/BottomNavBar';
 
@@ -89,12 +94,39 @@ export default function HomePage() {
     const { theme } = useTheme();
     const styles = getStyles(theme);
     const { showAlert } = useAlert();
-    const { user: profile, refreshUser, signOut, api } = useAuth();
+    const { user: profile, refreshUser, signOut, api } = useAuth(); 
     const { subscriptionData, paymentHistory, subscriptionStatus, refreshSubscription, isLoading: isSubscriptionLoading } = useSubscription();
 
     const [uiState, setUiState] = useState({ isMenuVisible: false, isLogoutModalVisible: false, isExitModalVisible: false });
-    const [dataState, setDataState] = useState({ unreadCount: 0, refreshing: false });
+    const [refreshing, setRefreshing] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [isMapTouched, setIsMapTouched] = useState(false);
+    
+    const isRefreshingRef = useRef(false);
     const hasDiscoveredScroll = useRef(false);
+
+    // --- MAP LOCATION DATA ---
+    const officeLocation = { latitude: 14.7397636, longitude: 121.1401032 };
+    const officeAddress = "Blk 18, Lot 95, Phase 1D, Kasiglahan Village, San Jose, Rodriguez, Rizal";
+    const officeName = "FiBear Network Technologies Corp. Kasiglahan Branch";
+
+    const openGoogleMaps = () => {
+        const scheme = Platform.select({ ios: 'maps:0,0?q=', android: 'geo:0,0?q=' });
+        const latLng = `${officeLocation.latitude},${officeLocation.longitude}`;
+        const label = officeName;
+        const url = Platform.select({
+            ios: `${scheme}${label}@${latLng}`,
+            android: `${scheme}${latLng}(${label})`
+        });
+        Linking.openURL(url);
+    };
+
+    const mapHtml = `
+      <!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body, html, #map { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }</style></head>
+      <body><iframe id="map" src="https://www.google.com/maps?q=${officeLocation.latitude},${officeLocation.longitude}&output=embed" frameborder="0" style="border:0" allowfullscreen="" aria-hidden="false" tabindex="0"></iframe></body></html>
+    `;
+
+    // --- FIX: Added 'upcoming' status for new users ---
     const statusConfig = useMemo(() => ({
         'active': { text: 'Active', color: theme.success },
         'pending_change': { text: 'Active (Change Pending)', color: theme.success },
@@ -103,41 +135,70 @@ export default function HomePage() {
         'suspended': { text: 'Suspended', color: theme.danger },
         'declined': { text: 'Declined', color: theme.danger },
         'cancelled': { text: 'Cancelled', color: theme.textSecondary },
+        'upcoming': { text: 'Upcoming', color: theme.info }, // New status
     }), [theme]);
-
-    const currentStatus = statusConfig[subscriptionStatus] || { text: 'Not Subscribed', color: theme.disabled };
-    const showScrollIndicator = !hasDiscoveredScroll.current && subscriptionStatus === 'active';
     
-    const fetchAllData = useCallback(async () => {
-        if (!api) return;
-        setDataState(prev => ({ ...prev, refreshing: true }));
+    // --- FIX: Determine the effective status to display ---
+    const hasDueOrOverdueBills = useMemo(() => 
+        paymentHistory.some(bill => ['Due', 'Overdue'].includes(bill.status)),
+        [paymentHistory]
+    );
+
+    const effectiveStatus = 
+        (subscriptionStatus === 'active' || subscriptionStatus === 'pending_installation') && !hasDueOrOverdueBills
+        ? 'upcoming'
+        : subscriptionStatus;
+
+    const currentStatus = statusConfig[effectiveStatus] || { text: 'Not Subscribed', color: theme.disabled };
+    const showScrollIndicator = !hasDiscoveredScroll.current && subscriptionStatus === 'active';
+
+    // --- Centralized Data Refresh Logic ---
+    const onRefresh = useCallback(async () => {
+        if (isRefreshingRef.current || !api) return;
+
+        isRefreshingRef.current = true;
+        setRefreshing(true);
         try {
-            const [notificationsRes] = await Promise.all([
-                api.get('/notifications'),
+            await Promise.all([
+                api.get('/notifications').then(res => {
+                    if (res?.data?.data) {
+                        setUnreadCount(res.data.data.filter(n => !n.read).length);
+                    }
+                }),
                 refreshUser(),
                 refreshSubscription(),
             ]);
-            if (notificationsRes?.data?.data) {
-                setDataState(prev => ({ ...prev, unreadCount: notificationsRes.data.data.filter(n => !n.read).length }));
-            }
         } catch (error) {
-            console.error("Error fetching homepage data:", error.message);
+            if (error.response?.status !== 401) {
+                 console.error("Error during refresh:", error.message);
+            }
         } finally {
-            setDataState(prev => ({ ...prev, refreshing: false }));
+            isRefreshingRef.current = false;
+            setRefreshing(false);
         }
     }, [api, refreshUser, refreshSubscription]);
 
-    useFocusEffect(useCallback(() => { fetchAllData(); }, [fetchAllData]));
-
+    useFocusEffect(
+      useCallback(() => {
+        onRefresh();
+      }, [onRefresh])
+    );
+    
+    // --- UI State Handlers ---
     const handleUiStateChange = useCallback((key, value) => setUiState(prev => ({ ...prev, [key]: value })), []);
     const onConfirmLogout = useCallback(() => { handleUiStateChange('isLogoutModalVisible', false); signOut(); }, [signOut, handleUiStateChange]);
     const navigateAndCloseDrawer = useCallback((screenName) => { navigation.navigate(screenName); handleUiStateChange('isMenuVisible', false); }, [navigation, handleUiStateChange]);
 
+    // --- Hardware Back Button Handler ---
     useFocusEffect(
         useCallback(() => {
             const onBackPress = () => {
                 if (uiState.isMenuVisible) { handleUiStateChange('isMenuVisible', false); return true; }
-                if (uiState.isLogoutModalVisible || uiState.isExitModalVisible) { handleUiStateChange('isLogoutModalVisible', false); handleUiStateChange('isExitModalVisible', false); return true; }
+                if (uiState.isLogoutModalVisible || uiState.isExitModalVisible) { 
+                    handleUiStateChange('isLogoutModalVisible', false); 
+                    handleUiStateChange('isExitModalVisible', false); 
+                    return true; 
+                }
                 handleUiStateChange('isExitModalVisible', true);
                 return true;
             };
@@ -145,9 +206,10 @@ export default function HomePage() {
             return () => subscription.remove();
         }, [uiState, handleUiStateChange])
     );
-
+    
+    // --- Memoized Dashboard Component ---
     const renderDashboard = useMemo(() => {
-        if (isSubscriptionLoading && !dataState.refreshing) {
+        if (isSubscriptionLoading && !refreshing) {
             return <View style={styles.dashboardLoader}><ActivityIndicator color={theme.primary} /></View>;
         }
 
@@ -164,30 +226,57 @@ export default function HomePage() {
             </TouchableOpacity>
         );
 
-        if (subscriptionStatus === 'suspended') return renderNoPlanCard('Account Suspended', 'Pay your bill to reactivate.', 'MyBills', 'warning-outline', true);
-        if (subscriptionStatus !== 'active' || !subscriptionData) return renderNoPlanCard('Unlock Your Dashboard', 'Explore our plans now!', 'Subscription', 'sparkles-outline');
+        if (subscriptionStatus === 'suspended') return renderNoPlanCard('Account Suspended', 'Pay your bill to reactivate.', 'PayBills', 'warning-outline', true);
+        if (!['active', 'pending_change', 'pending_installation'].includes(subscriptionStatus)) return renderNoPlanCard('Unlock Your Dashboard', 'Explore our plans now!', 'Subscription', 'sparkles-outline');
+        
+        const activePlan = subscriptionData?.planId;
+        const renewalDate = subscriptionData?.renewalDate;
+        const pendingBill = paymentHistory.find(bill => bill.status === 'Pending Verification');
+        const dueBill = paymentHistory.find(bill => bill.status === 'Due' || bill.status === 'Overdue');
+        const upcomingBill = paymentHistory.find(bill => bill.status === 'Upcoming');
 
-        const activePlan = subscriptionData.planId;
-        const renewalDate = subscriptionData.renewalDate;
-        const pendingBill = paymentHistory.find(bill => bill.type === 'bill' && bill.status === 'Pending Verification');
-        const dueBill = paymentHistory.find(bill => bill.type === 'bill' && (bill.status === 'Due' || bill.status === 'Overdue'));
+        // --- FIX: Show upcoming status for new users without a due bill ---
+        if (effectiveStatus === 'upcoming') {
+            const firstBillDate = upcomingBill
+                ? new Date(upcomingBill.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                : (renewalDate ? new Date(renewalDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Soon');
+            
+            return (
+                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScrollContainer}>
+                    <AccountInfoCard icon="file-text" label="First Bill" value="Upcoming" color={theme.info} onPress={() => navigation.navigate('MyBills')} />
+                    <AccountInfoCard icon="bar-chart-2" label="Current Plan" value={activePlan?.name || 'N/A'} color={theme.primary} onPress={() => navigation.navigate('MySubscriptionScreen')} />
+                    <AccountInfoCard icon="calendar" label="Billing Starts" value={firstBillDate} color={theme.textSecondary} onPress={() => navigation.navigate('MyBills')} />
+                </ScrollView>
+            );
+        }
 
-        let billAmount = 'All Paid', billColor = theme.success, billLabel = 'Current Bill', billOnPress = () => navigation.navigate('MyBills');
+        let billAmount = 'All Paid', 
+            billColor = theme.success, 
+            billLabel = 'Current Bill', 
+            billOnPress = () => navigation.navigate('MyBills');
 
-        if (pendingBill) { billAmount = `₱${pendingBill.amount.toFixed(2)}`; billColor = theme.warning; billLabel = 'Payment Verifying'; }
-        else if (dueBill) { billAmount = `₱${dueBill.amount.toFixed(2)}`; billColor = dueBill.status === 'Overdue' ? theme.danger : theme.warning; billOnPress = () => navigation.navigate('PayBills'); }
+        if (pendingBill) {
+            billAmount = `₱${(pendingBill.amount ?? 0).toFixed(2)}`;
+            billColor = theme.warning;
+            billLabel = 'Verifying Payment';
+        } else if (dueBill) {
+            billAmount = `₱${(dueBill.amount ?? 0).toFixed(2)}`;
+            billColor = dueBill.status === 'Overdue' ? theme.danger : theme.warning;
+            billLabel = dueBill.status === 'Overdue' ? 'Bill Overdue' : 'Bill Due';
+            billOnPress = () => navigation.navigate('PayBills');
+        }
 
-        const nextBillDate = dueBill ? new Date(dueBill.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : new Date(renewalDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const nextBillDate = dueBill ? new Date(dueBill.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : (renewalDate ? new Date(renewalDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A');
 
         return (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScrollContainer} onScrollBeginDrag={() => { if (showScrollIndicator) hasDiscoveredScroll.current = true; }}>
                 <AccountInfoCard icon="dollar-sign" label={billLabel} value={billAmount} color={billColor} onPress={billOnPress} />
                 <AccountInfoCard icon="bar-chart-2" label="Current Plan" value={activePlan?.name || 'N/A'} color={theme.primary} onPress={() => navigation.navigate('MySubscriptionScreen')} />
-                <AccountInfoCard icon="calendar" label={dueBill ? 'Bill Due' : 'Next Renewal'} value={nextBillDate} color={theme.textSecondary} onPress={() => navigation.navigate('MyBills')} />
+                <AccountInfoCard icon="calendar" label={dueBill ? 'Due Date' : 'Next Renewal'} value={nextBillDate} color={theme.textSecondary} onPress={() => navigation.navigate('MyBills')} />
             </ScrollView>
         );
-    }, [isSubscriptionLoading, dataState.refreshing, subscriptionStatus, paymentHistory, subscriptionData, theme, navigation, styles]);
-
+    }, [isSubscriptionLoading, refreshing, subscriptionStatus, paymentHistory, subscriptionData, theme, navigation, styles, effectiveStatus]);
+    
     const photoSource = profile?.photoUrl ? { uri: profile.photoUrl } : require('../../assets/images/avatars/profilepic.jpg');
 
     return (
@@ -201,13 +290,19 @@ export default function HomePage() {
                     <TouchableOpacity onPress={() => handleUiStateChange('isMenuVisible', true)} style={styles.headerIcon}><Ionicons name="menu" size={28} color={theme.text} /></TouchableOpacity>
                     <Image source={require('../../assets/images/logos/logo.png')} style={styles.headerLogo} />
                     <TouchableOpacity onPress={() => navigation.navigate('Notif')} style={styles.headerIcon}>
-                        {dataState.unreadCount > 0 && <View style={styles.notificationBadge} />}
+                        {unreadCount > 0 && <View style={styles.notificationBadge} />}
                         <Ionicons name="notifications-outline" size={26} color={theme.text} />
                     </TouchableOpacity>
                 </BlurView>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={dataState.refreshing} onRefresh={fetchAllData} tintColor={theme.primary} progressViewOffset={120} />} contentContainerStyle={styles.scrollContent} onScrollBeginDrag={() => { if (showScrollIndicator) hasDiscoveredScroll.current = true; }}>
+            <ScrollView
+                showsVerticalScrollIndicator={false}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} progressViewOffset={120} />}
+                contentContainerStyle={styles.scrollContent}
+                onScrollBeginDrag={() => { if (showScrollIndicator) hasDiscoveredScroll.current = true; }}
+                scrollEnabled={!isMapTouched} 
+            >
                 <View style={styles.headerSpacer} />
 
                 {/* --- WELCOME CARD --- */}
@@ -215,7 +310,6 @@ export default function HomePage() {
                     <TouchableOpacity activeOpacity={0.9} onPress={() => navigation.navigate('Profile')}>
                         <LinearGradient colors={theme.isDarkMode ? [theme.primary, theme.accent] : [theme.accent, theme.primary]} style={styles.welcomeCard}>
                             <Image source={require('../../assets/images/backgrounds/welcome-bg.jpg')} style={styles.welcomeBg} />
-                            
                             <View style={styles.welcomeContent}>
                                 <Image source={photoSource} style={styles.profilePic} />
                                     <View style={styles.welcomeTextContainer}>
@@ -249,9 +343,36 @@ export default function HomePage() {
                         <QuickActionButton icon="headphones" label="Support" onPress={() => navigation.navigate('Support')} />
                     </View>
                 </View>
-
+                
                 <View style={styles.section}>
                     <FeedbackPromptCard onPress={() => navigation.navigate('CustomerFeedbackScreen')} />
+                </View>
+
+                {/* --- OUR OFFICE SECTION --- */}
+                <View style={styles.section}>
+                    <Text style={[styles.sectionTitle, { marginBottom: 15, paddingHorizontal: 20 }]}>Our Office</Text>
+                    <View
+                        style={styles.mapContainer}
+                        onTouchStart={() => setIsMapTouched(true)}
+                        onTouchEnd={() => setIsMapTouched(false)}
+                    >
+                        <WebView
+                            style={styles.map}
+                            source={{ html: mapHtml }}
+                            javaScriptEnabled={true}
+                            domStorageEnabled={true}
+                        />
+                    </View>
+                    <View style={styles.footerCard}>
+                        <Ionicons name="location-sharp" size={24} color={theme.primary} />
+                        <View style={styles.footerTextContainer}>
+                             <Text style={styles.footerTitle}>{officeName}</Text>
+                             <Text style={styles.footerAddress}>{officeAddress}</Text>
+                        </View>
+                        <TouchableOpacity style={styles.directionsButton} onPress={openGoogleMaps}>
+                            <Text style={styles.directionsButtonText}>Directions</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
             </ScrollView>
@@ -269,8 +390,6 @@ const getStyles = (theme) =>
         headerIcon: { padding: 8 },
         headerLogo: { height: 35, width: 100, resizeMode: 'contain' },
         headerSpacer: { height: 80 },
-
-        // --- ANIMATED WelcomeCard Styles ---
         welcomeCardWrapper: { 
             marginHorizontal: 20, 
             marginTop: 12, 
@@ -305,16 +424,11 @@ const getStyles = (theme) =>
             shadowColor: 'rgba(0, 0, 0, 0.3)',
             shadowOffset: { width: 0, height: 5 },
             shadowRadius: 10,
-            marginBottom: -40,
-            zIndex: 1,
-            right: 100,
-            top: 23
+            marginBottom: 12,
         },
         welcomeTextContainer: { 
             alignItems: 'center',
             marginBottom: 12,
-            left: 50,
-            bottom: 10
         },
         welcomeTitle: { 
             fontSize: 20, 
@@ -338,7 +452,6 @@ const getStyles = (theme) =>
             width: 8,
             height: 8,
             borderRadius: 4,
-            backgroundColor: theme.success,
             marginRight: 8,
         },
         statusText: {
@@ -346,16 +459,12 @@ const getStyles = (theme) =>
             fontWeight: '600',
             color: theme.textOnPrimary,
         },
-
-        // --- SECTION ---
-        section: { marginBottom: 20 },
+        section: { marginBottom: 40 },
         sectionHeaderContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 15 },
         sectionTitle: { fontSize: 22, fontWeight: 'bold', color: theme.text },
         scrollIndicator: { flexDirection: 'row', alignItems: 'center', opacity: 0.7 },
         scrollIndicatorText: { color: theme.textSecondary, fontStyle: 'italic', marginRight: 2 },
         horizontalScrollContainer: { paddingLeft: 20, paddingRight: 5, paddingBottom: 10 },
-
-        // --- SMALLER AccountInfoCard ---
         accountCard: { 
             backgroundColor: theme.surface, 
             borderRadius: 20, 
@@ -395,13 +504,11 @@ const getStyles = (theme) =>
             color: theme.text,
             marginTop: 4,
         },
-        
         noPlanCard: { flexDirection: 'row', alignItems: 'center', borderRadius: 24, paddingHorizontal: 24, paddingVertical: 30, marginHorizontal: 20 },
         noPlanCardContent: { flex: 1, marginHorizontal: 20 },
         noPlanTitle: { fontSize: 18, fontWeight: 'bold', color: theme.textOnPrimary },
         noPlanSubtitle: { fontSize: 14, color: theme.textOnPrimary, marginTop: 4, opacity: 0.9 },
         dashboardLoader: { height: 160, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.surface, borderRadius: 20, marginHorizontal: 20 },
-
         actionsGrid: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 15 },
         quickActionContainer: { alignItems: 'center', flex: 1, marginHorizontal: 5 },
         quickActionIconCircle: { 
@@ -413,18 +520,16 @@ const getStyles = (theme) =>
             justifyContent: 'center', 
             marginBottom: 12,
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
+            shadowOffset: { width: 0, height: 2 },
             shadowOpacity: theme.isDarkMode ? 0.2 : 0.08,
-            shadowRadius: 6,
-            elevation: 8,
+            shadowRadius: 8,
+            elevation: 4,
         },
         quickActionText: { fontSize: 14, fontWeight: '600', color: theme.text, textAlign: 'center' },
-
         feedbackPromptCard: {
             marginHorizontal: 20,
             borderRadius: 20,
             overflow: 'hidden',
-            marginTop: 10,
             shadowColor: theme.primary,
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.2,
@@ -436,5 +541,59 @@ const getStyles = (theme) =>
         feedbackPromptTextContainer: { flex: 1, marginLeft: 15 },
         feedbackPromptTitle: { fontSize: 18, fontWeight: 'bold', color: theme.textOnPrimary, marginBottom: 4 },
         feedbackPromptSubtitle: { fontSize: 13, color: theme.textOnPrimary, opacity: 0.8 },
-        notificationBadge: { position: 'absolute', top: 5, right: 5, backgroundColor: theme.danger, width: 10, height: 10, borderRadius: 5, borderWidth: 1.5, borderColor: theme.surface }
+        notificationBadge: { position: 'absolute', top: 5, right: 5, backgroundColor: theme.danger, width: 10, height: 10, borderRadius: 5, borderWidth: 1.5, borderColor: theme.surface },
+        mapContainer: {
+            height: 200,
+            marginHorizontal: 20,
+            borderRadius: 20,
+            overflow: 'hidden',
+            backgroundColor: theme.surface,
+            elevation: 6,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: theme.isDarkMode ? 0.2 : 0.08,
+            shadowRadius: 8,
+        },
+        map: {
+            ...StyleSheet.absoluteFillObject,
+        },
+        footerCard: {
+            backgroundColor: theme.surface,
+            borderRadius: 20,
+            padding: 16,
+            marginHorizontal: 20,
+            marginTop: -20, 
+            flexDirection: 'row',
+            alignItems: 'center',
+            elevation: 8,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: theme.isDarkMode ? 0.25 : 0.1,
+            shadowRadius: 10,
+        },
+        footerTextContainer: {
+            flex: 1,
+            marginLeft: 12,
+        },
+        footerTitle: {
+            fontSize: 16,
+            fontWeight: 'bold',
+            color: theme.text,
+        },
+        footerAddress: {
+            fontSize: 13,
+            color: theme.textSecondary,
+            marginTop: 2,
+        },
+        directionsButton: {
+            backgroundColor: `${theme.primary}20`,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            borderRadius: 12,
+        },
+        directionsButtonText: {
+            color: theme.primary,
+            fontWeight: '600',
+            fontSize: 13,
+        },
     });

@@ -1,4 +1,4 @@
-// screens/SignUpScreen.js
+// screens/SignUpScreen.js (Corrected & Final)
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
@@ -10,56 +10,40 @@ import {
   Dimensions,
   ImageBackground,
   TouchableOpacity,
-  Modal,
   Keyboard,
   ScrollView,
   BackHandler,
   ActivityIndicator,
-  Clipboard,
 } from 'react-native';
 import { TextInput, Checkbox, Provider as PaperProvider } from 'react-native-paper';
-import { useRoute, useNavigation, useFocusEffect, CommonActions } from '@react-navigation/native';
+import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Easing } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth, useMessage, useAlert } from '../../contexts/index.js';
+import PolicyModal from './components/PolicyModal.js';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 const IMAGE_HEIGHT = SCREEN_HEIGHT * 0.8;
 const CARD_HEIGHT_FACTOR = 0.7;
 const CARD_HEIGHT = SCREEN_HEIGHT * CARD_HEIGHT_FACTOR;
 
-const PolicyModal = ({ visible, title, content, onClose }) => (
-  <Modal animationType="fade" transparent={true} visible={visible} onRequestClose={onClose}>
-    <View style={styles.policyModalOverlay}>
-      <View style={styles.policyModalView}>
-        <Text style={styles.policyTitle}>{title}</Text>
-        <ScrollView style={styles.policyScrollView}>
-          <Text style={styles.policyModalText}>{content}</Text>
-        </ScrollView>
-        <TouchableOpacity style={[styles.button, styles.buttonClose]} onPress={onClose}>
-          <Text style={styles.textStyle}>Close</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </Modal>
-);
-
 export default function SignUpScreen() {
-  const { showMessage: originalShowMessage } = useMessage();
+  const { showMessage } = useMessage();
   const { showAlert } = useAlert();
   const route = useRoute();
   const navigation = useNavigation();
-  const animatedValue = useRef(new Animated.Value(0)).current;
+
   const {
     signIn,
     register,
     googleSignIn,
-    setAuthAction,
-    completeAuthAction,
     pendingRecoveryCode,
+    isLoading, // The ONLY loading state we need
+    authAction,
   } = useAuth();
+
   const [isLogin, setIsLogin] = useState(route.params?.screen === 'Login' || false);
   const [checked, setChecked] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -68,28 +52,22 @@ export default function SignUpScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [Name, setName] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [isPolicyModalVisible, setPolicyModalVisible] = useState(false);
-  const [policyContent, setPolicyContent] = useState({ title: '', text: '' });
+  const [policyContent, setPolicyContent] = useState({ title: '', content: '' });
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const opacity = useRef(new Animated.Value(1)).current;
-  const cardAnim = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(0)).current;
   const [isPolicyLoading, setIsPolicyLoading] = useState(false);
 
-  const showMessage = useCallback((msg, callback) => {
-    console.log('>>> showMessage called with:', msg);
-    originalShowMessage(msg, callback);
-  }, [originalShowMessage]);
-
+  const cardAnim = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(1)).current;
+  const translateY = useRef(new Animated.Value(0)).current;
 
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
         if (isLogin) {
           setIsLogin(false);
-          return true;
+          return true; // Prevent default behavior
         }
         navigation.goBack();
         return true;
@@ -98,6 +76,7 @@ export default function SignUpScreen() {
       return () => subscription.remove();
     }, [isLogin, navigation])
   );
+
   useEffect(() => {
     Animated.timing(cardAnim, {
       toValue: 1,
@@ -108,24 +87,20 @@ export default function SignUpScreen() {
   }, []);
 
   useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () =>
-      setIsKeyboardVisible(true)
-    );
-    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () =>
-      setIsKeyboardVisible(false)
-    );
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => setIsKeyboardVisible(true));
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => setIsKeyboardVisible(false));
     return () => {
       keyboardDidShowListener.remove();
       keyboardDidHideListener.remove();
     };
-  }, [setIsKeyboardVisible]);
+  }, []);
 
   useEffect(() => {
     const opacityToValue = isKeyboardVisible ? 0 : 1;
     const translateToValue = isKeyboardVisible ? -42 : 0;
     Animated.parallel([
       Animated.timing(opacity, { toValue: opacityToValue, duration: 200, useNativeDriver: true }),
-      Animated.spring(translateY, { toValue: translateToValue, useNativeDriver: true }),
+      Animated.spring(translateY, { toValue: translateToValue, stiffness: 120, damping: 12, useNativeDriver: true }),
     ]).start();
   }, [isKeyboardVisible, opacity, translateY]);
 
@@ -140,10 +115,6 @@ export default function SignUpScreen() {
             setEmail(savedEmail || '');
             setPassword(savedPassword || '');
             setRememberMe(true);
-          } else {
-            setEmail('');
-            setPassword('');
-            setRememberMe(false);
           }
         } catch (error) {
           console.error('Failed to load credentials from storage', error);
@@ -151,6 +122,7 @@ export default function SignUpScreen() {
       };
       loadCredentials();
     } else {
+      // Clear sign-up form fields when toggling
       setName('');
       setEmail('');
       setPassword('');
@@ -160,154 +132,69 @@ export default function SignUpScreen() {
   }, [isLogin]);
 
   const toggleMode = useCallback(() => {
-    animatedValue.setValue(0);
-    setIsLogin(prevIsLogin => !prevIsLogin);
-    Animated.timing(animatedValue, {
-      toValue: !isLogin ? 1 : 0,
-      duration: 500,
-      easing: Easing.out(Easing.exp),
-      useNativeDriver: true,
-    }).start();
-  }, [animatedValue, isLogin]);
-
+    if (isLoading) return;
+    setIsLogin((prev) => !prev);
+  }, [isLoading]);
 
   const openPolicyModal = useCallback(async (type) => {
     if (isPolicyLoading) return;
-
     setIsPolicyLoading(true);
-
     try {
-      let rawTextModule;
-      let title = '';
-
-      if (type === 'terms') {
-        rawTextModule = await import('../../data/TermsOfServices.js');
-        title = 'Terms and Conditions';
-      } else {
-        rawTextModule = await import('../../data/PrivacyPolicy.js');
-        title = 'Privacy Policy';
-      }
-
-      const formattedDate = new Date().toLocaleDateString();
-
-      const processedText = rawTextModule.default.replace('{{LAST_UPDATED}}', formattedDate);
-
-      setPolicyContent({ title, text: processedText });
+      const title = type === 'terms' ? 'Terms and Conditions' : 'Privacy Policy';
+      const rawTextModule = type === 'terms'
+        ? await import('../../data/TermsOfServices.js')
+        : await import('../../data/PrivacyPolicy.js');
+      setPolicyContent({ title, content: rawTextModule.default });
       setPolicyModalVisible(true);
     } catch (error) {
-      console.error('Failed to load policy text:', error);
-      showAlert('Error', 'Could not load the document. Please try again.');
+      showAlert('Error', 'Could not load the document.');
     } finally {
       setIsPolicyLoading(false);
     }
   }, [isPolicyLoading, showAlert]);
 
-
   const handleSignUp = async () => {
-    setIsLoading(true);
-
-    console.log('--- handleSignUp triggered (Attempt) ---');
-    console.log('Name:', Name, 'Email:', email, 'Password length:', password.length, 'Confirm Password length:', confirmPassword.length);
-    console.log('Validation checks: !Name.trim()=', !Name.trim(), ' !email.trim()=', !email.trim(), ' !password=', !password);
-
-
-    if (!Name.trim() || !email.trim() || !password) {
-      console.log('!!! VALIDATION FAILED: MISSING FIELDS !!!');
-      setIsLoading(false);
-      return showMessage('PLEASE FILL IN ALL FIELDS.');
-    } else {
-        console.log('Client-side basic fields validation PASSED.');
-    }
-
-    if (password !== confirmPassword) {
-      console.log('!!! VALIDATION FAILED: PASSWORDS DO NOT MATCH !!!');
-      setIsLoading(false);
-      return showMessage('PASSWORDS DO NOT MATCH.');
-    }
-    const passwordRegex =
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+{}\[\]:;<>,.?~\\/-]).{8,}$/;
-    if (!passwordRegex.test(password)) {
-      console.log('!!! VALIDATION FAILED: PASSWORD COMPLEXITY !!!');
-      setIsLoading(false);
-      return showMessage(
-        'Password must be at least 8 characters and include an uppercase letter, a number, and a special character.'
-      );
-    }
-    if (!checked) {
-      console.log('!!! VALIDATION FAILED: TERMS NOT AGREED !!!');
-      setIsLoading(false);
-      return showMessage('PLEASE AGREE TO THE TERMS AND CONDITIONS.');
-    }
-
-     setAuthAction('PENDING_SIGNUP_MESSAGE');
-
+    if (!Name.trim() || !email.trim() || !password) return showMessage('PLEASE FILL IN ALL FIELDS.');
+    if (password !== confirmPassword) return showMessage('PASSWORDS DO NOT MATCH.');
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+{}\[\]:;<>,.?~\\/-]).{8,}$/;
+    if (!passwordRegex.test(password)) return showMessage('Password must be at least 8 characters and include an uppercase letter, a number, and a special character.');
+    if (!checked) return showMessage('PLEASE AGREE TO THE TERMS AND CONDITIONS.');
+    
     try {
-        await register({ displayName: Name, email, password });
-            navigation.navigate('VerifyOtp', { email });
-        } catch (error) {
-            console.error('Sign-up API call failed:', error.response?.data?.message || error.message);
-            const errorMsg = error.response?.data?.message || 'An unexpected error occurred.';
-            showAlert('Sign-Up Failed', errorMsg);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-  const handleLogin = async () => {
-    setIsLoading(true);
-
-    if (!email.trim() || !password) {
-      console.log('!!! VALIDATION FAILED: LOGIN MISSING FIELDS !!!');
-      setIsLoading(false);
-      return showMessage('PLEASE ENTER BOTH EMAIL AND PASSWORD.');
-    }
-
-    try {
-      setAuthAction('PENDING_LOGIN_MESSAGE');
-      await signIn(email, password, rememberMe);
-
-      if (rememberMe) {
-        await AsyncStorage.setItem('savedEmail', email);
-        await AsyncStorage.setItem('savedPassword', password);
-        await AsyncStorage.setItem('rememberCredentials', 'true');
-      } else {
-        await AsyncStorage.removeItem('savedEmail');
-        await AsyncStorage.removeItem('savedPassword');
-        await AsyncStorage.setItem('rememberCredentials', 'false');
-      }
+      await register({ displayName: Name, email, password });
+      // The context will keep `isLoading` true until the next screen
+      navigation.navigate('VerifyOtp', { email });
     } catch (error) {
-      console.log('LoginScreen: Login FAILED.');
-      if (error.response) {
-        console.error('LoginScreen: Error Data from Axios response:', error.response.data);
-      } else {
-        console.error('LoginScreen: Error Message:', error.message);
-      }
-      showMessage(error.message);
-      completeAuthAction();
-    } finally {
-      setIsLoading(false);
+      const errorMsg = error.response?.data?.message || 'An unexpected error occurred.';
+      showAlert('Sign-Up Failed', errorMsg);
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    setIsLoading(true);
+  const handleLogin = async () => {
+    if (!email.trim() || !password) return showMessage('PLEASE ENTER BOTH EMAIL AND PASSWORD.');
     try {
-      await googleSignIn();
+      const success = await signIn(email, password, rememberMe);
+      if (success) {
+        if (rememberMe) {
+          await AsyncStorage.setItem('savedEmail', email);
+          await AsyncStorage.setItem('savedPassword', password);
+          await AsyncStorage.setItem('rememberCredentials', 'true');
+        } else {
+          await AsyncStorage.removeItem('savedEmail');
+          await AsyncStorage.removeItem('savedPassword');
+          await AsyncStorage.setItem('rememberCredentials', 'false');
+        }
+      }
     } catch (error) {
-      console.error('Google Sign-In initiation failed:', error);
-      showAlert('Google Sign-In Failed');
-    } finally {
-      setIsLoading(false);
+      showMessage(error.message);
     }
   };
 
   useEffect(() => {
     if (pendingRecoveryCode) {
-      console.log('SignUpScreen: Detected pending recovery code from AuthContext, navigating to DisplayRecoveryCodeScreen.');
       navigation.navigate('DisplayRecoveryCodeScreen');
     }
-  }, [pendingRecoveryCode, navigation]); 
-
+  }, [pendingRecoveryCode, navigation]);
   const cardY = cardAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [SCREEN_HEIGHT, SCREEN_HEIGHT * (1 - CARD_HEIGHT_FACTOR)],
@@ -490,11 +377,7 @@ export default function SignUpScreen() {
                       onPress={handleSignUp}
                       disabled={isLoading}
                     >
-                      {isLoading ? (
-                        <ActivityIndicator color="#fff" />
-                      ) : (
-                        <Text style={styles.createButtonLabel}>Create Account</Text>
-                      )}
+                      {isLoading && authAction !== 'PENDING_LOGIN' ? <ActivityIndicator color="#fff" /> : <Text style={styles.createButtonLabel}>Create Account</Text>}
                     </TouchableOpacity>
                   </View>
 
@@ -504,17 +387,11 @@ export default function SignUpScreen() {
                     <View style={styles.separatorLine} />
                   </View>
                   <View style={styles.socialLoginContainer}>
-                    <TouchableOpacity style={styles.socialButton} onPress={handleGoogleSignIn} disabled={isLoading}>
-                      <Image
-                        source={require('../../assets/images/logos/Google_2015_logo.svg.png')}
-                        style={styles.icon}
-                      />
+                    <TouchableOpacity style={styles.socialButton} onPress={googleSignIn} disabled={isLoading}>
+                      {isLoading && authAction === 'PENDING_GOOGLE_SIGNIN' ? <ActivityIndicator color="#007bff" /> : <Image source={require('../../assets/images/logos/Google_2015_logo.svg.png')} style={styles.icon}/>}
                     </TouchableOpacity>
                   </View>
-
-                  <TouchableOpacity onPress={toggleMode} disabled={isLoading}>
-                    <Text style={styles.toggleToLoginText}>Already have an account? Log In</Text>
-                  </TouchableOpacity>
+                  <TouchableOpacity onPress={toggleMode} disabled={isLoading}><Text style={styles.toggleToLoginText}>Already have an account? Log In</Text></TouchableOpacity>
                 </>
               ) : (
                 <>
@@ -574,11 +451,11 @@ export default function SignUpScreen() {
                         />
                         <Text style={styles.loginCheckboxText}>Remember Me</Text>
                         <TouchableOpacity
-                            onPress={() => navigation.navigate('ForgotPassword')}
-                            style={styles.forgotPasswordLink}
-                            disabled={isLoading}
+                          onPress={() => navigation.navigate('ForgotPassword')}
+                          style={styles.forgotPasswordLink}
+                          disabled={isLoading}
                         >
-                            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                          <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
                         </TouchableOpacity>
                       </View>
                       <TouchableOpacity
@@ -586,11 +463,7 @@ export default function SignUpScreen() {
                         onPress={handleLogin}
                         disabled={isLoading}
                       >
-                        {isLoading ? (
-                          <ActivityIndicator color="#fff" />
-                        ) : (
-                          <Text style={styles.createButtonLabel}>Log In</Text>
-                        )}
+                        {isLoading && (authAction === 'PENDING_LOGIN' || !authAction) ? <ActivityIndicator color="#fff" /> : <Text style={styles.createButtonLabel}>Log In</Text>}
                       </TouchableOpacity>
                     </View>
 
@@ -600,12 +473,9 @@ export default function SignUpScreen() {
                       <View style={styles.separatorLine} />
                     </View>
                     <View style={styles.socialLoginContainer}>
-                      <TouchableOpacity style={styles.socialButton} onPress={handleGoogleSignIn} disabled={isLoading}>
-                        <Image
-                          source={require('../../assets/images/logos/Google_2015_logo.svg.png')}
-                          style={styles.icon}
-                        />
-                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.socialButton} onPress={googleSignIn} disabled={isLoading}>
+                      {isLoading && authAction === 'PENDING_GOOGLE_SIGNIN' ? <ActivityIndicator color="#007bff" /> : <Image source={require('../../assets/images/logos/Google_2015_logo.svg.png')} style={styles.icon}/>}
+                    </TouchableOpacity>
                     </View>
                   </View>
                   <View style={styles.footerLinks}>
@@ -626,13 +496,14 @@ export default function SignUpScreen() {
       <PolicyModal
         visible={isPolicyModalVisible}
         title={policyContent.title}
-        content={policyContent.text}
+        content={policyContent.content}
         onClose={() => setPolicyModalVisible(false)}
       />
     </View>
   );
 }
 
+// Styles remain the same
 const styles = StyleSheet.create({
   backgroundImage: {
     height: IMAGE_HEIGHT,
@@ -804,39 +675,13 @@ const styles = StyleSheet.create({
   },
   loginCheckboxText: { color: '#444', fontSize: 10, right: 35 },
   forgotPasswordLink: {
-      paddingVertical: 5,
-      paddingHorizontal: 5,
+    paddingVertical: 5,
+    paddingHorizontal: 5,
   },
   forgotPasswordText: {
-      color: '#007bff',
-      fontSize: 10,
-      textDecorationLine: 'underline',
+    color: '#007bff',
+    fontSize: 10,
+    textDecorationLine: 'underline',
   },
-  policyModalOverlay: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    flex: 1,
-    justifyContent: 'center',
-  },
-  policyModalView: {
-    alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 20,
-    elevation: 5,
-    height: '80%',
-    margin: 20,
-    padding: 25,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    width: '90%',
-  },
-  policyTitle: { color: '#333', fontSize: 20, fontWeight: 'bold', marginBottom: 15 },
-  policyScrollView: { marginVertical: 10, width: '100%' },
-  policyModalText: { color: '#333', fontSize: 14, lineHeight: 22 },
-  button: { borderRadius: 15, elevation: 2, padding: 10, top: 10, width: 100 },
-  buttonClose: { backgroundColor: 'red' },
-  textStyle: { color: 'white', fontWeight: 'bold', textAlign: 'center' },
   buttonDisabled: { backgroundColor: '#a3dbe1' },
 });

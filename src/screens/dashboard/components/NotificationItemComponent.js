@@ -30,11 +30,7 @@ const getStyles = (theme) => {
             marginVertical: 8,
             flexDirection: 'row',
             alignItems: 'center',
-            shadowColor: '#000', // RN uses shadowColor for iOS, elevation for Android
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1, // Adjusted for general use, theme specific might be better
-            shadowRadius: 4,
-            elevation: 3, // For Android
+            boxShadow:'2px 4px 2px rgba(0,0,0,0.4)',
             borderWidth: 1,
             borderColor: 'transparent',
         },

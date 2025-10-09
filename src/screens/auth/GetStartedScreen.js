@@ -17,33 +17,7 @@ import { lightTheme } from '../../constants/colors.js';
 import TermsOfServiceText from '../../data/TermsOfServices.js';
 import PrivacyPolicyText from '../../data/PrivacyPolicy.js';
 import { COMPANY_NAME, SUBTITLE_TEXT } from '../../data/Constants-Data.js';
-
-// --- Sub-Components ---
-const PolicyModal = React.memo(({ visible, title, content, onClose }) => {
-  const styles = getStyles(lightTheme);
-
-  const formattedContent = useMemo(() => {
-    const formattedDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-    return content.replace('{{LAST_UPDATED}}', formattedDate);
-  }, [content]);
-
-  return (
-    <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
-      <SafeAreaView style={styles.policyModalOverlay}>
-        <Animatable.View animation="fadeInUp" duration={400} style={styles.policyModalView}>
-          <Text style={styles.policyTitle}>{title}</Text>
-          <ScrollView style={styles.policyScrollView} contentContainerStyle={{ paddingBottom: 20 }}>
-            <Text style={styles.policyModalText}>{formattedContent}</Text>
-          </ScrollView>
-          <TouchableOpacity style={styles.policyCloseButton} onPress={onClose}>
-            <Text style={styles.policyCloseButtonText}>Close</Text>
-          </TouchableOpacity>
-        </Animatable.View>
-      </SafeAreaView>
-    </Modal>
-  );
-});
-
+import PolicyModal from './components/PolicyModal.js'; // Import the new component
 
 // --- Main Screen Component ---
 export default function GetStartedScreen() {

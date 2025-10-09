@@ -3,7 +3,7 @@ import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 
 // Import Auth Screens
-import SplashScreen2 from '../screens/auth/SplashScreen2';
+import SplashScreen2 from '../screens/auth/WelcomeScreen';
 import GetStartedScreen from '../screens/auth/GetStartedScreen';
 import SignUpScreen from '../screens/auth/AuthScreen';
 import VerifyOtpScreen from '../screens/auth/VerifyOtpScreen';

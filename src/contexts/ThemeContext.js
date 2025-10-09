@@ -17,8 +17,6 @@ export const ThemeProvider = ({ children }) => {
       try {
         const savedTheme = await AsyncStorage.getItem(THEME_STORAGE_KEY);
         
-        // Only set to dark mode IF the saved value is explicitly 'dark'.
-        // Otherwise, it remains light (the default state).
         if (savedTheme === 'dark') {
           setIsDarkMode(true);
         }
@@ -47,14 +45,15 @@ export const ThemeProvider = ({ children }) => {
   const theme = isDarkMode ? darkTheme : lightTheme;
 
   if (isLoadingTheme) {
-    // Show a light-themed loading screen to prevent a flash of content
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: lightTheme.background }}>
-        <ActivityIndicator color={lightTheme.primary} />
-      </View>
-    );
-  }
+  const systemDark = Appearance.getColorScheme() === 'dark';
+  const fallbackTheme = systemDark ? darkTheme : lightTheme;
 
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: fallbackTheme.background }}>
+      <ActivityIndicator color={fallbackTheme.primary} />
+    </View>
+  );
+}
   const value = {
     isDarkMode,
     theme,

@@ -10,7 +10,6 @@ import EditProfileScreen from '../screens/dashboard/EditProfileScreen';
 // Subscription
 import Subscription from '../screens/subscriptions/Subscription';
 import MySubscriptionScreen from '../screens/subscriptions/MySubscriptionScreen';
-import PaymentVoucherScreen from '../screens/subscriptions/PaymentVoucherScreen';
 import MyBills from '../screens/subscriptions/MyBills';
 import PayBills from '../screens/subscriptions/PayBills';
 // Settings
@@ -25,6 +24,7 @@ import AboutScreen from '../screens/misc/AboutScreen';
 import Support from '../screens/support/Support';
 import LiveChatScreen from '../screens/support/LiveChatScreen';
 import HowToUseScreen from '../screens/misc/HowToUseScreen';
+import ContactScreen from '../screens/support/ContactScreen';
 // Others
 import LegalDocumentScreen from '../screens/misc/LegalDocumentScreen';
 
@@ -38,7 +38,6 @@ const MainStack = () => (
     <Stack.Screen name="Subscription" component={Subscription} />
     <Stack.Screen name="MyBills" component={MyBills} />
     <Stack.Screen name="PayBills" component={PayBills} />
-    <Stack.Screen name="PaymentVoucherScreen" component={PaymentVoucherScreen} />
     <Stack.Screen name="Notif" component={Notif} />
     <Stack.Screen name="Settings" component={Settings} />
     <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
@@ -51,6 +50,7 @@ const MainStack = () => (
     <Stack.Screen name="LiveChatScreen" component={LiveChatScreen} />
     <Stack.Screen name="MySubscriptionScreen" component={MySubscriptionScreen} />
     <Stack.Screen name="HowToUseScreen" component={HowToUseScreen} />
+    <Stack.Screen name="ContactScreen" component={ContactScreen} />
   </Stack.Navigator>
 );
 

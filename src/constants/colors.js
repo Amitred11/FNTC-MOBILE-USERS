@@ -26,7 +26,8 @@ export const lightTheme = {
   gradient: null,
   bot: '#E4E6EB',
   serv: '#F0F2F5',
-  ChatInput: '#E5E5EA'
+  ChatInput: '#E5E5EA',
+  info: '#559600ff'
 };
 
 export const darkTheme = {
@@ -53,5 +54,6 @@ export const darkTheme = {
   gradient: null, // Avoid gradients in dark mode too.
   bot: '#343435ff',
   serv: '#F0F2F5',
-  ChatInput: '#424242'
+  ChatInput: '#424242',
+  info: '#0b8a00ff'
 };

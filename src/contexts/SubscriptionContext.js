@@ -58,17 +58,33 @@ export const SubscriptionProvider = ({ children }) => {
     }
   }, [user, refreshSubscription]);
 
-
-  const subscribeToPlan = async (plan, paymentMethod, proofOfPaymentBase64, installationAddress) => {
-    const payload = { plan, paymentMethod, installationAddress, proofOfPayment: proofOfPaymentBase64 };
+  const initiatePayment = useCallback(async (payload) => {
+    if (!api) throw new Error('Not authenticated');
     try {
-        await api.post('/subscriptions/subscribe', payload);
-        await refreshSubscription();
+      // The payload should be { billId, paymentMethod, customer }
+      const { data } = await api.post('/billing/initiate-payment', payload);
+      await refreshSubscription();
+      return data; // Return the response to the screen (contains mobileRedirectUrl)
     } catch (error) {
-        console.error("Failed to subscribe:", error.response?.data?.message || error.message);
-        throw error;
+      console.error("Failed to initiate payment:", error.response?.data?.message || error.message);
+      throw error;
     }
+  }, [api, refreshSubscription]);
+
+
+  const subscribeToPlan = async (plan, installationAddress) => {
+    const payload = { 
+    planId: plan._id, 
+    installationAddress 
   };
+  try {
+    await api.post('/subscriptions/subscribe', payload);
+    await refreshSubscription();
+  } catch (error) {
+    console.error("Failed to subscribe:", error.response?.data?.message || error.message);
+    throw error;
+  }
+};
 
   const changePlan = async (selectedPlan) => {
     try {
@@ -86,30 +102,6 @@ export const SubscriptionProvider = ({ children }) => {
     await refreshSubscription();
   }, [api, refreshSubscription]);
 
-  const payBill = async (billId, proofOfPaymentBase64) => {
-    try {
-      const { data } = await api.post('/billing/pay', { billId, proofOfPayment: proofOfPaymentBase64 });
-      if (data.subscriptionData) {
-        setSubscriptionData(data.subscriptionData);
-      } else {
-        await refreshSubscription(); 
-      }
-    } catch (error) {
-      console.error("Failed to pay bill:", error.response?.data?.message || error.message);
-      throw error;
-    }
-  };
-
-  const submitProof = async (billId, proofOfPaymentBase64) => {
-    try {
-      if (!proofOfPaymentBase64) throw new Error("Proof of payment is required for submission.");
-      await api.post('/billing/submit-proof', { billId, proofOfPaymentBase64 });
-      await refreshSubscription();
-    } catch (error) {
-      console.error("Failed to submit proof:", error.response?.data?.message || error.message);
-      throw error;
-    }
-  };
 
   const cancelPlanChange = async () => {
     try {
@@ -139,7 +131,7 @@ export const SubscriptionProvider = ({ children }) => {
 
   const value = useMemo(() => ({
     subscriptionStatus: subscriptionData?.status || null,
-    subscriptionData: subscriptionData,
+    subscriptionData,
     paymentHistory: subscriptionData?.history || [],
     isLoading,
     scheduledPlanChange: subscriptionData?.scheduledPlanChange || null,
@@ -147,14 +139,14 @@ export const SubscriptionProvider = ({ children }) => {
     startDate: subscriptionData?.startDate || null,
     renewalDate: subscriptionData?.renewalDate || null,
     cancellationEffectiveDate: subscriptionData?.cancellationEffectiveDate || null,
-    
+    pendingPlanId: subscriptionData?.pendingPlanId || null,
+
+    initiatePayment,
     refreshSubscription,
     subscribeToPlan,
     changePlan,
     cancelPlanChange,
     cancelScheduledChange,
-    payBill,
-    submitProof,
     cancelSubscription,
     reactivateSubscription,
     clearSubscription,
@@ -165,7 +157,9 @@ export const SubscriptionProvider = ({ children }) => {
     cancelScheduledChange,
     cancelSubscription, 
     reactivateSubscription,
-    clearSubscription
+    clearSubscription,
+    // ✅ FIX: Added initiatePayment to the dependency array
+    initiatePayment
   ]);
 
   return <SubscriptionContext.Provider value={value}>{children}</SubscriptionContext.Provider>;

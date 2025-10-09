@@ -15,6 +15,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as Animatable from 'react-native-animatable';
 import { useTheme, useAlert, useAuth, useMessage } from '../../contexts';
 import StatusDisplay from '../../components/StatusDisplay'; 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // --- Import separated components ---
 import NotificationItemComponent from './components/NotificationItemComponent.js';
@@ -23,7 +24,7 @@ import NotificationDetailModalComponent from './components/NotificationDetailMod
 // --- Helpers ---
 const NOTIFICATIONS_PER_PAGE = 20;
 
-const Header = React.memo(({ isSelectionMode, onCancelSelection, selectedCount, onSelectAll, allSelected, onDelete, onMarkAllRead, onBackPress }) => {
+const Header = React.memo(({ isSelectionMode, onCancelSelection, selectedCount, onSelectAll, allSelected, onDelete, onMarkAllRead, onBackPress, dndEnabled, onToggleDnd }) => {
     const { theme } = useTheme();
     const styles = getStyles(theme);
 
@@ -55,6 +56,9 @@ const Header = React.memo(({ isSelectionMode, onCancelSelection, selectedCount, 
                     </Animatable.View>
                 ) : (
                     <Animatable.View animation="fadeIn" duration={300} style={styles.headerActions}>
+                        <TouchableOpacity onPress={onToggleDnd} style={styles.headerButton}>
+                            <Ionicons name={dndEnabled ? "notifications-off-circle" : "notifications-circle-outline"} size={28} color={dndEnabled ? theme.primary : theme.text} />
+                        </TouchableOpacity>
                         <TouchableOpacity onPress={onMarkAllRead} style={styles.headerButton}>
                             <Ionicons name="checkmark-done-outline" size={28} color={theme.text} />
                         </TouchableOpacity>
@@ -81,8 +85,36 @@ export default function NotificationScreen() {
   const [loadingState, setLoadingState] = useState({ initial: true, refreshing: false, loadingMore: false });
   const [isDetailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState(null);
+  const [dndEnabled, setDndEnabled] = useState(false);
 
   const isLoadingRef = useRef(false);
+
+  useFocusEffect(
+    useCallback(() => {
+        const loadDndSetting = async () => {
+            try {
+                const storedValue = await AsyncStorage.getItem('dnd_enabled');
+                setDndEnabled(storedValue === 'true');
+            } catch (error) {
+                console.error("Failed to load DND setting:", error);
+            }
+        };
+        loadDndSetting();
+    }, [])
+  );
+
+  const handleToggleDnd = useCallback(async () => {
+    const newValue = !dndEnabled;
+    setDndEnabled(newValue);
+    try {
+      await AsyncStorage.setItem('dnd_enabled', String(newValue));
+      showMessage(newValue ? 'Sounds are silenced.' : 'Sounds are enabled.');
+    } catch (error) {
+      console.error('Failed to save DND setting:', error.message);
+      setDndEnabled(prev => !prev); // Revert UI on failure
+      showAlert('Error', 'Could not save your preference.');
+    }
+  }, [dndEnabled, showMessage, showAlert]);
 
   const fetchNotifications = useCallback(async (isInitial = true, isRefreshing = false) => {
     if (isLoadingRef.current) return;
@@ -234,7 +266,7 @@ export default function NotificationScreen() {
   if (loadingState.initial) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header onBackPress={() => navigation.goBack()} onMarkAllRead={handleMarkAllAsRead} />
+        <Header onBackPress={() => navigation.goBack()} onMarkAllRead={handleMarkAllAsRead} dndEnabled={dndEnabled} onToggleDnd={handleToggleDnd}/>
         <View style={styles.loadingContainer}><ActivityIndicator size="large" color={theme.primary} /></View>
       </SafeAreaView>
     );
@@ -251,6 +283,8 @@ export default function NotificationScreen() {
         onDelete={handleDeleteSelected}
         onMarkAllRead={handleMarkAllAsRead}
         onBackPress={() => navigation.goBack()}
+        dndEnabled={dndEnabled}
+        onToggleDnd={handleToggleDnd}
       />
       
       <SectionList
@@ -280,15 +314,13 @@ export default function NotificationScreen() {
   );
 }
 
-// --- Styles (Only styles relevant to NotificationScreen itself and Header remain) ---
+// --- Styles  ---
 const getStyles = (theme) => {
-  const isDarkMode = theme.background === '#000000'; // Define here as well for self-containment
+  const isDarkMode = theme.background === '#000000';
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: theme.background },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     statusDisplayWrapper: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, marginTop: '20%' },
-
-    // --- Header ---
     header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, height: 60, borderBottomWidth: 1, borderBottomColor: theme.border, backgroundColor: theme.background },
     selectionHeader: { backgroundColor: isDarkMode ? theme.surface : `${theme.primary}1A` },
     headerLeft: { flex: 1, alignItems: 'flex-start' },
@@ -297,8 +329,6 @@ const getStyles = (theme) => {
     headerTitle: { fontSize: 20, fontWeight: 'bold', color: theme.text },
     headerActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     headerButton: { padding: 8, borderRadius: 20 },
-
-    // --- List specific styles ---
     sectionHeader: { color: theme.textSecondary, fontSize: 14, fontWeight: '600', paddingVertical: 12, textTransform: 'uppercase', letterSpacing: 0.8 },
   });
 }

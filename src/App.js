@@ -2,6 +2,7 @@
 import React, { useEffect, useRef } from 'react';
 import 'expo-dev-client';
 import * as Notifications from 'expo-notifications';
+import * as Linking from 'expo-linking';
 
 // Context Providers
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -22,11 +23,26 @@ import {
   setupNotificationHandler,
   setupAndroidNotificationChannels,
 } from './services/notificationService';
+import ErrorBoundary from './components/ErrorBoundary';
+
+const linking = {
+  // ✅ This uses your app's scheme ('fibear://' in production, 'exp://...' in dev)
+  prefixes: [Linking.createURL('/')],
+  config: {
+    screens: {
+      // ✅ This maps the URL path to the screen name in your navigator
+      PaymentSuccess: 'payment-success',
+      PaymentFailure: 'payment-failure',
+    },
+  },
+};
+
 
 const AppContent = () => {
   const { isLoading } = useAuth();
   const notificationListener = useRef();
   const responseListener = useRef();
+
 
   useEffect(() => {
     setupNotificationHandler();
@@ -50,12 +66,14 @@ const AppContent = () => {
     };
   }, []);
 
+
   if (isLoading) {
     return <LoadingScreen />;
   }
 
-  return <AppNavigator />;
+ return <AppNavigator linking={linking} />;
 };
+
 
 export default function App() {
   return (
@@ -65,7 +83,9 @@ export default function App() {
           <MessageProvider>
             <AuthProvider>
               <SubscriptionProvider>
-                <AppContent />
+                <ErrorBoundary>
+                  <AppContent />
+                </ErrorBoundary>
               </SubscriptionProvider>
             </AuthProvider>
           </MessageProvider>

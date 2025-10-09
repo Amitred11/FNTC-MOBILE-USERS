@@ -1,6 +1,6 @@
 // screens/OurServicesScreen.js
 
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,73 +10,17 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Button,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme, useAuth, useSubscription } from '../../contexts';
+import { servicesData } from '../../data/Constants-Data';
+// Removed: import { plansData } from '../../data/Constants-Data';
 
-//CONSTANTS
+// --- Reusable Components (Header and ServiceItem remain unchanged) ---
 
-export const servicesData = [
-  {
-    icon: 'git-network-outline',
-    title: 'Fiber Optic Network Installation',
-    description: 'We offer fiber optic broadband connection to the community to provide high-speed internet services to residentials and commercials.',
-  },
-  {
-    icon: 'wifi-outline',
-    title: 'Internet Packages',
-    description: 'We offer a variety of affordable internet plans to meet the needs of different customers, from basic plans for individual users to more advanced plans for businesses and organizations.',
-  },
-  {
-    icon: 'build-outline',
-    title: 'Technical Support',
-    description: 'Our team of experienced professionals provides technical support to ensure that our networks are always running smoothly.',
-  },
-  {
-    icon: 'headset-outline',
-    title: 'Customer Service',
-    description: 'We are committed to providing excellent customer service, and our support team is available 24/7 to answer questions and troubleshoot any issues.',
-  },
-];
-
-const plansData = [
-  {
-    _id: 'plan_1000',
-    name: 'PLAN 1000',
-    price: '₱1000',
-    speed: 'Up to 30Mbps',
-    boostedSpeed: 'Boosted Up to 60Mbps',
-    features: ['No Data Capping', 'Fast Internet Speed', 'Quick Installation', 'P1500 Installation Fee'],
-  },
-  {
-    _id: 'plan_1300',
-    name: 'PLAN 1300',
-    price: '₱1300',
-    speed: 'Up to 40Mbps',
-    boostedSpeed: 'Boosted Up to 70Mbps',
-    features: ['No Data Capping', 'Fast Internet Speed', 'Quick Installation', 'P1500 Installation Fee'],
-  },
-  {
-    _id: 'plan_1500',
-    name: 'PLAN 1500',
-    price: '₱1500',
-    speed: 'Up to 60Mbps',
-    boostedSpeed: 'Boosted Up to 90Mbps',
-    features: ['No Data Capping', 'Fast Internet Speed', 'Quick Installation', 'P1500 Installation Fee'],
-  },
-  {
-    _id: 'plan_1800',
-    name: 'PLAN 1800',
-    price: '₱1800',
-    speed: 'Up to 100Mbps',
-    boostedSpeed: 'Boosted Up to 130Mbps',
-    features: ['No Data Capping', 'Fast Internet Speed', 'Quick Installation', 'P1500 Installation Fee'],
-  },
-];
-
-// Reusable Header Component
 const Header = React.memo(({ onBackPress }) => {
   const { theme } = useTheme();
   const styles = useMemo(() => getStyles(theme), [theme]);
@@ -91,12 +35,16 @@ const Header = React.memo(({ onBackPress }) => {
   );
 });
 
-// Reusable Service Item Component
-const ServiceItem = React.memo(({ icon, title, description }) => {
+const ServiceItem = React.memo(({ icon, title, description, screen }) => {
   const { theme } = useTheme();
+  const navigation = useNavigation();
   const styles = useMemo(() => getStyles(theme), [theme]);
+
   return (
-    <View style={styles.serviceCard}>
+    <TouchableOpacity
+      style={styles.serviceCard}
+      onPress={() => navigation.navigate(screen)}
+    >
       <View style={styles.serviceIconContainer}>
         <Ionicons name={icon} size={28} color={theme.primary} />
       </View>
@@ -104,11 +52,11 @@ const ServiceItem = React.memo(({ icon, title, description }) => {
         <Text style={styles.serviceTitle}>{title}</Text>
         <Text style={styles.serviceDescription}>{description}</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 });
 
-// Reusable Plan Card Component
+// PlanCard is slightly modified to be more robust with API data
 const PlanCard = React.memo(({ plan, onChoose }) => {
   const { theme } = useTheme();
   const styles = useMemo(() => getStyles(theme), [theme]);
@@ -129,12 +77,13 @@ const PlanCard = React.memo(({ plan, onChoose }) => {
     <View style={styles.planCard}>
       <Text style={styles.planName}>{plan.name}</Text>
       <View style={styles.planPriceContainer}>
-        <Text style={styles.planPrice}>{plan.price}</Text>
+        <Text style={styles.planPrice}>${plan.price}</Text>
         <Text style={styles.planPerMonth}>/ month</Text>
       </View>
       <View style={styles.speedContainer}>
-        <Text style={styles.planSpeed}>{plan.speed}</Text>
-        <Text style={styles.planBoostedSpeed}>{plan.boostedSpeed}</Text>
+        {/* Conditionally render speed info to prevent crashes if not provided by API */}
+        {plan.speed && <Text style={styles.planSpeed}>{plan.speed}</Text>}
+        {plan.boostedSpeed && <Text style={styles.planBoostedSpeed}>{plan.boostedSpeed}</Text>}
       </View>
       <View style={styles.featuresList}>
         {plan.features.map((feature, index) => (
@@ -161,8 +110,30 @@ export default function OurServicesScreen() {
   const navigation = useNavigation();
   const { theme } = useTheme();
   const styles = useMemo(() => getStyles(theme), [theme]);
-  const { user } = useAuth();
+  const { user, api } = useAuth();
   const { subscriptionStatus, isLoading } = useSubscription();
+
+  // State for managing plans fetched from the database
+  const [plans, setPlans] = useState([]);
+  const [plansLoading, setPlansLoading] = useState(true);
+  const [plansError, setPlansError] = useState(null);
+
+  const fetchPlans = useCallback(async () => {
+  setPlansLoading(true);
+  setPlansError(null);
+  try {
+    const { data } = await api.get('/plans');
+    setPlans(data);
+  } catch (error) {
+    setPlansError(error.response?.data?.message || error.message || 'An unexpected error occurred.');
+  } finally {
+    setPlansLoading(false);
+  }
+}, [api]);
+
+useEffect(() => {
+  fetchPlans();
+}, [fetchPlans]);
 
   const showAlert = useCallback((title, message) => {
     Alert.alert(title, message);
@@ -182,6 +153,7 @@ export default function OurServicesScreen() {
     }
   }, [navigation, user, subscriptionStatus, showAlert]);
 
+  // Main loading indicator for checking subscription status
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -193,6 +165,39 @@ export default function OurServicesScreen() {
       </SafeAreaView>
     );
   }
+
+  // Helper function to render the state of the plans list
+  const renderPlans = () => {
+    if (plansLoading) {
+      return (
+        <View style={styles.inlineLoadingContainer}>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={styles.loadingText}>Fetching our latest plans...</Text>
+        </View>
+      );
+    }
+
+    if (plansError) {
+      return (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{plansError}</Text>
+          <Button title="Retry" onPress={fetchPlans} color={theme.primary} />
+        </View>
+      );
+    }
+
+    if (plans.length === 0) {
+        return (
+            <View style={styles.errorContainer}>
+                <Text style={styles.loadingText}>No plans are available at the moment.</Text>
+            </View>
+        )
+    }
+
+    return plans.map((plan) => (
+      <PlanCard key={plan._id} plan={plan} onChoose={handleChoosePlan} />
+    ));
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -213,9 +218,8 @@ export default function OurServicesScreen() {
           <Text style={styles.sectionSubtitle}>Affordable, reliable, and fast internet with premium customer service. Find the perfect fit for your needs.</Text>
         </View>
 
-        {plansData.map((plan) => (
-          <PlanCard key={plan._id} plan={plan} onChoose={handleChoosePlan} />
-        ))}
+        {renderPlans()}
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -280,6 +284,14 @@ const getStyles = (theme) =>
       alignItems: 'center',
       borderWidth: 1,
       borderColor: theme.border,
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.23,
+      shadowRadius: 2.62,
+      elevation: 4,
     },
     serviceIconContainer: {
       backgroundColor: `${theme.primary}20`,
@@ -365,13 +377,11 @@ const getStyles = (theme) =>
     },
     choosePlanButton: {
       width: '100%',
-      backgroundColor: theme.surface,
+      backgroundColor: 'transparent',
       borderRadius: 12,
       paddingVertical: 16,
       alignItems: 'center',
       justifyContent: 'center',
-      borderWidth: 2,
-      borderColor: theme.primary,
     },
     buttonGradient: {
         borderRadius: 12,
@@ -382,7 +392,7 @@ const getStyles = (theme) =>
         elevation: 8,
     },
     choosePlanButtonText: {
-      color: theme.primary,
+      color: theme.surface,
       fontSize: 16,
       fontWeight: 'bold',
     },
@@ -392,9 +402,26 @@ const getStyles = (theme) =>
         alignItems: 'center',
         backgroundColor: theme.background,
     },
+    inlineLoadingContainer: {
+      alignItems: 'center',
+      marginTop: 20,
+    },
     loadingText: {
         marginTop: 15,
         fontSize: 16,
         color: theme.textSecondary,
+    },
+    errorContainer: {
+      alignItems: 'center',
+      marginTop: 20,
+      padding: 20,
+      backgroundColor: theme.surface,
+      borderRadius: 16,
+    },
+    errorText: {
+      fontSize: 16,
+      color: theme.error,
+      textAlign: 'center',
+      marginBottom: 20,
     }
   });

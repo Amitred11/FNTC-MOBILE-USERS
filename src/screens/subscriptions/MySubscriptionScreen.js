@@ -1,6 +1,5 @@
-// screens/MySubscriptionScreen.js (Cleaned)
-
-import React, { useState, useCallback, useMemo } from 'react';
+// screens/subscription/MySubscriptionScreen.js (Corrected)
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,13 +17,10 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { formatDistanceToNowStrict } from 'date-fns';
 import * as Animatable from 'react-native-animatable';
 
-// --- Helpers & Constants ---
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
   return new Date(dateString).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 };
-
-// --- Sub-Components (Memoized for Performance) ---
 
 const FeatureItem = React.memo(({ text }) => {
   const { theme } = useTheme();
@@ -52,7 +48,7 @@ const CancellationInfoCard = React.memo(({ plan, effectiveDate, onReactivate }) 
       <Text style={styles.cancellationText}>
         Your plan is scheduled to be cancelled{' '}
         <Text style={{ fontWeight: 'bold' }}>{timeRemaining}</Text>. You will lose access on{' '}
-        {formatDate(effectiveDate)}. If you want a refund, please create a support ticket.
+        {formatDate(effectiveDate)}.
       </Text>
       <TouchableOpacity style={styles.keepPlanBigButton} onPress={onReactivate}>
         <Ionicons name="heart-outline" size={20} color={theme.textOnPrimary} />
@@ -73,30 +69,30 @@ const InfoNotice = React.memo(({ icon, color, title, onAction, actionText, child
         <Text style={styles.noticeBody}>{children}</Text>
       </View>
       {onAction && actionText && (
-        <TouchableOpacity onPress={onAction} style={styles.reactivateButton}>
-          <Text style={styles.reactivateButtonText}>{actionText}</Text>
+        <TouchableOpacity onPress={onAction} style={styles.actionButton}>
+          <Text style={styles.actionButtonText}>{actionText}</Text>
         </TouchableOpacity>
       )}
     </Animatable.View>
   );
 });
 
-// --- Main Screen Component ---
 export default function MySubscriptionScreen() {
   const {
+    subscriptionStatus,
+    pendingPlanId,
+    cancelPlanChange,
     activePlan,
     scheduledPlanChange,
     startDate,
     renewalDate,
     cancellationEffectiveDate,
-    cancelScheduledChange, 
     paymentHistory,
     isLoading,
     cancelSubscription,
     reactivateSubscription,
     refreshSubscription,
   } = useSubscription();
-  // --- FIX END ---
 
   const { theme } = useTheme();
   const styles = getStyles(theme);
@@ -107,7 +103,7 @@ export default function MySubscriptionScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      refreshSubscription(false); 
+      refreshSubscription(false);
     }, [refreshSubscription])
   );
 
@@ -116,31 +112,47 @@ export default function MySubscriptionScreen() {
     await refreshSubscription(true);
     setRefreshing(false);
   }, [refreshSubscription]);
+
+  const { pendingBill, dueBill, overdueBill } = useMemo(() => ({
+    pendingBill: paymentHistory.find(item => item.type === 'bill' && item.status === 'Pending Verification'),
+    dueBill: paymentHistory.find(item => item.type === 'bill' && item.status === 'Due'),
+    overdueBill: paymentHistory.find(item => item.type === 'bill' && item.status === 'Overdue'),
+  }), [paymentHistory]);
+
+  const isAwaitingFirstBill = useMemo(() =>
+    subscriptionStatus === 'active' &&
+    !dueBill && !overdueBill && !pendingBill,
+    [subscriptionStatus, dueBill, overdueBill, pendingBill]
+  );
   
+  const isPendingCash = useMemo(() => 
+    pendingBill?.payments?.some(p => p.method === 'Cash' && p.status === 'Pending Verification'),
+    [pendingBill]
+  );
+
+  const handlePayNow = useCallback(() => {
+    navigation.navigate('PayBills');
+  }, [navigation]);
+
   const handleActionWithConfirmation = useCallback((config) => {
     showAlert(config.title, config.message, [
         { text: config.cancelText || 'Go Back', style: 'cancel' },
         { text: config.confirmText, style: config.confirmStyle || 'default', onPress: config.onConfirm }
     ]);
   }, [showAlert]);
-  
-  const handleCancelPlanChange = useCallback(() => {
+
+  const handleCancelPendingChangeRequest = useCallback(() => {
     handleActionWithConfirmation({
-        title: 'Cancel Plan Change',
-        message: 'Are you sure you want to withdraw your request to change plans? Your current plan will remain active.',
-        confirmText: 'Yes, Cancel Change',
+        title: 'Cancel Plan Change Request',
+        message: 'Are you sure you want to withdraw your request? It has not been approved yet.',
+        confirmText: 'Yes, Withdraw',
         confirmStyle: 'destructive',
         onConfirm: async () => {
-            try { 
-                await cancelScheduledChange(); 
-                showMessage('Request Cancelled Successfully'); 
-            } 
-            catch (e) { 
-                showAlert('Action Failed', e.response?.data?.message || 'Could not cancel the request.');
-            }
+            try { await cancelPlanChange(); showMessage('Request Withdrawn Successfully'); }
+            catch (e) { showAlert('Action Failed', e.response?.data?.message || 'Could not withdraw the request.'); }
         }
     });
-  }, [handleActionWithConfirmation, cancelScheduledChange, showMessage, showAlert]);
+  }, [handleActionWithConfirmation, cancelPlanChange, showMessage, showAlert]);
 
   const handleReactivate = useCallback(() => {
     handleActionWithConfirmation({
@@ -162,11 +174,11 @@ export default function MySubscriptionScreen() {
         confirmText: 'Yes, Cancel',
         confirmStyle: 'destructive',
         onConfirm: async () => {
-            try { await cancelSubscription(); navigation.navigate('Support'); }
+            try { await cancelSubscription(); }
             catch (e) { showAlert('Error', 'Could not schedule cancellation.'); }
         }
     });
-  }, [handleActionWithConfirmation, cancelSubscription, navigation, showAlert]);
+  }, [handleActionWithConfirmation, cancelSubscription, showAlert]);
 
   const handleChangePlan = useCallback(() => {
     handleActionWithConfirmation({
@@ -177,47 +189,41 @@ export default function MySubscriptionScreen() {
     });
   }, [handleActionWithConfirmation, navigation]);
 
+  const handleChat = useCallback(() => {
+    navigation.navigate('LiveChatScreen');
+  }, [navigation]);
 
   const { percentage, statusText } = useMemo(() => {
     if (!startDate || !renewalDate) return { percentage: 0, statusText: 'N/A' };
-
     const today = new Date();
     const start = new Date(startDate);
     const renewal = new Date(renewalDate);
+
+    if (isAwaitingFirstBill) {
+        return { percentage: 0, statusText: 'Awaiting Bill' };
+    }
 
     const totalDuration = renewal.getTime() - start.getTime();
     const elapsedDuration = today.getTime() - start.getTime();
     let calculatedPercentage = totalDuration > 0 ? (elapsedDuration / totalDuration) * 100 : 100;
     calculatedPercentage = Math.max(0, Math.min(100, Math.round(calculatedPercentage)));
 
-
-    const overdueBill = paymentHistory.find(b => b.type === 'bill' && b.status === 'Overdue');
-    if (overdueBill) {
-        return { percentage: 100, statusText: 'Overdue' };
-    }
-    
-    const pendingBill = paymentHistory.find(b => b.type === 'bill' && b.status === 'Pending Verification');
-    if (pendingBill) {
-        return { percentage: calculatedPercentage, statusText: 'Verifying' };
-    }
-
-    const dueBill = paymentHistory.find(b => b.type === 'bill' && b.status === 'Due');
+    if (overdueBill) return { percentage: 100, statusText: 'Overdue' };
+    if (pendingBill) return { percentage: calculatedPercentage, statusText: 'Verifying' };
     if (dueBill) {
         const dueDate = new Date(dueBill.dueDate);
         const daysLeft = Math.max(0, Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24)));
-        const text = daysLeft > 0 ? `${daysLeft}d to Pay` : 'Due Today';
-        return { percentage: calculatedPercentage, statusText: text };
+        return { percentage: calculatedPercentage, statusText: daysLeft > 0 ? `${daysLeft}d to Pay` : 'Due Today' };
     }
-    
-    return { percentage: calculatedPercentage, statusText: 'All Paid' };
 
-  }, [startDate, renewalDate, paymentHistory]);
-  
+    return { percentage: calculatedPercentage, statusText: 'All Paid' };
+  }, [startDate, renewalDate, paymentHistory, pendingBill, dueBill, overdueBill, isAwaitingFirstBill]);
+
+  const isActionInProgress = !!cancellationEffectiveDate || !!scheduledPlanChange || subscriptionStatus === 'pending_change';
+
   if (isLoading && !refreshing) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.emptyStateContainer}><ActivityIndicator size="large" color={theme.primary} /></View>
-      </SafeAreaView>
+      <SafeAreaView style={styles.container}><View style={styles.emptyStateContainer}><ActivityIndicator size="large" color={theme.primary} /></View></SafeAreaView>
     );
   }
 
@@ -236,21 +242,65 @@ export default function MySubscriptionScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} tintColor={theme.primary} />} showsVerticalScrollIndicator={false}>
-        {scheduledPlanChange?.plan && !cancellationEffectiveDate && (
-          <InfoNotice icon="information-circle-outline" color={theme.primary} title="Plan Change Scheduled" actionText="Cancel Change" onAction={handleCancelPlanChange}>
-            Your plan will switch to <Text style={{ fontWeight: 'bold' }}>{scheduledPlanChange.plan.name}</Text> on {formatDate(scheduledPlanChange.effectiveDate)}.
+        
+        {isAwaitingFirstBill && (
+            <InfoNotice
+                icon="checkmark-circle"
+                color={theme.success}
+                title="Your Plan is Active!"
+            >
+                Welcome aboard! Your <Text style={{ fontWeight: 'bold' }}>{activePlan.name}</Text> plan is now active. Your first bill will be generated approximately 7 days before your renewal date.
+            </InfoNotice>
+        )}
+
+        {overdueBill && subscriptionStatus === 'active' && !cancellationEffectiveDate && (
+          <InfoNotice 
+            icon="alert-circle" 
+            color={theme.danger} 
+            title="Payment Overdue - Action Required"
+            actionText="Pay Now"
+            onAction={handlePayNow}
+          >
+            Your bill of{' '}
+            <Text style={{ fontWeight: 'bold' }}>₱{(overdueBill.amount ?? 0).toFixed(2)}</Text> is overdue. Please pay within 1 week to avoid service suspension.
+          </InfoNotice>
+        )}
+        {isPendingCash && !cancellationEffectiveDate && (
+          <InfoNotice 
+            icon="wallet-outline" 
+            color={theme.primary} 
+            title="Cash Collection Scheduled"
+          >
+            Our collector will visit you to collect a payment of{' '}
+            <Text style={{ fontWeight: 'bold' }}>₱{pendingBill.amount.toFixed(2)}</Text>.
+            Your payment status will be updated upon collection.
           </InfoNotice>
         )}
 
-        {cancellationEffectiveDate ? (
-          <CancellationInfoCard plan={activePlan} effectiveDate={cancellationEffectiveDate} onReactivate={handleReactivate} />
-        ) : (
-          <View style={styles.planCard}>
-            <Text style={styles.planCardLabel}>CURRENT PLAN</Text>
-            <Text style={styles.planName}>{activePlan.name}</Text>
-            <Text style={styles.planPrice}>{activePlan.priceLabel}</Text>
-          </View>
+        {subscriptionStatus === 'pending_change' && pendingPlanId && !cancellationEffectiveDate && (
+          <InfoNotice icon="time-outline" color={theme.warning} title="Request Under Review" actionText="Cancel Request" onAction={handleCancelPendingChangeRequest}>
+            Your request to switch to the <Text style={{ fontWeight: 'bold' }}>{pendingPlanId.name}</Text> plan is being processed by our team.
+          </InfoNotice>
         )}
+
+        {scheduledPlanChange?.plan && !cancellationEffectiveDate && (
+          <InfoNotice
+            icon="information-circle-outline"
+            color={theme.primary}
+            title="Plan Change Scheduled"
+            actionText="Chat with Admin"
+            onAction={handleChat}
+          >
+            Your plan will switch to <Text style={{ fontWeight: 'bold' }}>{scheduledPlanChange.plan.name}</Text> on {formatDate(scheduledPlanChange.effectiveDate)}.
+            To cancel this change, please contact support.
+          </InfoNotice>
+        )}
+
+        <View style={styles.planCard}>
+          <Text style={styles.planCardLabel}>CURRENT PLAN</Text>
+          <Text style={styles.planName}>{activePlan.name}</Text>
+          <Text style={styles.planPrice}>{activePlan.priceLabel}</Text>
+        </View>
 
         <View style={styles.usageCard}>
           <Text style={styles.sectionTitle}>Billing Cycle</Text>
@@ -267,7 +317,7 @@ export default function MySubscriptionScreen() {
           <View style={styles.dateInfoContainer}>
             <View style={styles.dateInfo}><Text style={styles.dateLabel}>Start Date</Text><Text style={styles.dateValue}>{formatDate(startDate)}</Text></View>
             <View style={styles.dateInfo}><Text style={styles.dateLabel}>Next Renewal</Text><Text style={styles.dateValue}>{formatDate(renewalDate)}</Text></View>
-          </View>   
+          </View>
         </View>
 
         <View style={styles.featuresCard}>
@@ -276,11 +326,15 @@ export default function MySubscriptionScreen() {
             {activePlan.features?.map((feature, index) => <FeatureItem key={index} text={feature} />)}
           </View>
         </View>
-
-        {!cancellationEffectiveDate && !scheduledPlanChange && (
+        
+        {!isActionInProgress && !pendingBill && (
           <View style={styles.actionsContainer}>
-            <TouchableOpacity style={styles.changePlanButton} onPress={handleChangePlan}><Text style={styles.changePlanButtonText}>Change Plan</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}><Text style={styles.cancelButtonText}>Cancel Subscription</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.changePlanButton} onPress={handleChangePlan}>
+                  <Text style={styles.changePlanButtonText}>Change Plan</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
+                  <Text style={styles.cancelButtonText}>Cancel Subscription</Text>
+              </TouchableOpacity>
           </View>
         )}
       </ScrollView>
@@ -288,32 +342,14 @@ export default function MySubscriptionScreen() {
   );
 }
 
-// --- Stylesheet ---
+
 const getStyles = (theme) =>
   StyleSheet.create({
     container: { backgroundColor: theme.background, flex: 1 },
     scrollContent: { padding: 20, paddingBottom: 120 },
-    fallbackText: {
-      color: theme.text,
-      fontSize: 18,
-      fontWeight: 'bold',
-      marginTop: 15,
-      textAlign: 'center',
-    },
-    fallbackSubText: {
-      color: theme.textSecondary,
-      fontSize: 14,
-      marginTop: 8,
-      textAlign: 'center',
-    },
-    emptyStateContainer: {
-      alignItems: 'center',
-      flex: 1,
-      justifyContent: 'center',
-      paddingHorizontal: 30,
-    },
-
-    // Standard Plan Card
+    fallbackText: { color: theme.text, fontSize: 18, fontWeight: 'bold', marginTop: 15, textAlign: 'center' },
+    fallbackSubText: { color: theme.textSecondary, fontSize: 14, marginTop: 8, textAlign: 'center' },
+    emptyStateContainer: { alignItems: 'center', flex: 1, justifyContent: 'center', paddingHorizontal: 30 },
     planCard: {
       backgroundColor: theme.primary,
       borderRadius: 20,
@@ -325,16 +361,9 @@ const getStyles = (theme) =>
       shadowOpacity: 0.3,
       shadowRadius: 5,
     },
-    planCardLabel: {
-      color: 'rgba(255, 255, 255, 0.8)',
-      fontSize: 14,
-      fontWeight: '600',
-      textTransform: 'uppercase',
-    },
+    planCardLabel: { color: 'rgba(255, 255, 255, 0.8)', fontSize: 14, fontWeight: '600', textTransform: 'uppercase' },
     planName: { color: theme.textOnPrimary, fontSize: 28, fontWeight: 'bold', marginTop: 4 },
     planPrice: { color: 'rgba(255, 255, 255, 0.9)', fontSize: 18, fontWeight: '500', marginTop: 8 },
-
-    // Cancellation Info Card
     cancellationCard: {
       alignItems: 'center',
       backgroundColor: `${theme.warning}20`,
@@ -346,20 +375,8 @@ const getStyles = (theme) =>
     },
     cancellationHeader: { alignItems: 'center', flexDirection: 'row', marginBottom: 10 },
     cancellationTitle: { color: theme.warning, fontSize: 18, fontWeight: 'bold', marginLeft: 10 },
-    cancellationPlanName: {
-      color: theme.text,
-      fontSize: 24,
-      fontWeight: 'bold',
-      marginVertical: 5,
-    },
-    cancellationText: {
-      color: theme.textSecondary,
-      fontSize: 15,
-      lineHeight: 22,
-      marginBottom: 20,
-      marginTop: 5,
-      textAlign: 'center',
-    },
+    cancellationPlanName: { color: theme.text, fontSize: 24, fontWeight: 'bold', marginVertical: 5 },
+    cancellationText: { color: theme.textSecondary, fontSize: 15, lineHeight: 22, marginBottom: 20, marginTop: 5, textAlign: 'center' },
     keepPlanBigButton: {
       alignItems: 'center',
       backgroundColor: theme.success,
@@ -371,8 +388,6 @@ const getStyles = (theme) =>
       width: '100%',
     },
     keepPlanButtonText: { color: theme.textOnPrimary, fontSize: 16, fontWeight: 'bold' },
-
-    // Usage Card
     usageCard: {
       backgroundColor: theme.surface,
       borderColor: theme.border,
@@ -397,8 +412,6 @@ const getStyles = (theme) =>
     dateInfo: { alignItems: 'center', flex: 1 },
     dateLabel: { color: theme.textSecondary, fontSize: 13, marginBottom: 4 },
     dateValue: { color: theme.text, fontSize: 12, fontWeight: '600' },
-
-    // Features Card
     featuresCard: {
       backgroundColor: theme.surface,
       borderColor: theme.border,
@@ -411,26 +424,11 @@ const getStyles = (theme) =>
     featureItem: { alignItems: 'center', flexDirection: 'row', marginBottom: 12 },
     featureIcon: { marginRight: 12 },
     featureText: { color: theme.text, flex: 1, fontSize: 15, lineHeight: 22 },
-
-    // Action Buttons
     actionsContainer: { marginTop: 10 },
-    changePlanButton: {
-      alignItems: 'center',
-      backgroundColor: theme.primary,
-      borderRadius: 14,
-      marginBottom: 15,
-      padding: 16,
-    },
+    changePlanButton: { alignItems: 'center', backgroundColor: theme.primary, borderRadius: 14, marginBottom: 15, padding: 16 },
     changePlanButtonText: { color: theme.textOnPrimary, fontSize: 16, fontWeight: 'bold' },
-    cancelButton: {
-      alignItems: 'center',
-      backgroundColor: theme.danger,
-      borderRadius: 14,
-      padding: 16,
-    },
+    cancelButton: { alignItems: 'center', backgroundColor: theme.danger, borderRadius: 14, padding: 16 },
     cancelButtonText: { color: theme.textOnPrimary, fontSize: 15, fontWeight: '600' },
-
-    // Generic Notice Card
     noticeCard: {
       alignItems: 'center',
       borderLeftWidth: 5,
@@ -443,7 +441,7 @@ const getStyles = (theme) =>
     noticeTextContainer: { flex: 1 },
     noticeTitle: { fontSize: 16, fontWeight: 'bold' },
     noticeBody: { color: theme.textSecondary, fontSize: 14, lineHeight: 20, marginTop: 4 },
-    reactivateButton: {
+    actionButton: {
       backgroundColor: theme.surface,
       borderColor: theme.border,
       borderRadius: 10,
@@ -452,5 +450,5 @@ const getStyles = (theme) =>
       paddingHorizontal: 12,
       paddingVertical: 8,
     },
-    reactivateButtonText: { color: theme.primary, fontSize: 14, fontWeight: 'bold' },
+    actionButtonText: { color: theme.primary, fontSize: 14, fontWeight: 'bold' },
   });

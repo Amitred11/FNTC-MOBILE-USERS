@@ -14,21 +14,8 @@ export default ({ config }) => ({
     resizeMode: "contain",
     backgroundColor: "#ffffff"
   },
-  ios: {
-    supportsTablet: true,
-    bundleIdentifier: "com.user12312312312.fibear",
-    infoPlist: {
-      NSPhotoLibraryUsageDescription:
-        "The app needs access to your photos so you can select a proof of payment or update your profile picture.",
-      NSCameraUsageDescription:
-        "The app needs access to your camera to capture images for proof of payment or for your profile picture.",
-      NSMicrophoneUsageDescription:
-        "The app needs access to your microphone for video recording (if you also capture video)."
-    }
-  },
   android: {
-    package: "com.user12312312312.fibear",
-    googleServicesFile: "./google-services.json",
+    package: "com.fnas.fibear",
     newArchEnabled: true,
     adaptiveIcon: {
       foregroundImage: "./src/assets/logo.png",
@@ -40,7 +27,9 @@ export default ({ config }) => ({
       "android.permission.READ_MEDIA_IMAGES",
       "android.permission.READ_MEDIA_VIDEO",
       "android.permission.CAMERA",
-      "android.permission.RECORD_AUDIO"
+      "android.permission.RECORD_AUDIO",
+      "android.permission.ACCESS_COARSE_LOCATION",
+      "android.permission.ACCESS_FINE_LOCATION"
     ]
   },
   web: {
@@ -48,14 +37,13 @@ export default ({ config }) => ({
   },
   extra: {
     eas: {
-      projectId: "ca00445b-0508-46c4-bb74-05e2977fa248"
+        projectId: "a605f001-8f66-460b-9c64-f4f56fbbf12d"
     },
     webClientId: process.env.WEB_CLIENT_ID,
     iosClientId: process.env.IOS_CLIENT_ID,
     androidClientId: process.env.ANDROID_CLIENT_ID,
     API_URL: process.env.API_URL,
     Config_INTERNAL_API_KEY: process.env.CONFIG_INTERNAL_API_KEY,
-    CHATBOT_API_ENDPOINT: process.env.CHATBOT_API_ENDPOINT
   },
   plugins: [
     [

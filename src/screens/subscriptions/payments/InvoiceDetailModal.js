@@ -150,8 +150,8 @@ const getStyles = (theme) =>
         paddingBottom: 5,
     },
     modalDetailRow: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', paddingVertical: 5 },
-    modalDetailLabel: { color: theme.textSecondary, fontSize: 15 },
-    modalDetailValue: { color: theme.text, fontSize: 15, textAlign: 'right', flexShrink: 1 },
+    modalDetailLabel: { color: theme.textSecondary, fontSize: 13 },
+    modalDetailValue: { color: theme.text, fontSize: 13, textAlign: 'right', flexShrink: 1 },
     modalDetailValueBold: { color: theme.text, fontSize: 15, fontWeight: 'bold', textAlign: 'right', flexShrink: 1 },
 
     finalAmountRow: {
