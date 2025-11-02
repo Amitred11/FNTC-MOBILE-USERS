@@ -15,7 +15,7 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useSubscription, useTheme,  useAlert } from '../../contexts';
+import { useSubscription, useTheme, useAlert, useAuth } from '../../contexts';
 import * as Animatable from 'react-native-animatable';
 import { BottomNavBar } from '../../components/BottomNavBar';
 import { ICONS } from '../../data/Constants-Data';
@@ -48,7 +48,7 @@ const Header = React.memo(() => {
     );
 });
 
-const CurrentBill = React.memo(({ dueBill, pendingBill, upcomingBill, onPay }) => {
+const CurrentBill = React.memo(({ dueBill, pendingBill, upcomingBill, onPay, onVerify, isVerifying }) => {
     const { theme } = useTheme();
     const styles = getStyles(theme);
 
@@ -62,6 +62,13 @@ const CurrentBill = React.memo(({ dueBill, pendingBill, upcomingBill, onPay }) =
                     </View>
                     <Text style={styles.billCardAmount}>₱{(pendingBill.amount ?? 0).toFixed(2)}</Text>
                     <Text style={styles.billCardDueDate}>Submitted on {formatDate(pendingBill.date, true)}</Text>
+                    
+                    <View style={styles.verifyInfoContainer}>
+                         <Ionicons name="information-circle-outline" size={20} color={theme.textSecondary} />
+                         <Text style={styles.verifyInfoText}>
+                                The collection process may take a few hours. Kindly wait for the cash collector to collect your payment.
+                         </Text>
+                    </View>
                 </>
             );
         }
@@ -83,12 +90,29 @@ const CurrentBill = React.memo(({ dueBill, pendingBill, upcomingBill, onPay }) =
                             <Text style={styles.payNowButtonText}>PAY NOW</Text>
                         </TouchableOpacity>
                     </View>
+                    <TouchableOpacity
+                        style={[styles.verifyButton, isVerifying && styles.buttonDisabled]}
+                        onPress={onVerify}
+                        disabled={isVerifying}
+                    >
+                        {isVerifying ? (
+                            <ActivityIndicator size="small" color={theme.textOnPrimary} />
+                        ) : (
+                            <Ionicons name="shield-checkmark-outline" size={20} color={theme.textOnPrimary} />
+                        )}
+                        <Text style={styles.verifyButtonText}>
+                            {isVerifying ? 'Verifying...' : 'Verify Previous Payment'}
+                        </Text>
+                    </TouchableOpacity>
+                    <Text style={styles.verifyInfoText}>
+                        If you've already paid online but the bill still shows as due, tap here to check the status.
+                    </Text>
                 </>
             );
         }
 
         if (upcomingBill) {
-            return (
+             return (
                 <>
                     <View style={styles.billCardStatus}>
                         <Ionicons name="timer-outline" size={16} color={theme.info} />
@@ -110,7 +134,7 @@ const CurrentBill = React.memo(({ dueBill, pendingBill, upcomingBill, onPay }) =
                 <Text style={styles.billCardDueDate}>Your account is in good standing.</Text>
             </>
         );
-    }, [pendingBill, dueBill, upcomingBill, theme, styles, onPay]);
+    }, [pendingBill, dueBill, upcomingBill, theme, styles, onPay, onVerify, isVerifying]);
 
     return (
         <Animatable.View animation="fadeIn" duration={400} style={styles.billCard}>
@@ -119,6 +143,7 @@ const CurrentBill = React.memo(({ dueBill, pendingBill, upcomingBill, onPay }) =
         </Animatable.View>
     );
 });
+
 
 
 const HistoryItem = React.memo(({ item, onViewReceipt, onViewInvoice, onHide, activeHideId, setActiveHideId }) => {
@@ -224,11 +249,20 @@ const HistorySection = React.memo(({ history, onViewReceipt, onViewInvoice, onHi
     const { theme } = useTheme();
     const styles = getStyles(theme);
     const [activeFilter, setActiveFilter] = useState('All');
-    const filters = ['All', 'Bills', 'Payments'];
+    const filters = ['All', 'Invoices', 'Receipts', 'Pending'];
+
     const filteredHistory = useMemo(() => {
-        if (activeFilter === 'Bills') return history.filter(item => item.type === 'bill');
-        if (activeFilter === 'Payments') return history.filter(item => item.type === 'payment_success' || item.type === 'submitted_payment');
-        return history;
+        switch (activeFilter) {
+            case 'Invoices':
+                return history.filter(item => item.type === 'bill');
+            case 'Receipts':
+                return history.filter(item => item.type === 'payment_success' && item.receiptNumber);
+            case 'Pending':
+                return history.filter(item => item.type === 'submitted_payment' || item.status === 'Pending Verification');
+            case 'All':
+            default:
+                return history;
+        }
     }, [history, activeFilter]);
 
     return (
@@ -273,11 +307,12 @@ const HistorySection = React.memo(({ history, onViewReceipt, onViewInvoice, onHi
                     />
                 ))
             ) : (
-                <Text style={styles.noHistoryText}>No {activeFilter.toLowerCase()} history found.</Text>
+                <Text style={styles.noHistoryText}>No items found for the "{activeFilter.toLowerCase()}" filter.</Text>
             )}
         </View>
     );
 });
+
 
 
 const EmptyStateView = React.memo(({ illustration, icon, title, text, buttonText, onButtonPress, reason }) => {
@@ -323,7 +358,8 @@ export default function MyBillsScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const [activeHideId, setActiveHideId] = useState(null);
     const [hiddenIds, setHiddenIds] = useState(new Set());
-
+    const { api } = useAuth();
+    const [isVerifying, setIsVerifying] = useState(false);
     const loadHiddenIds = async () => {
         try {
             const storedIds = await AsyncStorage.getItem(HIDDEN_HISTORY_KEY);
@@ -346,12 +382,41 @@ export default function MyBillsScreen() {
     const onRefresh = useCallback(async () => {
         setRefreshing(true);
         setActiveHideId(null);
-        await refreshSubscription();
         await loadHiddenIds();
         setRefreshing(false);
     }, [refreshSubscription]);
 
-    useFocusEffect(useCallback(() => { onRefresh(); }, [onRefresh]));
+    useFocusEffect(useCallback(() => { 
+        if (!isLoading) {
+           onRefresh();
+        }
+    }, []));
+
+    const handleVerifyPayment = useCallback(async () => {
+        if (!dueBill || !dueBill._id) {
+            showAlert('Error', 'No due bill selected to verify.');
+            return;
+        }
+
+        setIsVerifying(true);
+        try {
+            const { data } = await api.post(`/bills/${dueBill._id}/verify-payment`);
+            
+            await refreshSubscription();
+
+            if (data.status === 'Paid') {
+                showAlert('Payment Confirmed', 'Your payment was successfully verified and your bill has been marked as paid. Thank you!');
+            } else {
+                showAlert('Status Unchanged', 'The payment provider has not yet confirmed your payment. Please try again in a few minutes.');
+            }
+
+        } catch (error) {
+            const errorMessage = error.response?.data?.message || 'Could not verify payment status at this time. Please try again later.';
+            showAlert('Verification Failed', errorMessage);
+        } finally {
+            setIsVerifying(false);
+        }
+    }, [api, dueBill, showAlert, refreshSubscription]);
 
     const visibleHistory = useMemo(() => paymentHistory.filter(item => !hiddenIds.has(item._id)), [paymentHistory, hiddenIds]);
     const hiddenCount = useMemo(() => paymentHistory.length - visibleHistory.length, [paymentHistory, visibleHistory]);
@@ -433,6 +498,8 @@ export default function MyBillsScreen() {
                             pendingBill={pendingBill}
                             upcomingBill={upcomingBill}
                             onPay={() => handleNavigate('PayBills')}
+                            onVerify={handleVerifyPayment}
+                            isVerifying={isVerifying}
                         />
                     </Pressable>
                     <HistorySection
@@ -573,4 +640,30 @@ const getStyles = (theme) =>
         reasonText: { color: theme.text, fontSize: 15 },
         primaryButton: { width: '100%', maxWidth: 320, backgroundColor: theme.primary, borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
         buttonText: { color: theme.textOnPrimary, fontSize: 16, fontWeight: 'bold' },
+        verifyButton: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 10,
+            backgroundColor: theme.success,
+            paddingVertical: 12,
+            borderRadius: 12,
+            marginTop: 10,
+        },
+        verifyButtonText: {
+            color: theme.textOnPrimary,
+            fontSize: 15,
+            fontWeight: 'bold',
+        },
+        verifyInfoText: {
+            color: theme.textSecondary,
+            fontSize: 12,
+            textAlign: 'center',
+            marginTop: 12,
+            lineHeight: 18,
+            paddingHorizontal: 10,
+        },
+        buttonDisabled: {
+            backgroundColor: theme.disabled,
+        },
     });

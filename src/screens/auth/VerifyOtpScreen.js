@@ -16,10 +16,10 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { lightTheme } from '../../constants/colors';
-import { useAuth, useMessage, useAlert } from '../../contexts';
+import { useAuth, useBanner, useAlert } from '../../contexts';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Animatable from 'react-native-animatable';
-import Clipboard from '@react-native-clipboard/clipboard';
+import Clipboard from '@react-native-community/clipboard';
 
 const { width } = Dimensions.get('window');
 
@@ -128,7 +128,7 @@ export default function VerifyOtpScreen() {
   const styles = getStyles(theme);
 
   const { verifyOtpAndLogin, resendOtp } = useAuth();
-  const { showMessage } = useMessage();
+  const { showBanner} = useBanner();
   const { showAlert } = useAlert();
 
   const [otp, setOtp] = useState('');
@@ -167,7 +167,7 @@ export default function VerifyOtpScreen() {
   
   const handleVerify = async () => {
     if (otp.length !== 6) {
-      return showMessage('Please enter the complete 6-digit code.');
+      return showBanner('Please enter the complete 6-digit code.');
     }
     setIsLoading(true);
     try {
@@ -185,7 +185,7 @@ export default function VerifyOtpScreen() {
     setIsLoading(true);
     try {
       await resendOtp(email);
-      showMessage('A new code has been sent!');
+      showBanner('A new code has been sent!');
       setResendCooldown(60);
     } catch (error) {
       showAlert('Error', error.response?.data?.message || 'Could not resend code.');

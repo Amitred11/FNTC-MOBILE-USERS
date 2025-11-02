@@ -18,9 +18,9 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useTheme } from '../../contexts';
 import { BottomNavBar } from '../../components/BottomNavBar';
-import ChatbotScreen from './ChatbotScreen'; // Adjust path if needed
-import TicketListScreen from './TicketListScreen'; // Adjust path if needed
-import TicketCreateScreen from './TicketCreateScreen'; // Adjust path if needed
+import ChatbotScreen from './ChatbotScreen'; 
+import TicketListScreen from './TicketListScreen';
+import TicketCreateScreen from './TicketCreateScreen'; 
 
 // --- Constants ---
 const CHARACTER_NAME = 'FNTC Bot';

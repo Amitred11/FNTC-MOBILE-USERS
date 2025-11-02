@@ -17,9 +17,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme, useAuth, useSubscription } from '../../contexts';
 import { servicesData } from '../../data/Constants-Data';
-// Removed: import { plansData } from '../../data/Constants-Data';
 
-// --- Reusable Components (Header and ServiceItem remain unchanged) ---
 
 const Header = React.memo(({ onBackPress }) => {
   const { theme } = useTheme();
@@ -56,7 +54,6 @@ const ServiceItem = React.memo(({ icon, title, description, screen }) => {
   );
 });
 
-// PlanCard is slightly modified to be more robust with API data
 const PlanCard = React.memo(({ plan, onChoose }) => {
   const { theme } = useTheme();
   const styles = useMemo(() => getStyles(theme), [theme]);
@@ -81,7 +78,6 @@ const PlanCard = React.memo(({ plan, onChoose }) => {
         <Text style={styles.planPerMonth}>/ month</Text>
       </View>
       <View style={styles.speedContainer}>
-        {/* Conditionally render speed info to prevent crashes if not provided by API */}
         {plan.speed && <Text style={styles.planSpeed}>{plan.speed}</Text>}
         {plan.boostedSpeed && <Text style={styles.planBoostedSpeed}>{plan.boostedSpeed}</Text>}
       </View>
@@ -113,7 +109,6 @@ export default function OurServicesScreen() {
   const { user, api } = useAuth();
   const { subscriptionStatus, isLoading } = useSubscription();
 
-  // State for managing plans fetched from the database
   const [plans, setPlans] = useState([]);
   const [plansLoading, setPlansLoading] = useState(true);
   const [plansError, setPlansError] = useState(null);
@@ -153,7 +148,6 @@ useEffect(() => {
     }
   }, [navigation, user, subscriptionStatus, showAlert]);
 
-  // Main loading indicator for checking subscription status
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -166,7 +160,6 @@ useEffect(() => {
     );
   }
 
-  // Helper function to render the state of the plans list
   const renderPlans = () => {
     if (plansLoading) {
       return (
@@ -225,7 +218,6 @@ useEffect(() => {
   );
 }
 
-// --- Styles (Refactored for new design) ---
 const getStyles = (theme) =>
   StyleSheet.create({
     container: {

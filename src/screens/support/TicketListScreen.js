@@ -131,7 +131,6 @@ const TicketListScreen = forwardRef(({ onCreate, isRefreshing, onRefresh }, ref)
       try {
         const { data } = await api.get(`/support/tickets/${ticketId}`);
         setSelectedTicket(data);
-        // --- NEW: Populate editable fields when data is loaded ---
         setEditableSubject(data.subject);
         setEditableDescription(data.description);
       } catch (error) {
@@ -142,7 +141,6 @@ const TicketListScreen = forwardRef(({ onCreate, isRefreshing, onRefresh }, ref)
       }
     };
 
-    // --- NEW: Function to handle saving changes ---
     const handleSaveChanges = async () => {
         if (!editableSubject.trim() || !editableDescription.trim()) {
             showAlert('Missing Info', 'Subject and description cannot be empty.');
@@ -179,7 +177,7 @@ const TicketListScreen = forwardRef(({ onCreate, isRefreshing, onRefresh }, ref)
               const { data } = await api.post(`/support/tickets/${selectedTicket._id}/close`);
               setSelectedTicket(data.ticket);
               showMessage('Ticket Closed');
-              fetchTickets(true); // Refresh list
+              fetchTickets(true);
             } catch (err) {
               showAlert('Error', 'Could not close the ticket.');
             }
@@ -216,7 +214,6 @@ const TicketListScreen = forwardRef(({ onCreate, isRefreshing, onRefresh }, ref)
     );
 
     const cancelEditing = () => {
-        // Reset fields to original state
         setEditableSubject(selectedTicket.subject);
         setEditableDescription(selectedTicket.description);
         setIsEditing(false);
@@ -224,7 +221,6 @@ const TicketListScreen = forwardRef(({ onCreate, isRefreshing, onRefresh }, ref)
 
     return (
       <View style={styles.container}>
-        {/* --- IMAGE VIEWER MODAL --- */}
         <Modal
             animationType="fade"
             transparent={true}
@@ -236,10 +232,6 @@ const TicketListScreen = forwardRef(({ onCreate, isRefreshing, onRefresh }, ref)
                 activeOpacity={1} 
                 onPress={() => setImageViewerVisible(false)}
             >
-                {/* 
-                  The Animatable.Image is a direct child of the overlay.
-                  The overlay's flexbox styles (justifyContent, alignItems) now correctly center the image.
-                */}
                 <Animatable.Image
                     animation="zoomIn"
                     duration={400}
@@ -248,7 +240,6 @@ const TicketListScreen = forwardRef(({ onCreate, isRefreshing, onRefresh }, ref)
                     resizeMode="contain"
                 />
 
-                {/* The close button is positioned absolutely on top of everything else */}
                 <Animatable.View animation="fadeIn" delay={200} style={styles.imageViewerCloseButtonWrapper}>
                     <TouchableOpacity onPress={() => setImageViewerVisible(false)}>
                         <Ionicons name="close-circle" size={36} color="rgba(255,255,255,0.8)" />
@@ -269,7 +260,6 @@ const TicketListScreen = forwardRef(({ onCreate, isRefreshing, onRefresh }, ref)
                                 <Text style={styles.modalTitle}>{isEditing ? 'Edit Ticket' : 'Ticket Details'}</Text>
                             </View>
                             
-                            {/* --- MODIFIED: Show Edit/Cancel button --- */}
                             {!isLoadingDetail && selectedTicket && selectedTicket.status === 'Open' && (
                                 <TouchableOpacity onPress={isEditing ? cancelEditing : () => setIsEditing(true)}>
                                     <Ionicons name={isEditing ? "close-circle" : "create-outline"} size={28} color={theme.textSecondary} />
@@ -283,7 +273,6 @@ const TicketListScreen = forwardRef(({ onCreate, isRefreshing, onRefresh }, ref)
                         <View style={styles.modalBody}>
                             <ScrollView contentContainerStyle={styles.modalScrollView}>
                                 <View style={styles.detailCard}>
-                                    {/* --- MODIFIED: Show TextInput on edit --- */}
                                     {isEditing ? (
                                         <TextInput
                                             style={[styles.editableInput, styles.editableSubject]}

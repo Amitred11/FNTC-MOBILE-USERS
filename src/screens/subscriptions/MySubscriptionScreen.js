@@ -11,11 +11,13 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useSubscription, useTheme, useAlert, useMessage } from '../../contexts';
+import { useSubscription, useTheme, useAlert, useBanner } from '../../contexts';
 import { AnimatedCircularProgress } from 'react-native-circular-progress';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { formatDistanceToNowStrict } from 'date-fns';
 import * as Animatable from 'react-native-animatable';
+import { BottomNavBar } from '../../components/BottomNavBar';
+
 
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
@@ -30,31 +32,6 @@ const FeatureItem = React.memo(({ text }) => {
       <Ionicons name="checkmark-circle-outline" size={20} color={theme.success} style={styles.featureIcon} />
       <Text style={styles.featureText}>{text}</Text>
     </View>
-  );
-});
-
-const CancellationInfoCard = React.memo(({ plan, effectiveDate, onReactivate }) => {
-  const { theme } = useTheme();
-  const styles = getStyles(theme);
-  const timeRemaining = useMemo(() => formatDistanceToNowStrict(new Date(effectiveDate), { addSuffix: true }), [effectiveDate]);
-
-  return (
-    <Animatable.View animation="fadeIn" duration={500} style={styles.cancellationCard}>
-      <View style={styles.cancellationHeader}>
-        <Ionicons name="warning" size={24} color={theme.warning} />
-        <Text style={styles.cancellationTitle}>Subscription Ending Soon</Text>
-      </View>
-      <Text style={styles.cancellationPlanName}>{plan.name}</Text>
-      <Text style={styles.cancellationText}>
-        Your plan is scheduled to be cancelled{' '}
-        <Text style={{ fontWeight: 'bold' }}>{timeRemaining}</Text>. You will lose access on{' '}
-        {formatDate(effectiveDate)}.
-      </Text>
-      <TouchableOpacity style={styles.keepPlanBigButton} onPress={onReactivate}>
-        <Ionicons name="heart-outline" size={20} color={theme.textOnPrimary} />
-        <Text style={styles.keepPlanButtonText}>Keep My Plan</Text>
-      </TouchableOpacity>
-    </Animatable.View>
   );
 });
 
@@ -97,7 +74,7 @@ export default function MySubscriptionScreen() {
   const { theme } = useTheme();
   const styles = getStyles(theme);
   const { showAlert } = useAlert();
-  const { showMessage } = useMessage();
+  const { showBanner } = useBanner();
   const navigation = useNavigation();
   const [refreshing, setRefreshing] = useState(false);
 
@@ -148,11 +125,11 @@ export default function MySubscriptionScreen() {
         confirmText: 'Yes, Withdraw',
         confirmStyle: 'destructive',
         onConfirm: async () => {
-            try { await cancelPlanChange(); showMessage('Request Withdrawn Successfully'); }
+            try { await cancelPlanChange(); showBanner('success', 'Request Withdrawn', 'Your plan change request has been successfully withdrawn.'); }
             catch (e) { showAlert('Action Failed', e.response?.data?.message || 'Could not withdraw the request.'); }
         }
     });
-  }, [handleActionWithConfirmation, cancelPlanChange, showMessage, showAlert]);
+  }, [handleActionWithConfirmation, cancelPlanChange, showBanner, showAlert]);
 
   const handleReactivate = useCallback(() => {
     handleActionWithConfirmation({
@@ -160,11 +137,11 @@ export default function MySubscriptionScreen() {
         message: 'Are you sure you want to keep your plan? This will cancel your pending cancellation.',
         confirmText: 'Yes, Keep Plan',
         onConfirm: async () => {
-            try { await reactivateSubscription(); showMessage('Subscription Reactivated'); }
+            try { await reactivateSubscription(); showBanner('success', 'Subscription Reactivated', 'Your subscription is now active again.'); }
             catch (e) { showAlert('Error', 'Could not reactivate.'); }
         }
     });
-  }, [handleActionWithConfirmation, reactivateSubscription, showMessage, showAlert]);
+  }, [handleActionWithConfirmation, reactivateSubscription, showBanner, showAlert]);
 
   const handleCancel = useCallback(() => {
     handleActionWithConfirmation({
@@ -277,11 +254,36 @@ export default function MySubscriptionScreen() {
           </InfoNotice>
         )}
 
+        {/* THE FIX: Replaced CancellationInfoCard with a consistent InfoNotice */}
+        {cancellationEffectiveDate && activePlan && (
+          <InfoNotice
+            icon="warning"
+            color={theme.warning}
+            title="Cancellation Scheduled"
+            actionText="Keep My Plan"
+            onAction={handleReactivate}
+          >
+            Your <Text style={{ fontWeight: 'bold' }}>{activePlan.name}</Text> plan will be cancelled{' '}
+            <Text style={{ fontWeight: 'bold' }}>
+              {formatDistanceToNowStrict(new Date(cancellationEffectiveDate), { addSuffix: true })}
+            </Text>
+            . You will lose access on {formatDate(cancellationEffectiveDate)}.
+          </InfoNotice>
+        )}
+
         {subscriptionStatus === 'pending_change' && pendingPlanId && !cancellationEffectiveDate && (
-          <InfoNotice icon="time-outline" color={theme.warning} title="Request Under Review" actionText="Cancel Request" onAction={handleCancelPendingChangeRequest}>
+          <InfoNotice 
+            icon="time-outline" 
+            color={theme.warning} 
+            title="Request Under Review" 
+            actionText="Cancel Request" 
+            onAction={handleCancelPendingChangeRequest}
+          >
             Your request to switch to the <Text style={{ fontWeight: 'bold' }}>{pendingPlanId.name}</Text> plan is being processed by our team.
           </InfoNotice>
         )}
+
+        {/* THE FIX: Removed the duplicated InfoNotice block that was here */}
 
         {scheduledPlanChange?.plan && !cancellationEffectiveDate && (
           <InfoNotice
@@ -338,6 +340,7 @@ export default function MySubscriptionScreen() {
           </View>
         )}
       </ScrollView>
+      <BottomNavBar activeScreen="MySubscriptionScreen" />
     </SafeAreaView>
   );
 }
@@ -364,30 +367,6 @@ const getStyles = (theme) =>
     planCardLabel: { color: 'rgba(255, 255, 255, 0.8)', fontSize: 14, fontWeight: '600', textTransform: 'uppercase' },
     planName: { color: theme.textOnPrimary, fontSize: 28, fontWeight: 'bold', marginTop: 4 },
     planPrice: { color: 'rgba(255, 255, 255, 0.9)', fontSize: 18, fontWeight: '500', marginTop: 8 },
-    cancellationCard: {
-      alignItems: 'center',
-      backgroundColor: `${theme.warning}20`,
-      borderColor: theme.warning,
-      borderRadius: 20,
-      borderWidth: 1,
-      marginBottom: 20,
-      padding: 25,
-    },
-    cancellationHeader: { alignItems: 'center', flexDirection: 'row', marginBottom: 10 },
-    cancellationTitle: { color: theme.warning, fontSize: 18, fontWeight: 'bold', marginLeft: 10 },
-    cancellationPlanName: { color: theme.text, fontSize: 24, fontWeight: 'bold', marginVertical: 5 },
-    cancellationText: { color: theme.textSecondary, fontSize: 15, lineHeight: 22, marginBottom: 20, marginTop: 5, textAlign: 'center' },
-    keepPlanBigButton: {
-      alignItems: 'center',
-      backgroundColor: theme.success,
-      borderRadius: 14,
-      flexDirection: 'row',
-      gap: 10,
-      justifyContent: 'center',
-      padding: 16,
-      width: '100%',
-    },
-    keepPlanButtonText: { color: theme.textOnPrimary, fontSize: 16, fontWeight: 'bold' },
     usageCard: {
       backgroundColor: theme.surface,
       borderColor: theme.border,

@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import * as Updates from 'expo-updates';
-import Clipboard from '@react-native-clipboard/clipboard';
+import Clipboard from '@react-native-community/clipboard';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -11,12 +11,10 @@ class ErrorBoundary extends React.Component {
   }
 
   static getDerivedStateFromError(error) {
-    // Update state so the next render will show the fallback UI.
     return { hasError: true, error };
   }
 
   componentDidCatch(error, errorInfo) {
-    // You can also log the error to an error reporting service like Sentry here
     this.setState({
       errorInfo: errorInfo,
     });
@@ -24,7 +22,6 @@ class ErrorBoundary extends React.Component {
   }
 
   handleRestart = () => {
-    // Programmatically restart the application
     Updates.reloadAsync();
   };
 
@@ -44,7 +41,6 @@ ${this.state.errorInfo?.componentStack}
 
   render() {
     if (this.state.hasError) {
-      // Render your custom fallback UI
       return (
         <View style={styles.container}>
           <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -90,7 +86,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
-    paddingTop: 50, // Ensure content is not under status bar
+    paddingTop: 50,
   },
   scrollContent: {
     justifyContent: 'center',

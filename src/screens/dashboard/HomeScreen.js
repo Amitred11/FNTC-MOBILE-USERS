@@ -15,6 +15,7 @@ import {
     Platform,
     Alert
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import Feather from '@expo/vector-icons/Feather';
@@ -22,7 +23,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as Animatable from 'react-native-animatable';
 import { WebView } from 'react-native-webview';
-import { useSubscription, useAlert, useAuth, useTheme } from '../../contexts';
+import { useSubscription, useAuth, useTheme } from '../../contexts';
 import { BottomNavBar } from '../../components/BottomNavBar';
 
 // --- Import separated components ---
@@ -93,17 +94,39 @@ export default function HomePage() {
     const navigation = useNavigation();
     const { theme } = useTheme();
     const styles = getStyles(theme);
-    const { showAlert } = useAlert();
-    const { user: profile, refreshUser, signOut, api } = useAuth(); 
+    const { user: profile, refreshUser, signOut, api } = useAuth();
     const { subscriptionData, paymentHistory, subscriptionStatus, refreshSubscription, isLoading: isSubscriptionLoading } = useSubscription();
 
     const [uiState, setUiState] = useState({ isMenuVisible: false, isLogoutModalVisible: false, isExitModalVisible: false });
     const [refreshing, setRefreshing] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
     const [isMapTouched, setIsMapTouched] = useState(false);
-    
+    const [showInstructionalModal, setShowInstructionalModal] = useState(false); // Start as false
+
     const isRefreshingRef = useRef(false);
     const hasDiscoveredScroll = useRef(false);
+
+    // --- Check if instructional modal should be shown on startup ---
+    useEffect(() => {
+        const checkShouldShowModal = async () => {
+            const hasBeenShown = await AsyncStorage.getItem(INSTRUCTION_MODAL_SHOWN_KEY);
+            if (!hasBeenShown) {
+                // Use a small delay to ensure the UI has settled before showing the modal
+                setTimeout(() => {
+                    setShowInstructionalModal(true);
+                }, 500);
+            }
+        };
+        checkShouldShowModal();
+    }, []);
+
+    // --- Handler for closing the instructional modal ---
+    const handleModalClose = async (shouldRemember) => {
+        if (shouldRemember) {
+            await AsyncStorage.setItem(INSTRUCTION_MODAL_SHOWN_KEY, 'true');
+        }
+        setShowInstructionalModal(false);
+    };
 
     // --- MAP LOCATION DATA ---
     const officeLocation = { latitude: 14.7397636, longitude: 121.1401032 };
@@ -137,14 +160,13 @@ export default function HomePage() {
         'cancelled': { text: 'Cancelled', color: theme.textSecondary },
         'upcoming': { text: 'Upcoming', color: theme.info }, // New status
     }), [theme]);
-    
-    // --- FIX: Determine the effective status to display ---
-    const hasDueOrOverdueBills = useMemo(() => 
+
+    const hasDueOrOverdueBills = useMemo(() =>
         paymentHistory.some(bill => ['Due', 'Overdue'].includes(bill.status)),
         [paymentHistory]
     );
 
-    const effectiveStatus = 
+    const effectiveStatus =
         (subscriptionStatus === 'active' || subscriptionStatus === 'pending_installation') && !hasDueOrOverdueBills
         ? 'upcoming'
         : subscriptionStatus;
@@ -152,7 +174,6 @@ export default function HomePage() {
     const currentStatus = statusConfig[effectiveStatus] || { text: 'Not Subscribed', color: theme.disabled };
     const showScrollIndicator = !hasDiscoveredScroll.current && subscriptionStatus === 'active';
 
-    // --- Centralized Data Refresh Logic ---
     const onRefresh = useCallback(async () => {
         if (isRefreshingRef.current || !api) return;
 
@@ -183,7 +204,7 @@ export default function HomePage() {
         onRefresh();
       }, [onRefresh])
     );
-    
+
     // --- UI State Handlers ---
     const handleUiStateChange = useCallback((key, value) => setUiState(prev => ({ ...prev, [key]: value })), []);
     const onConfirmLogout = useCallback(() => { handleUiStateChange('isLogoutModalVisible', false); signOut(); }, [signOut, handleUiStateChange]);
@@ -194,10 +215,10 @@ export default function HomePage() {
         useCallback(() => {
             const onBackPress = () => {
                 if (uiState.isMenuVisible) { handleUiStateChange('isMenuVisible', false); return true; }
-                if (uiState.isLogoutModalVisible || uiState.isExitModalVisible) { 
-                    handleUiStateChange('isLogoutModalVisible', false); 
-                    handleUiStateChange('isExitModalVisible', false); 
-                    return true; 
+                if (uiState.isLogoutModalVisible || uiState.isExitModalVisible) {
+                    handleUiStateChange('isLogoutModalVisible', false);
+                    handleUiStateChange('isExitModalVisible', false);
+                    return true;
                 }
                 handleUiStateChange('isExitModalVisible', true);
                 return true;
@@ -206,7 +227,7 @@ export default function HomePage() {
             return () => subscription.remove();
         }, [uiState, handleUiStateChange])
     );
-    
+
     // --- Memoized Dashboard Component ---
     const renderDashboard = useMemo(() => {
         if (isSubscriptionLoading && !refreshing) {
@@ -228,7 +249,7 @@ export default function HomePage() {
 
         if (subscriptionStatus === 'suspended') return renderNoPlanCard('Account Suspended', 'Pay your bill to reactivate.', 'PayBills', 'warning-outline', true);
         if (!['active', 'pending_change', 'pending_installation'].includes(subscriptionStatus)) return renderNoPlanCard('Unlock Your Dashboard', 'Explore our plans now!', 'Subscription', 'sparkles-outline');
-        
+
         const activePlan = subscriptionData?.planId;
         const renewalDate = subscriptionData?.renewalDate;
         const pendingBill = paymentHistory.find(bill => bill.status === 'Pending Verification');
@@ -240,7 +261,7 @@ export default function HomePage() {
             const firstBillDate = upcomingBill
                 ? new Date(upcomingBill.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                 : (renewalDate ? new Date(renewalDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Soon');
-            
+
             return (
                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScrollContainer}>
                     <AccountInfoCard icon="file-text" label="First Bill" value="Upcoming" color={theme.info} onPress={() => navigation.navigate('MyBills')} />
@@ -250,9 +271,9 @@ export default function HomePage() {
             );
         }
 
-        let billAmount = 'All Paid', 
-            billColor = theme.success, 
-            billLabel = 'Current Bill', 
+        let billAmount = 'All Paid',
+            billColor = theme.success,
+            billLabel = 'Current Bill',
             billOnPress = () => navigation.navigate('MyBills');
 
         if (pendingBill) {
@@ -276,7 +297,7 @@ export default function HomePage() {
             </ScrollView>
         );
     }, [isSubscriptionLoading, refreshing, subscriptionStatus, paymentHistory, subscriptionData, theme, navigation, styles, effectiveStatus]);
-    
+
     const photoSource = profile?.photoUrl ? { uri: profile.photoUrl } : require('../../assets/images/avatars/profilepic.jpg');
 
     return (
@@ -301,7 +322,7 @@ export default function HomePage() {
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} progressViewOffset={120} />}
                 contentContainerStyle={styles.scrollContent}
                 onScrollBeginDrag={() => { if (showScrollIndicator) hasDiscoveredScroll.current = true; }}
-                scrollEnabled={!isMapTouched} 
+                scrollEnabled={!isMapTouched}
             >
                 <View style={styles.headerSpacer} />
 
@@ -341,9 +362,10 @@ export default function HomePage() {
                         <QuickActionButton icon="credit-card" label="Pay Bill" onPress={() => navigation.navigate('PayBills')} />
                         <QuickActionButton icon="layers" label="Services" onPress={() => navigation.navigate('OurServicesScreen')} />
                         <QuickActionButton icon="headphones" label="Support" onPress={() => navigation.navigate('Support')} />
+                        <QuickActionButton icon="info" label="Guide" onPress={() => navigation.navigate('HowToUseScreen')} />
                     </View>
                 </View>
-                
+
                 <View style={styles.section}>
                     <FeedbackPromptCard onPress={() => navigation.navigate('CustomerFeedbackScreen')} />
                 </View>
@@ -390,54 +412,54 @@ const getStyles = (theme) =>
         headerIcon: { padding: 8 },
         headerLogo: { height: 35, width: 100, resizeMode: 'contain' },
         headerSpacer: { height: 80 },
-        welcomeCardWrapper: { 
-            marginHorizontal: 20, 
-            marginTop: 12, 
-            marginBottom: 40, 
-            borderRadius: 24, 
-            shadowColor: theme.primary, 
-            shadowOffset: { width: 0, height: 8 }, 
-            shadowOpacity: 0.3, 
-            shadowRadius: 15, 
-            elevation: 12 
+        welcomeCardWrapper: {
+            marginHorizontal: 20,
+            marginTop: 12,
+            marginBottom: 40,
+            borderRadius: 24,
+            shadowColor: theme.primary,
+            shadowOffset: { width: 0, height: 8 },
+            shadowOpacity: 0.3,
+            shadowRadius: 15,
+            elevation: 12
         },
-        welcomeCard: { 
-            borderRadius: 24, 
-            overflow: 'hidden' 
+        welcomeCard: {
+            borderRadius: 24,
+            overflow: 'hidden'
         },
-        welcomeBg: { 
-            position: 'absolute', 
-            width: '100%', 
-            height: '100%', 
+        welcomeBg: {
+            position: 'absolute',
+            width: '100%',
+            height: '100%',
             opacity: 0.2
         },
-        welcomeContent: { 
-            alignItems: 'center', 
-            padding: 20 
+        welcomeContent: {
+            alignItems: 'center',
+            padding: 20
         },
-        profilePic: { 
-            width: 80, 
-            height: 80, 
-            borderRadius: 40, 
-            borderWidth: 4, 
+        profilePic: {
+            width: 80,
+            height: 80,
+            borderRadius: 40,
+            borderWidth: 4,
             borderColor: 'rgba(255,255,255,0.8)',
             shadowColor: 'rgba(0, 0, 0, 0.3)',
             shadowOffset: { width: 0, height: 5 },
             shadowRadius: 10,
             marginBottom: 12,
         },
-        welcomeTextContainer: { 
+        welcomeTextContainer: {
             alignItems: 'center',
             marginBottom: 12,
         },
-        welcomeTitle: { 
-            fontSize: 20, 
-            color: theme.textOnPrimary, 
+        welcomeTitle: {
+            fontSize: 20,
+            color: theme.textOnPrimary,
             opacity: 0.8,
         },
-        welcomeName: { 
-            fontSize: 24, 
-            fontWeight: 'bold', 
+        welcomeName: {
+            fontSize: 24,
+            fontWeight: 'bold',
             color: theme.textOnPrimary,
         },
         statusContainer: {
@@ -465,15 +487,15 @@ const getStyles = (theme) =>
         scrollIndicator: { flexDirection: 'row', alignItems: 'center', opacity: 0.7 },
         scrollIndicatorText: { color: theme.textSecondary, fontStyle: 'italic', marginRight: 2 },
         horizontalScrollContainer: { paddingLeft: 20, paddingRight: 5, paddingBottom: 10 },
-        accountCard: { 
-            backgroundColor: theme.surface, 
-            borderRadius: 20, 
+        accountCard: {
+            backgroundColor: theme.surface,
+            borderRadius: 20,
             width: 150,
-            marginRight: 15, 
-            shadowColor: '#000', 
-            shadowOffset: { width: 0, height: 2 }, 
-            shadowOpacity: theme.isDarkMode ? 0.2 : 0.05, 
-            shadowRadius: 8, 
+            marginRight: 15,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: theme.isDarkMode ? 0.2 : 0.05,
+            shadowRadius: 8,
             elevation: 4,
             flexDirection: 'row',
             overflow: 'hidden',
@@ -487,20 +509,20 @@ const getStyles = (theme) =>
             justifyContent: 'space-between',
         },
         accountCardHeader: {},
-        accountCardIconContainer: { 
-            padding: 10, 
-            borderRadius: 14, 
+        accountCardIconContainer: {
+            padding: 10,
+            borderRadius: 14,
             alignSelf: 'flex-start',
             marginBottom: 10,
         },
-        accountCardLabel: { 
-            fontSize: 13, 
-            color: theme.textSecondary, 
+        accountCardLabel: {
+            fontSize: 13,
+            color: theme.textSecondary,
             fontWeight: '500',
         },
-        accountCardValue: { 
-            fontSize: 22, 
-            fontWeight: 'bold', 
+        accountCardValue: {
+            fontSize: 22,
+            fontWeight: 'bold',
             color: theme.text,
             marginTop: 4,
         },
@@ -511,19 +533,15 @@ const getStyles = (theme) =>
         dashboardLoader: { height: 160, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.surface, borderRadius: 20, marginHorizontal: 20 },
         actionsGrid: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 15 },
         quickActionContainer: { alignItems: 'center', flex: 1, marginHorizontal: 5 },
-        quickActionIconCircle: { 
-            backgroundColor: theme.surface, 
-            width: 70, 
-            height: 70, 
-            borderRadius: 35, 
-            alignItems: 'center', 
-            justifyContent: 'center', 
+        quickActionIconCircle: {
+            backgroundColor: theme.surface,
+            width: 70,
+            height: 70,
+            borderRadius: 35,
+            alignItems: 'center',
+            justifyContent: 'center',
             marginBottom: 12,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: theme.isDarkMode ? 0.2 : 0.08,
-            shadowRadius: 8,
-            elevation: 4,
+            boxShadow:'2px 4px 2px rgba(0,0,0,0.4)'
         },
         quickActionText: { fontSize: 14, fontWeight: '600', color: theme.text, textAlign: 'center' },
         feedbackPromptCard: {
@@ -562,7 +580,7 @@ const getStyles = (theme) =>
             borderRadius: 20,
             padding: 16,
             marginHorizontal: 20,
-            marginTop: -20, 
+            marginTop: -20,
             flexDirection: 'row',
             alignItems: 'center',
             elevation: 8,

@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
-import { useAuth, useTheme, useAlert, useMessage } from '../../contexts';
+import { useAuth, useTheme, useAlert } from '../../contexts';
 import TermsOfServiceText from '../../data/TermsOfServices';
 import PrivacyPolicyText from '../../data/PrivacyPolicy';
 

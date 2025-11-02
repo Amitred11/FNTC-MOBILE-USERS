@@ -205,7 +205,7 @@ export default function CustomerFeedbackScreen() {
       return (total / allFeedbacks.length).toFixed(1);
   }, [allFeedbacks]);
 
-  const headerHeight = scrollY.interpolate({ inputRange: [0, 60], outputRange: [200, 90], extrapolate: 'clamp' });
+  const headerHeight = scrollY.interpolate({ inputRange: [0, 60], outputRange: [176, 90], extrapolate: 'clamp' });
   const headerOpacity = scrollY.interpolate({ inputRange: [0, 100], outputRange: [1, 0], extrapolate: 'clamp' });
   const titleTranslateY = scrollY.interpolate({ inputRange: [0, 150], outputRange: [0, -20], extrapolate: 'clamp' });
   const titleScale = scrollY.interpolate({ inputRange: [0, 150], outputRange: [1, 0.8], extrapolate: 'clamp' });
@@ -276,9 +276,8 @@ const getStyles = (theme) => StyleSheet.create({
     header: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 },
     headerBlur: { flex: 1, justifyContent: 'flex-end', paddingBottom: 20 },
     headerBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, position: 'absolute', top: 15, left: 0, right: 15 },
-    headerIcon: { width: 40, padding: 5 },
-    // --- FIX APPLIED HERE ---
-    headerTitleCompact: { fontSize: 22, fontWeight: '600', color: '#FFFFFF', position: 'absolute', top: 20, left: 0, right: 0, textAlign: 'center' },
+    headerIcon: { width: 40, padding: 5, top: 12, right: 5, zIndex: 1 },
+    headerTitleCompact: { fontSize: 22, fontWeight: '600', color: '#FFFFFF', position: 'absolute', top: 14, left: 10, right: 0, textAlign: 'center' },
     headerContent: { alignItems: 'center' },
     headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#FFF', textAlign: 'center' },
     headerSubtitle: { fontSize: 16, color: '#FFF', opacity: 0.85, textAlign: 'center', marginTop: 8 },

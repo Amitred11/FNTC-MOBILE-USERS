@@ -68,15 +68,6 @@ const CustomPicker = ({
     );
   }, [selectedValue, theme.primary, handleSelect]);
   
-  const ListHeader = () => {
-    if (!listTitle) return null;
-    return (
-      <View style={styles.listHeaderContainer}>
-        <Text style={styles.listTitleText}>{listTitle}</Text>
-      </View>
-    );
-  };
-  
   const containerStyles = [
     styles.pickerRow,
     disabled && styles.pickerRowDisabled,

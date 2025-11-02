@@ -10,11 +10,11 @@ import {
   ScrollView,
   BackHandler,
 } from 'react-native';
-import Clipboard from '@react-native-clipboard/clipboard';
+import Clipboard from '@react-native-community/clipboard';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { lightTheme } from '../../constants/colors';
-import { useMessage, useAlert, useAuth } from '../../contexts';  
+import { useBanner, useAlert, useAuth } from '../../contexts';  
 import * as Animatable from 'react-native-animatable';
 
 
@@ -40,7 +40,7 @@ const Guideline = React.memo(({ icon, text }) => {
 export default function DisplayRecoveryCodeScreen() {
   const navigation = useNavigation();
   const theme = lightTheme;
-  const { showMessage } = useMessage();
+  const { showBanner } = useBanner();
   const { showAlert } = useAlert();
   const { pendingRecoveryCode, acknowledgeRecoveryCode } = useAuth();
   const styles = getStyles(theme);
@@ -64,9 +64,9 @@ export default function DisplayRecoveryCodeScreen() {
   const handleCopyCode = useCallback(() => {
     if (pendingRecoveryCode) {
         Clipboard.setString(pendingRecoveryCode);
-        showMessage('Recovery code copied to clipboard!');
+        showBanner('success', 'Copied!', 'Recovery code copied to clipboard.');
     }
-  }, [pendingRecoveryCode, showMessage]);
+  }, [pendingRecoveryCode, showBanner]);
 
   const handleContinue = useCallback(() => {
     showAlert(

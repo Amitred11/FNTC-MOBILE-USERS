@@ -24,7 +24,7 @@ import { MAX_CHARACTERS, RATING_DESCRIPTIONS, POSITIVE_TAGS, NEGATIVE_TAGS } fro
 // --- Sub-Components ---
 const StarRating = React.memo(({ currentRating, onRate, disabled }) => {
   const { theme } = useTheme();
-  if (!theme) return null; // Guard against undefined theme
+  if (!theme) return null; 
   const styles = getStyles(theme);
   const starRefs = useRef([]);
 
@@ -58,7 +58,7 @@ const StarRating = React.memo(({ currentRating, onRate, disabled }) => {
 
 const TagSelector = React.memo(({ rating, selectedTags, onTagPress }) => {
     const { theme } = useTheme();
-    if (!theme) return null; // Guard against undefined theme
+    if (!theme) return null; 
     const styles = getStyles(theme);
     const relevantTags = useMemo(() => {
         if (rating === 0) return [];
@@ -292,7 +292,7 @@ export default function FeedbackFormScreen() {
 
 const getStyles = (theme) =>
   StyleSheet.create({
-    container: { flex: 1 },
+    container: { flex: 1, backgroundColor: theme.surface},
     kavContainer: { flex: 1 },
     scrollContent: { 
       flexGrow: 1, 

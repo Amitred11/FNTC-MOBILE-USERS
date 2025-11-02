@@ -1,4 +1,4 @@
-// AuthContext.js (Corrected & Final)
+// AuthContext.js (Corrected & Final with Graceful Handling)
 import React, { createContext, useState, useEffect, useContext, useCallback, useMemo, useRef } from 'react';
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -10,7 +10,9 @@ import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import Constants from 'expo-constants';
 import { useAlert } from './AlertContext';
-import * as Notifications from 'expo-notifications'; 
+import { useBanner } from './BannerContext';
+import * as Notifications from 'expo-notifications';
+import { makeRedirectUri, useAuthRequest } from 'expo-auth-session';// <--- IMPORT THIS
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -43,18 +45,27 @@ export const AuthProvider = ({ children }) => {
   const { showAlert } = useAlert();
   const [user, setUser] = useState(null);
   const [accessToken, setAccessToken] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isBootstrapping, setIsBootstrapping] = useState(true); // Renamed from isLoading
+  const [isLoading, setIsLoading] = useState(false);
   const [authAction, setAuthAction] = useState(null);
   const [pendingRecoveryCode, setPendingRecoveryCode] = useState(null);
-  
+  const [isOnline, setIsOnline] = useState(true);
+  const [justCameOnline, setJustCameOnline] = useState(false);
+  const { showBanner } = useBanner();
+
   const isRefreshingSession = useRef(false);
   let refreshPromise = useRef(null);
 
+  const androidRedirectUri = makeRedirectUri({ scheme: 'com.hellopo123.fibear' });({
+    scheme: Constants.expoConfig.scheme, 
+  });
+
   const [request, response, promptAsync] = Google.useAuthRequest({
-    expoClientId: Constants.expoConfig.extra.webClientId,
+    expoClientId: Constants.expoConfig.extra.webClientId, 
     iosClientId: Constants.expoConfig.extra.iosClientId,
     androidClientId: Constants.expoConfig.extra.androidClientId,
     webClientId: Constants.expoConfig.extra.webClientId,
+    redirectUri: androidRedirectUri,
   });
 
   const updateUserStateAndCache = useCallback(async (newUserData) => {
@@ -76,16 +87,15 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const signOut = useCallback(
-  async (apiCall = true) => {
-    setIsLoading(true);
+  const signOut = useCallback(async (options = {}) => {
+    const { apiCall = true, reason = null } = options;
 
     const tokenExists = await AsyncStorage.getItem('accessToken');
     if (tokenExists) {
       try {
         await api.post('/users/push-token', { token: null });
       } catch (err) {
-        console.warn('Could not clear push token on server (token may have been expired):', err.message);
+        console.warn('Could not clear push token on server:', err.message);
       }
     }
 
@@ -95,7 +105,7 @@ export const AuthProvider = ({ children }) => {
         try {
           await api.post('/auth/logout', { refreshToken });
         } catch (err) {
-          console.warn('API logout call failed (this is often ok):', err.message);
+          console.warn('API logout call failed:', err.message);
         }
       }
     }
@@ -105,40 +115,41 @@ export const AuthProvider = ({ children }) => {
     await updateUserStateAndCache(null);
     setAuthAction(null);
     setIsLoading(false);
-  },
-  [updateAccessToken, updateUserStateAndCache]
-);
+
+    if (reason) {
+      showAlert("Session Ended", reason);
+    }
+  }, [updateAccessToken, updateUserStateAndCache, showAlert]);
   
   const _refreshSessionAndUser = useCallback(async (refreshToken) => {
-    if (!refreshToken) {
-      throw new Error("No refresh token provided.");
-    }
-    
-    if (isRefreshingSession.current) {
-        return refreshPromise.current;
-    }
+    if (!refreshToken) throw new Error("No refresh token provided.");
+    if (isRefreshingSession.current) return refreshPromise.current;
 
     isRefreshingSession.current = true;
     const promise = (async () => {
-        try {
-            const { data: refreshed } = await api.post('/auth/refresh', { refreshToken });
-            await updateAccessToken(refreshed.accessToken);
-            const { data: freshUserData } = await api.get('/users/me');
-            await updateUserStateAndCache(freshUserData);
-            return refreshed.accessToken;
-        } catch (error) {
-            if (error.response?.status === 401 || error.response?.status === 403) {
-                await signOut(false);
-            }
-            throw error;
-        } finally {
-            isRefreshingSession.current = false;
-            refreshPromise.current = null;
+      try {
+        const { data: refreshed } = await api.post('/auth/refresh', { refreshToken });
+        await updateAccessToken(refreshed.accessToken);
+        const { data: freshUserData } = await api.get('/users/me');
+        await updateUserStateAndCache(freshUserData);
+        if (!isOnline) setIsOnline(true); 
+        return refreshed.accessToken;
+      } catch (error) {
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          await signOut({ apiCall: false, reason: "Your session has expired for security reasons. Please log in again." });
+        } else {
+          setIsOnline(false);
+          showBanner('warning', 'Connection Issue', "You appear to be offline.");
         }
+        throw error;
+      } finally {
+        isRefreshingSession.current = false;
+        refreshPromise.current = null;
+      }
     })();
     refreshPromise.current = promise;
     return promise;
-  }, [updateAccessToken, updateUserStateAndCache, signOut]);
+  }, [updateAccessToken, updateUserStateAndCache, signOut, isOnline, showBanner]);
 
   useEffect(() => {
     const interceptor = api.interceptors.response.use(
@@ -152,7 +163,7 @@ export const AuthProvider = ({ children }) => {
         originalRequest._retry = true;
         const storedToken = await AsyncStorage.getItem('refreshToken');
         if (!storedToken) {
-          await signOut(false);
+          await signOut({ apiCall: false });
           return Promise.reject(new Error('No refresh token available.'));
         }
         try {
@@ -168,37 +179,57 @@ export const AuthProvider = ({ children }) => {
   }, [signOut, _refreshSessionAndUser]);
 
   useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      if (state.isConnected && !isOnline) {
+        setIsOnline(true);
+        setJustCameOnline(true);
+        refreshUser();
+        setTimeout(() => {
+          setJustCameOnline(false);
+        }, 3000);
+      } else if (!state.isConnected) {
+        setIsOnline(false);
+      }
+    });
+    return () => unsubscribe();
+  }, [isOnline, refreshUser]);
+
+  useEffect(() => {
     const bootstrapApp = async () => {
-      setIsLoading(true);
+      setIsBootstrapping(true); // Use the bootstrapping state
       try {
         const storedRefreshToken = await AsyncStorage.getItem('refreshToken');
+
         if (!storedRefreshToken) {
-            await signOut(false); 
+            await signOut({ apiCall: false });
             return;
         }
         const netState = await NetInfo.fetch();
         if (netState.isConnected) {
-          await _refreshSessionAndUser(storedRefreshToken);
-          await registerAndSendPushToken(); 
+          try {
+            await _refreshSessionAndUser(storedRefreshToken);
+            await registerAndSendPushToken();
+          } catch (err) {
+            console.warn('Session refresh failed during bootstrap:', err.message);
+            await signOut({ apiCall: false });
+            return; 
+         }
         } else {
           const cachedUserJSON = await AsyncStorage.getItem('cachedUser');
-          if (cachedUserJSON) {
-            setUser(JSON.parse(cachedUserJSON));
-          }
-          showMessage('You are offline. Showing last available data.');
+          if (cachedUserJSON) setUser(JSON.parse(cachedUserJSON));
+          showBanner('info', 'You are offline', 'Showing last available data.');
         }
       } catch (err) {
-        // Any failure in bootstrap leads to a logged-out state.
-        await signOut(false);
+        await signOut({ apiCall: false });
       } finally {
-        setIsLoading(false);
+        setIsBootstrapping(false); // Use the bootstrapping state
       }
     };
     bootstrapApp();
   }, []);
 
   const signIn = useCallback(async (email, password, rememberMe) => {
-    setIsLoading(true);
+    setIsLoading(true); // Use action loading state
     setAuthAction('PENDING_LOGIN');
     try {
       const response = await api.post('/auth/login', { email, password, rememberMe });
@@ -208,34 +239,38 @@ export const AuthProvider = ({ children }) => {
       if (newRefreshToken) await AsyncStorage.setItem('refreshToken', newRefreshToken);
       
       await updateUserStateAndCache(backendUser);
-      showMessage('Login Successful!');
+      showBanner('success', 'Login Successful!');
       await registerAndSendPushToken(); 
       await new Promise(resolve => setTimeout(resolve, 0));
 
-      setIsLoading(false);
-      setAuthAction(null);
       return true;
     } catch (error) {
       const errorMessage = error.response?.data?.message || 'Login failed. Please check your credentials.';
-      await signOut(false);
+      await signOut({ apiCall: false });
       throw new Error(errorMessage);
+    } finally {
+        setIsLoading(false); // Use action loading state
+        setAuthAction(null);
     }
-  }, [updateAccessToken, updateUserStateAndCache, showMessage, signOut, registerAndSendPushToken]);
+  }, [updateAccessToken, updateUserStateAndCache, showBanner, signOut, registerAndSendPushToken]);
 
   const register = useCallback(async (credentials) => {
-    setIsLoading(true);
+    setIsLoading(true); // Use action loading state
     try {
       await api.post('/auth/register', credentials);
-      // Success, but don't stop loading, as we navigate to OTP
+      return true;
     } catch (error) {
-      setIsLoading(false); // Stop loading on registration failure
-      console.error('Registration Failed:', error.response?.data?.message || error.message);
-      throw error;
+      const errorMessage = error.response?.data?.message || 'An unexpected error occurred.';
+      console.error('Registration Failed:', errorMessage);
+      showBanner('error', 'Registration Failed', errorMessage);
+      return false;
+    } finally {
+      setIsLoading(false); // Use action loading state
     }
-  }, []);
+  }, [showBanner]);
 
   const verifyOtpAndLogin = useCallback(async (email, otp) => {
-    setIsLoading(true);
+    setIsLoading(true); // Use action loading state
     try {
       const { data } = await api.post('/auth/verify-otp', { email, otp });
       const { accessToken: newAccessToken, refreshToken: newRefreshToken, user: backendUser, recoveryCode } = data;
@@ -248,11 +283,11 @@ export const AuthProvider = ({ children }) => {
       await updateUserStateAndCache(backendUser);
       await registerAndSendPushToken();
       await new Promise(resolve => setTimeout(resolve, 0));
-      setIsLoading(false);
     } catch (error) {
       console.error('OTP Verification Failed:', error.response?.data?.message || error.message);
-      setIsLoading(false);
       throw error;
+    } finally {
+      setIsLoading(false); // Use action loading state
     }
   }, [updateAccessToken, updateUserStateAndCache, showMessage, registerAndSendPushToken]);
 
@@ -277,7 +312,7 @@ export const AuthProvider = ({ children }) => {
       if (newRefreshToken) await AsyncStorage.setItem('refreshToken', newRefreshToken);
       if (recoveryCode) setPendingRecoveryCode(recoveryCode);
       
-      showMessage('Google Sign-In Successful!');
+      showBanner('success', 'Google Sign-In Successful!');
       await updateUserStateAndCache(backendUser);
       await registerAndSendPushToken(); 
       await new Promise(resolve => setTimeout(resolve, 0));
@@ -287,21 +322,26 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       const errorMessage = error.response?.data?.message || 'Google Sign-In failed on the server.';
       showAlert("Sign-In Error", errorMessage);
-      await signOut(false);
+      await signOut({ apiCall: false });
     }
-  }, [updateAccessToken, signOut, showAlert, showMessage, updateUserStateAndCache]);
+  }, [updateAccessToken, signOut, showAlert, showBanner, updateUserStateAndCache]);
 
   useEffect(() => {
     if (response?.type === 'success' && response.authentication?.idToken) {
       handleBackendGoogleSignIn(response.authentication.idToken);
     } else if (response && response.type !== 'success') {
       if (response.type === 'cancel' || response.type === 'dismiss') {
-        showMessage('Google Sign-In cancelled.');
+       showBanner('warning', 'Google Sign-In Cancelled');
+       console.log('Google Sign-In was cancelled or dismissed by the user.'); // Added console log
+      } else {
+        // Handle other non-success scenarios (e.g., error, access blocked by user/policy)
+        console.warn('Google Sign-In access blocked or failed for another reason:', response); // Added console log for general non-success
+        showBanner('error', 'Google Sign-In Failed', 'Access blocked or an unexpected error occurred.');
       }
       setIsLoading(false);
       setAuthAction(null);
     }
-  }, [response, handleBackendGoogleSignIn, showMessage]);
+  }, [response, handleBackendGoogleSignIn, showBanner]);
 
   const googleSignIn = useCallback(() => {
     if (isLoading || authAction) return;
@@ -312,7 +352,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const { data: updatedUser } = await api.put('/users/me', newProfileData);
       await updateUserStateAndCache(updatedUser);
-      showMessage('Profile updated successfully!');
+      showBanner('success', 'Profile updated successfully!');
     } catch (error) {
       console.error('Failed to update profile', error.response?.data?.message || error.message);
       throw error;
@@ -327,7 +367,7 @@ export const AuthProvider = ({ children }) => {
         await updateUserStateAndCache(freshUserData);
     } catch (error) {
         if (error.response?.status === 401) {
-            await signOut(false);
+            await signOut({ apiCall: false });
         }
     } finally {
         isRefreshingSession.current = false;
@@ -338,14 +378,12 @@ export const AuthProvider = ({ children }) => {
   const acknowledgeRecoveryCode = useCallback(() => setPendingRecoveryCode(null), []);
 
   const registerAndSendPushToken = useCallback(async () => {
-    // 1. Check if it's a real device
     if (!Constants.isDevice) {
         console.log('Push notifications are only available on physical devices.');
         return;
     }
 
     try {
-        // 2. Get permission from the user
         const { status: existingStatus } = await Notifications.getPermissionsAsync();
         let finalStatus = existingStatus;
         if (existingStatus !== 'granted') {
@@ -353,16 +391,13 @@ export const AuthProvider = ({ children }) => {
             finalStatus = status;
         }
 
-        // 3. Exit if permission is not granted
         if (finalStatus !== 'granted') {
             console.log('User did not grant permission for push notifications.');
             return;
         }
 
-        // 4. Get the user's unique push token
         const token = (await Notifications.getExpoPushTokenAsync()).data;
         
-        // 5. Send the token to your backend API
         if (token) {
             await api.post('/users/push-token', { token });
             console.log('Push token sent to server successfully.');
@@ -375,7 +410,10 @@ export const AuthProvider = ({ children }) => {
   const value = useMemo(() => ({
     user,
     accessToken,
+    isBootstrapping,
     isLoading,
+    isOnline,
+    justCameOnline,
     signIn,
     signOut,
     register,
@@ -390,7 +428,7 @@ export const AuthProvider = ({ children }) => {
     acknowledgeRecoveryCode,
     setAuthAction,
     completeAuthAction,
-  }), [ user, accessToken, isLoading, authAction, pendingRecoveryCode, signIn, signOut, register, verifyOtpAndLogin, resendOtp, googleSignIn, refreshUser, completeAuthAction, acknowledgeRecoveryCode]);
+  }), [ user, accessToken, isBootstrapping, isLoading, isOnline, justCameOnline, authAction, pendingRecoveryCode, signIn, signOut, register, verifyOtpAndLogin, resendOtp, googleSignIn, refreshUser, completeAuthAction, acknowledgeRecoveryCode]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

@@ -18,14 +18,11 @@ const AnimatedImageBackground = Animated.createAnimatedComponent(ImageBackground
 export default function SplashScreen2() {
   const navigation = useNavigation();
 
-  // Define the animated values. We no longer need containerTranslateY.
   const backgroundScale = useRef(new Animated.Value(1.15)).current;
   const contentOpacity = useRef(new Animated.Value(0)).current;
   const contentTranslateY = useRef(new Animated.Value(0)).current;
 
-  // This useEffect hook runs ONLY ONCE when the component mounts.
   useEffect(() => {
-    // A slow, subtle background zoom
     const backgroundAnimation = Animated.timing(backgroundScale, {
       toValue: 1,
       duration: 6000,
@@ -33,7 +30,6 @@ export default function SplashScreen2() {
       easing: Easing.out(Easing.quad),
     });
 
-    // The continuous "breathing" animation
     const breathingAnimation = Animated.loop(
       Animated.sequence([
         Animated.timing(contentTranslateY, {
@@ -51,33 +47,28 @@ export default function SplashScreen2() {
       ])
     );
 
-    // The initial fade-in for the content
     const fadeInAnimation = Animated.timing(contentOpacity, {
       toValue: 1,
       duration: 1500,
       useNativeDriver: true,
     });
 
-    // Start all animations. They will continue to run indefinitely.
     backgroundAnimation.start();
     breathingAnimation.start();
     fadeInAnimation.start();
 
-    // The cleanup function will stop animations if the component is ever unmounted
     return () => {
       backgroundAnimation.stop();
       breathingAnimation.stop();
       fadeInAnimation.stop();
     };
-  }, []); // The empty array [] ensures this effect runs only once.
+  }, []);
 
-  // --- SIMPLIFIED HANDLE NEXT FUNCTION ---
-  // This is the most important change. It only navigates.
+
   const handleNext = () => {
     navigation.navigate('GetStarted');
   };
 
-  // --- Define Animated Styles ---
   const animatedBackgroundStyle = { transform: [{ scale: backgroundScale }] };
   const animatedContentStyle = {
     opacity: contentOpacity,
@@ -92,7 +83,6 @@ export default function SplashScreen2() {
         resizeMode="cover"
       />
 
-      {/* The main container is now a regular View, not animated */}
       <View style={styles.contentContainer}>
         <Animated.View style={[styles.animatedContentWrapper, animatedContentStyle]}>
           <Animated.Image

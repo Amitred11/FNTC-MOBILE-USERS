@@ -18,7 +18,7 @@ import * as Animatable from 'react-native-animatable';
 import { SvgXml } from 'react-native-svg';
 
 import MySubscriptionScreen from './MySubscriptionScreen';
-import { useSubscription, useAuth, useTheme, useMessage, useAlert } from '../../contexts';
+import { useSubscription, useAuth, useTheme, useBanner, useAlert } from '../../contexts';
 import { BottomNavBar } from '../../components/BottomNavBar';
 
 // --- Static Assets ---
@@ -261,7 +261,7 @@ const PlanSelectionFlow = memo(({ isChangingPlan = false, onFlowFinish }) => {
     const navigation = useNavigation();
     const { subscribeToPlan, changePlan, subscriptionStatus } = useSubscription(); 
     const { user: profile, api } = useAuth();
-    const { showMessage } = useMessage();
+    const { showBanner } = useBanner();
     const { theme } = useTheme();
     const { showAlert } = useAlert();
 
@@ -322,14 +322,14 @@ const PlanSelectionFlow = memo(({ isChangingPlan = false, onFlowFinish }) => {
         try {
             const planToSubmit = selectedPlanRef.current;
             await subscribeToPlan(planToSubmit, installationAddress);
-            showMessage('Submission Received!', 'Your application is now pending installation.');
+            showBanner('success', 'Submission Received!', 'Your application is now pending installation.');
             if (onFlowFinish) onFlowFinish();
         } catch (error) {
             showAlert('Submission Failed', error.response?.data?.message || 'An error occurred.');
         } finally {
             setIsSubmitting(false);
         }
-    }, [subscribeToPlan, installationAddress, showMessage, showAlert, onFlowFinish]);
+    }, [subscribeToPlan, installationAddress, showBanner, showAlert, onFlowFinish]);
 
 
     const handleChangePlanSubmit = useCallback(async () => {
@@ -337,14 +337,14 @@ const PlanSelectionFlow = memo(({ isChangingPlan = false, onFlowFinish }) => {
         setIsSubmitting(true);
         try {
             await changePlan(selectedPlan);
-            showMessage('Request Received!', 'Your plan change is now pending approval.');
+            showBanner('success', 'Request Received!', 'Your plan change is now pending approval.');
             if (onFlowFinish) onFlowFinish();
         } catch (error) {
             showAlert('Change Failed', error.response?.data?.message || 'An error occurred.');
         } finally {
             setIsSubmitting(false);
         }
-    }, [selectedPlan, changePlan, showMessage, showAlert, onFlowFinish]);
+    }, [selectedPlan, changePlan, showBanner, showAlert, onFlowFinish]);
 
     const renderContent = () => {
         if (isChangingPlan) {

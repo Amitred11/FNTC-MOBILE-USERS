@@ -23,13 +23,13 @@ import { useNetInfo } from '@react-native-community/netinfo';
 import * as Animatable from 'react-native-animatable';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { useTheme, useAuth, useAlert } from '../../contexts';
+import { useTheme, useAuth, useAlert, useBanner } from '../../contexts';
 import { faqData } from '../../data/faqData';
 import EventSource from 'react-native-event-source';
 import apiConfig from '../../config/apiConfig';
 
 // --- Constants ---
-const { CHATBOT_API_ENDPOINT } = apiConfig;
+const { CHATBOT_API_ENDPOINT, CONFIG_INTERNAL_API_KEY} = apiConfig;
 const HEADER_HEIGHT = Platform.select({ ios: 90, android: 70 });
 const RETRY_DELAY_MS = 5000;
 const INITIALIZATION_TIMEOUT_MS = 15000;
@@ -39,8 +39,6 @@ const SUGGESTED_PROMPTS = [
     { title: "Plan Details", question: "What internet plans do you offer?" },
     { title: "Contact Support", question: "How can I speak to a human agent?" },
 ];
-
-const CONFIG_INTERNAL_API_KEY="ba69a3fb71924f66aae20486d98e5a078db29da7108a283c5a5ee84b55307e74";
 
 // ====================================================================
 // --- CHILD & HELPER COMPONENTS
@@ -230,6 +228,7 @@ const ChatbotScreen = forwardRef(({ onRefresh, isRefreshing }, ref) => {
     const [showPrompts, setShowPrompts] = useState(true);
     const netInfo = useNetInfo();
     const { showAlert } = useAlert();
+    const { showBanner } = useBanner();
   
     const retryTimeoutRef = useRef(null);
     const initializationTimeoutRef = useRef(null);
@@ -416,35 +415,66 @@ const ChatbotScreen = forwardRef(({ onRefresh, isRefreshing }, ref) => {
     };
   
     const handleDeleteMessage = async () => {
-      if (!selectedMessage) return;
-      setActionSheetVisible(false);
-      try {
-        const response = await fetch(`${CHATBOT_API_ENDPOINT}/history/message`, {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json', 'X-API-Key': CONFIG_INTERNAL_API_KEY },
-          body: JSON.stringify({ userId: profile._id, message: { text: selectedMessage.text, role: selectedMessage.isUser ? 'user' : 'model' } }),
-        });
-        if (!response.ok) throw new Error('Server failed to delete message.');
-        handleManualRetry();
-      } catch (error) { showAlert('Error', 'Could not delete the message.'); }
-    };
-  
-    const handleClearChat = () => {
-      setActionSheetVisible(false);
-      showAlert('Clear Chat', 'Are you sure you want to delete this entire conversation?', [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear Chat', style: 'destructive',
-          onPress: async () => {
-            try {
-              await fetch(`${CHATBOT_API_ENDPOINT}/history/${profile._id}`, { method: 'DELETE', headers: { 'X-API-Key': CONFIG_INTERNAL_API_KEY } });
-              handleManualRetry();
-            } catch (error) { showAlert('Error', 'Could not clear chat history.'); }
-          },
-        },
-      ]);
-    };
-  
+  if (!selectedMessage) return;
+
+  setActionSheetVisible(false);
+
+  try {
+    const response = await fetch(`${CHATBOT_API_ENDPOINT}/history/message`, {
+      method: 'DELETE',
+      headers: { 
+        'Content-Type': 'application/json', 
+        'X-API-Key': CONFIG_INTERNAL_API_KEY 
+      },
+      body: JSON.stringify({ 
+        userId: profile._id, 
+        message: { 
+          text: selectedMessage.text, 
+          role: selectedMessage.isUser ? 'user' : 'model' 
+        } 
+      }),
+    });
+    if (!response.ok) {
+      throw new Error('Server responded with an error.');
+    }
+    showBanner('success', 'Message Deleted', 'The message has been removed from your history.');
+    handleManualRetry();
+
+  } catch (error) {
+    showBanner('error', 'Deletion Failed', 'Could not delete the message.');
+  }
+};
+
+const handleClearChat = () => {
+  setActionSheetVisible(false);
+
+  showAlert('Clear Chat', 'Are you sure you want to delete this entire conversation?', [
+    { text: 'Cancel', style: 'cancel' },
+    {
+      text: 'Clear Chat', 
+      style: 'destructive',
+      onPress: async () => {
+        try {
+          const response = await fetch(`${CHATBOT_API_ENDPOINT}/history/${profile._id}`, { 
+            method: 'DELETE', 
+            headers: { 'X-API-Key': CONFIG_INTERNAL_API_KEY } 
+          });
+
+          if (!response.ok) {
+            throw new Error('Server failed to clear chat.');
+          }
+
+          showBanner('success', 'Chat Cleared', 'Your conversation history has been deleted.');
+
+          handleManualRetry();
+
+        } catch (error) { 
+          showBanner('error', 'Operation Failed', 'Could not clear the chat history.'); 
+        }
+      },
+    },
+  ]);
+};
     if (chatState.status === 'initializing' || chatState.status === 'connecting') {
       return (
         <View style={styles.placeholderContent}>

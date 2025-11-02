@@ -23,7 +23,6 @@ export const ThemeProvider = ({ children }) => {
         
       } catch (error) {
         console.error('Failed to load theme from storage.', error);
-        // On error, it will just use the default state, which is light mode.
       } finally {
         setIsLoadingTheme(false);
       }

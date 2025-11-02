@@ -7,11 +7,10 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import EventSource from 'react-native-event-source';
-import { useAuth, useTheme, useAlert } from '../../contexts';
+import { useAuth, useTheme, useAlert, useBanner } from '../../contexts';
 
 // --- SECTION 1: REUSABLE UI COMPONENTS ---
 
-// --- 💡 FIX: Simplified Header by removing the connection status ---
 const ChatHeader = React.memo(({ onBackPress, theme }) => {
   const styles = getStyles(theme);
   return (
@@ -97,7 +96,6 @@ const MessageInput = React.memo(({ value, onChangeText, onSend, isSending, theme
     );
 });
 
-// --- 💡 NEW: Typing Indicator Component ---
 const TypingIndicator = ({ theme }) => {
     const styles = getStyles(theme);
     return (
@@ -124,6 +122,7 @@ export default function LiveChatScreen() {
   const { user, api, accessToken } = useAuth();
   const flatListRef = useRef();
   const { showAlert } = useAlert();
+  const { showBanner } = useBanner();
 
   const [chatId, setChatId] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -134,7 +133,7 @@ export default function LiveChatScreen() {
 
   const eventSourceRef = useRef(null);
   const pollingIntervalRef = useRef(null);
-  const typingTimeoutRef = useRef(null); // Ref for debounce timeout
+  const typingTimeoutRef = useRef(null); 
 
 
   const fetchLatestMessages = useCallback(async () => {
@@ -211,7 +210,7 @@ export default function LiveChatScreen() {
     setIsLoading(true);
     try {
       const { data } = await api.post('/support/live-chat/session');
-      setChatId(data.chatId);
+      setChatId(data._id);
       setMessages(data.messages || []);
     } catch (error) {
       showAlert('Connection Failed', 'Could not connect to the chat service.', [{ text: 'OK', onPress: () => navigation.goBack() }]);
@@ -249,7 +248,7 @@ export default function LiveChatScreen() {
         setTimeout(fetchLatestMessages, 300);
       }
     } catch (error) {
-      showAlert('Send Failed', 'Your message could not be sent.');
+      showBanner('error', 'Send Failed', 'Your message could not be sent. Please try again.');
       setMessages((prev) => prev.filter((msg) => msg._id !== tempId));
       setInputText(text);
     } finally {
@@ -264,16 +263,15 @@ export default function LiveChatScreen() {
           const messageId = messageToDelete._id;
           if (!chatId || !messageId || messageId.startsWith('pending_')) return;
           
-          // --- 💡 FIX: Improved optimistic update by saving state before changing it ---
           const originalMessages = messages;
           setMessages((prev) => prev.filter((msg) => msg._id !== messageId));
           
           try {
             await api.delete(`/support/live-chat/delete/${chatId}/${messageId}`);
+            showBanner('success', 'Message removed! It’s no longer visible.')
           } catch (err) {
             console.error('Delete Error:', err);
-            showAlert('Delete Failed', 'Could not delete the message. It has been restored.');
-            // Restore original messages on failure
+            showBanner('error', 'Delete Failed', 'Could not delete the message. It has been restored.');
             setMessages(originalMessages);
           }
       }},

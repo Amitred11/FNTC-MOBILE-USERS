@@ -21,7 +21,7 @@ import { Easing } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useAuth, useMessage, useAlert } from '../../contexts/index.js';
+import { useAuth, useMessage, useAlert, useBanner } from '../../contexts/index.js';
 import PolicyModal from './components/PolicyModal.js';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -32,6 +32,7 @@ const CARD_HEIGHT = SCREEN_HEIGHT * CARD_HEIGHT_FACTOR;
 export default function SignUpScreen() {
   const { showMessage } = useMessage();
   const { showAlert } = useAlert();
+  const { showBanner } = useBanner();
   const route = useRoute();
   const navigation = useNavigation();
 
@@ -40,7 +41,7 @@ export default function SignUpScreen() {
     register,
     googleSignIn,
     pendingRecoveryCode,
-    isLoading, // The ONLY loading state we need
+    isLoading,
     authAction,
   } = useAuth();
 
@@ -154,24 +155,26 @@ export default function SignUpScreen() {
   }, [isPolicyLoading, showAlert]);
 
   const handleSignUp = async () => {
-    if (!Name.trim() || !email.trim() || !password) return showMessage('PLEASE FILL IN ALL FIELDS.');
-    if (password !== confirmPassword) return showMessage('PASSWORDS DO NOT MATCH.');
+    if (!Name.trim() || !email.trim() || !password) return showBanner('error', 'Missing Information', 'Please fill in all required fields.');
+    if (password !== confirmPassword) return showBanner('error', 'Password Mismatch', 'The passwords you entered do not match.');
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+{}\[\]:;<>,.?~\\/-]).{8,}$/;
-    if (!passwordRegex.test(password)) return showMessage('Password must be at least 8 characters and include an uppercase letter, a number, and a special character.');
-    if (!checked) return showMessage('PLEASE AGREE TO THE TERMS AND CONDITIONS.');
+    if (!passwordRegex.test(password)) return showBanner('error', 'Weak Password', 'Password must be at least 8 characters and include an uppercase letter, a number, and a special character.');
+    if (!checked) return showBanner('warning', 'Terms and Conditions', 'Please agree to the terms and conditions to continue.');
     
     try {
-      await register({ displayName: Name, email, password });
-      // The context will keep `isLoading` true until the next screen
-      navigation.navigate('VerifyOtp', { email });
+      const success = await register({ displayName: Name, email, password });
+      if (success) {
+        navigation.navigate('VerifyOtp', { email });
+      } else {
+        console.log("Registration was not successful, not navigating.");
+      }
     } catch (error) {
-      const errorMsg = error.response?.data?.message || 'An unexpected error occurred.';
-      showAlert('Sign-Up Failed', errorMsg);
+      showBanner('error', 'Sign-Up Failed', 'An unexpected error occurred.');
     }
   };
 
   const handleLogin = async () => {
-    if (!email.trim() || !password) return showMessage('PLEASE ENTER BOTH EMAIL AND PASSWORD.');
+    if (!email.trim() || !password) return showBanner('error', 'Missing Information', 'Please enter both email and password.');
     try {
       const success = await signIn(email, password, rememberMe);
       if (success) {

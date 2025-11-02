@@ -13,7 +13,7 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as Animatable from 'react-native-animatable';
-import { useTheme, useAlert, useAuth, useMessage } from '../../contexts';
+import { useTheme, useAlert, useAuth, useBanner } from '../../contexts';
 import StatusDisplay from '../../components/StatusDisplay'; 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -75,7 +75,7 @@ export default function NotificationScreen() {
   const styles = getStyles(theme);
   const { user: profile, api } = useAuth();
   const { showAlert } = useAlert();
-  const { showMessage } = useMessage(); 
+  const { showBanner } = useBanner(); 
 
   const [notifications, setNotifications] = useState([]);
   const [page, setPage] = useState(1);
@@ -86,6 +86,7 @@ export default function NotificationScreen() {
   const [isDetailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState(null);
   const [dndEnabled, setDndEnabled] = useState(false);
+  const notifiedIdsRef = useRef(new Set()); 
 
   const isLoadingRef = useRef(false);
 
@@ -108,13 +109,13 @@ export default function NotificationScreen() {
     setDndEnabled(newValue);
     try {
       await AsyncStorage.setItem('dnd_enabled', String(newValue));
-      showMessage(newValue ? 'Sounds are silenced.' : 'Sounds are enabled.');
+      showBanner('info', 'Settings Updated', newValue ? 'Sounds are silenced.' : 'Sounds are enabled.');
     } catch (error) {
       console.error('Failed to save DND setting:', error.message);
       setDndEnabled(prev => !prev); // Revert UI on failure
       showAlert('Error', 'Could not save your preference.');
     }
-  }, [dndEnabled, showMessage, showAlert]);
+  }, [dndEnabled, showBanner, showAlert]);
 
   const fetchNotifications = useCallback(async (isInitial = true, isRefreshing = false) => {
     if (isLoadingRef.current) return;
@@ -140,13 +141,11 @@ export default function NotificationScreen() {
     try {
         const { data: response } = await api.get(`/notifications?page=${nextPage}&limit=${NOTIFICATIONS_PER_PAGE}`);
         const newNotifications = response.data || [];
-        
         setTotalPages(response.pagination?.totalPages || 1);
-
+        
         if (isInitial || isRefreshing) {
             setNotifications(newNotifications);
         } else {
-            // Use functional update for appending to avoid needing 'notifications' in deps
             setNotifications(prev => [...prev, ...newNotifications]);
         }
     } catch (error) {
@@ -218,7 +217,7 @@ export default function NotificationScreen() {
                 setIsSelectionMode(false);
                 setSelectedIds(new Set());
                 setNotifications(prev => prev.filter(n => !idsToDelete.includes(n._id)));
-                showMessage(`${idsToDelete.length} notification(s) deleted.`);
+                showBanner('success', 'Notifications Deleted', `${idsToDelete.length} notification(s) deleted successfully.`);
                 try {
                     await api.post('/notifications/delete', { ids: idsToDelete });
                 } catch (e) { 
@@ -228,17 +227,17 @@ export default function NotificationScreen() {
             }
         }
     ]);
-  }, [selectedIds, api, showAlert, showMessage, fetchNotifications]);
+  }, [selectedIds, api, showAlert, showBanner, fetchNotifications]);
 
   const handleMarkAllAsRead = useCallback(async () => {
     const unreadIds = notifications.filter(n => !n.read).map(n => n._id);
-    if (unreadIds.length === 0) { showMessage('All caught up!'); return; }
+    if (unreadIds.length === 0) { showBanner('success', 'All Caught Up!', 'You have no unread notifications.'); return; }
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    showMessage('All notifications marked as read.');
+    showBanner('success', 'Success', 'All notifications have been marked as read.');
     try {
       await api.post('/notifications/mark-read', { ids: unreadIds });
     } catch (e) { showAlert('Error', 'Could not mark all as read.'); }
-  }, [notifications, api, showMessage, showAlert]);
+  }, [notifications, api, showBanner, showAlert]);
 
   const groupedNotifications = useMemo(() => {
     const today = [];

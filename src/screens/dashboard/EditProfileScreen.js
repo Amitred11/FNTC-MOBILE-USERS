@@ -37,7 +37,7 @@ const FormField = React.memo(({ label, iconName, children, isRequired }) => {
         {iconName && <Ionicons name={iconName} size={20} color={theme.textSecondary} style={styles.inputIcon} />}
         {children}
       </View>
-      {isRequired && <Text style={styles.requiredIndicator}>*</Text>}
+      {isRequired && <Text style={styles.requiredIndicator}></Text>}
     </View>
   );
 });
@@ -51,13 +51,36 @@ const GENDER_OPTIONS = [
   { label: 'Male', value: 'Male' }, { label: 'Female', value: 'Female' }, { label: 'Prefer not to say', value: 'Prefer not to say' },
 ];
 const validateForm = (formData) => {
-  const { firstName, lastName, mobileNumber } = formData;
-  if (!firstName || firstName.trim().length < 2) return 'First Name must be at least 2 characters.';
-  if (!lastName || lastName.trim().length < 2) return 'Last Name must be at least 2 characters.';
-  if (mobileNumber && mobileNumber.length > 0 && mobileNumber.length !== 13) return 'Please enter a complete 11-digit mobile number or leave the field blank.';
-  return null;
-};
+  const { firstName, lastName, mobileNumber, address, phase } = formData;
 
+  if (!firstName || firstName.trim().length < 2) {
+    return 'First Name must be at least 2 characters.';
+  }
+  if (!lastName || lastName.trim().length < 2) {
+    return 'Last Name must be at least 2 characters.';
+  }
+
+  if (mobileNumber && !/^\+639\d{9}$/.test(mobileNumber)) {
+    return 'Mobile number must be in the format +639XXXXXXXXX.';
+  }
+
+  if (address && address.trim().length < 5) {
+    return 'House No., Street must be at least 5 characters long.';
+  }
+   if (phase && phase.trim().length < 3) {
+    return 'Barangay must be at least 3 characters long.';
+  }
+  
+  const repetitiveCharRegex = /(.)\1{4,}/;
+  if (address && repetitiveCharRegex.test(address)) {
+      return 'Address appears to contain invalid characters.';
+  }
+  if (phase && repetitiveCharRegex.test(phase)) {
+      return 'Barangay appears to contain invalid characters.';
+  }
+
+  return null; 
+};
 // --- Main Screen Component ---
 export default function EditProfileScreen() {
   const navigation = useNavigation();

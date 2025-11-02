@@ -15,7 +15,7 @@ const CustomAlert = ({ visible, title, message, buttons, onClose }) => {
     if (lowerTitle.includes('warning') || lowerTitle.includes('are you sure'))
       return { name: 'alert-circle', color: theme.warning };
     return { name: 'information-circle', color: theme.primary };
-  }, [title, theme]); // Added 'theme' to dependencies to re-calculate if theme changes
+  }, [title, theme]);
 
   return (
     <Modal

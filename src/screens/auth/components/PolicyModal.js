@@ -4,10 +4,8 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, SafeAreaView } from 'react-native';
 import * as Animatable from 'react-native-animatable';
 
-// This function parses the text and applies styles
 const renderFormattedText = (text) => {
   return text.split('\n').map((line, index) => {
-    // ## Heading
     if (line.startsWith('## ')) {
       return (
         <Text key={index} style={styles.h2}>
@@ -15,7 +13,6 @@ const renderFormattedText = (text) => {
         </Text>
       );
     }
-    // ### Subheading
     if (line.startsWith('### ')) {
       return (
         <Text key={index} style={styles.h3}>
@@ -23,7 +20,6 @@ const renderFormattedText = (text) => {
         </Text>
       );
     }
-    // * List Item
     if (line.startsWith('* ')) {
       return (
         <View key={index} style={styles.listItemContainer}>
@@ -32,11 +28,9 @@ const renderFormattedText = (text) => {
         </View>
       );
     }
-    // Empty line for spacing
     if (line.trim() === '') {
       return <View key={index} style={styles.spacer} />;
     }
-    // Default paragraph text
     return (
       <Text key={index} style={styles.paragraph}>
         {line}
@@ -46,7 +40,6 @@ const renderFormattedText = (text) => {
 };
 
 const PolicyModal = ({ visible, title, content, onClose }) => {
-  // Replace the placeholder with the current date before parsing
   const formattedContent = content.replace(
     '{{LAST_UPDATED}}',
     new Date().toLocaleDateString('en-US', {
@@ -62,7 +55,6 @@ const PolicyModal = ({ visible, title, content, onClose }) => {
         <Animatable.View animation="fadeInUp" duration={400} style={styles.policyModalView}>
           <Text style={styles.policyTitle}>{title}</Text>
           <ScrollView style={styles.policyScrollView} contentContainerStyle={{ paddingBottom: 20 }}>
-            {/* Use the renderer here */}
             {renderFormattedText(formattedContent)}
           </ScrollView>
           <TouchableOpacity style={styles.policyCloseButton} onPress={onClose}>

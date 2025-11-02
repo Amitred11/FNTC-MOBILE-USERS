@@ -28,7 +28,6 @@ const CATEGORY_ITEMS = [
   { label: 'Modem Installation', value: 'modem_installation' },
 ];
 
-// Container remains the same: Use KeyboardAvoidingView ONLY for iOS.
 const ScreenContainer = ({ children, theme }) => {
   if (Platform.OS === 'ios') {
     return (
@@ -56,20 +55,17 @@ const TicketCreateScreen = ({ onFinish }) => {
     const { showAlert } = useAlert();
     const [category, setCategory] = useState('technical');
     
-    // REMOVED: const [focusedField, setFocusedField] = useState(null);
 
-    // Create refs for the input containers
     const categoryContainerRef = useRef(null);
     const subjectContainerRef = useRef(null);
     const descriptionContainerRef = useRef(null);
 
-    // Helper function to apply styles using setNativeProps
     const setFocusStyle = (ref) => {
       ref.current?.setNativeProps({
         style: {
           borderColor: theme.primary,
-          elevation: 5, // For Android shadow
-          shadowColor: theme.primary, // For iOS shadow
+          elevation: 5,
+          shadowColor: theme.primary,
           shadowOpacity: 0.2,
           shadowRadius: 4,
         }
@@ -133,7 +129,7 @@ const TicketCreateScreen = ({ onFinish }) => {
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={styles.formContentContainer}
-          keyboardShouldPersistTaps="always" // This remains critical
+          keyboardShouldPersistTaps="always" 
         >
             <View style={styles.headerContainer}>
                 <Text style={styles.title}>Create a New Ticket</Text>
@@ -155,7 +151,6 @@ const TicketCreateScreen = ({ onFinish }) => {
 
             <Text style={styles.formLabel}>Subject</Text>
             <View ref={subjectContainerRef} style={styles.inputContainer}>
-                {/* The icon color must now be managed differently or simplified */}
                 <Ionicons name="mail-outline" size={22} color={theme.textSecondary} style={styles.inputIcon} />
                 <TextInput
                     style={styles.formInput}

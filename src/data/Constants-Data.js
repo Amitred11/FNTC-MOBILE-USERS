@@ -28,7 +28,7 @@ export const howToUseData = {
       content: 'Use the bottom navigation bar to easily switch between Home, Plan, Support, and Profile. Each section is tailored to help you manage your account efficiently.',
       icon: 'compass-outline',
       tags: ['general', 'navigation'],
-      navigateTo: 'Home',
+      navigateTo: 'Home', // Target screen name
     },
     {
       id: 'en-2',
@@ -36,7 +36,7 @@ export const howToUseData = {
       content: 'Visit the "Plan" screen to see your active subscription details, view your next billing date, or apply for a new plan. You can also submit requests to upgrade, downgrade, or cancel your service directly from this screen.',
       icon: 'wifi-outline',
       tags: ['plan', 'subscription', 'billing'],
-      navigateTo: 'Plan',
+      navigateTo: 'Subscription', // Target screen name
     },
     {
       id: 'en-3',
@@ -54,11 +54,10 @@ export const howToUseData = {
     {
       id: 'en-4',
       title: 'Getting Help & Support',
-      content: 'Our Support team is here to help. For urgent issues, call our 24/7 hotline at 0945 220 3371. For other concerns, email us at rparreno@fibearnetwork.com or create a ticket in the app.',
+      content: 'Our Support team is here to help. For urgent issues, call our 24/7 hotline at the contact section. For other concerns, use the live chat or create a ticket in the app.',
       icon: 'headset-outline',
       tags: ['support', 'help', 'ticket', 'chat'],
-      navigateTo: 'Support',
-      isCopyable: true,
+      navigateTo: 'Support', 
     },
     {
       id: 'en-5',
@@ -66,7 +65,7 @@ export const howToUseData = {
       content: 'Keep your information current in the "Profile" screen. You can change your display name and profile picture. Most importantly, ensure your installation address and mobile number are always up-to-date for uninterrupted service.',
       icon: 'person-circle-outline',
       tags: ['profile', 'account', 'address'],
-      navigateTo: 'Profile',
+      navigateTo: 'Profile'
     },
     {
       id: 'en-6',
@@ -74,7 +73,7 @@ export const howToUseData = {
       content: 'If you want to make the app less distracting, you can enable "Do Not Disturb" mode in the Settings screen. This will mute notification sounds while still allowing alerts to appear in your notification tray.',
       icon: 'notifications-off-outline',
       tags: ['notifications', 'dnd', 'alerts', 'settings'],
-      navigateTo: 'Settings',
+      navigateTo: 'Settings', // Target screen name
     },
     {
       id: 'en-7',
@@ -82,7 +81,7 @@ export const howToUseData = {
       content: 'Before troubleshooting, check our official Facebook Page for any service interruption announcements in your area. You can find the link in the Support screen.',
       icon: 'megaphone-outline',
       tags: ['pro-tip', 'outage', 'facebook'],
-      navigateTo: 'Support',
+      navigateTo: 'Support', // Target screen name
     },
   ],
   tl: [
@@ -92,6 +91,7 @@ export const howToUseData = {
       content: 'Gamitin ang navigation bar sa ibaba para madaling lumipat sa pagitan ng Home, Plan, Support, at Profile. Ang bawat seksyon ay idinisenyo para tulungan kang gamitin ang iyong account nang maayos.',
       icon: 'compass-outline',
       tags: ['pangkalahatan', 'nabigasyon'],
+      navigateTo: 'Home', // Target screen name
     },
     {
       id: 'tl-2',
@@ -99,7 +99,7 @@ export const howToUseData = {
       content: 'Bisitahin ang "Plan" screen para makita ang detalye ng iyong aktibong subscription, tingnan ang susunod na petsa ng iyong bill, o mag-apply para sa bagong plano. Maaari ka ring mag-request ng upgrade, downgrade, o kanselasyon ng serbisyo dito.',
       icon: 'wifi-outline',
       tags: ['plano', 'subscription', 'billing'],
-      navigateTo: 'Plan',
+      navigateTo: 'Subscription', // Target screen name (or 'Plan' if that's the correct Tagalog screen name)
     },
     {
       id: 'tl-3',
@@ -112,16 +112,15 @@ export const howToUseData = {
         { id: '3', text: 'Lumapit sa router upang suriin kung may problema sa lakas ng signal.' },
         { id: '4', text: 'Kung magpapatuloy ang isyu, gumawa ng support ticket.' },
       ],
-      navigateTo: 'Support',
+      navigateTo: 'Support', // Target screen name
     },
     {
       id: 'tl-4',
       title: 'Paghahanap ng Tulong at Suporta',
-      content: 'Narito ang aming Support team para tumulong. Para sa mga agarang isyu, tawagan ang aming 24/7 hotline sa 0945 220 3371. Para sa iba pang alalahanin, mag-email sa amin sa rparreno@fibearnetwork.com o gumawa ng ticket sa app.',
+      content: 'Narito ang aming Support team para tumulong. Para sa mga agarang isyu, tawagan ang aming 24/7 hotline na nasa contact section. Para sa iba pang alalahanin, gumamit ng live chat o gumawa ng ticket sa app.',
       icon: 'headset-outline',
       tags: ['suporta', 'tulong', 'ticket', 'chat'],
       navigateTo: 'Support',
-      isCopyable: true,
     },
     {
       id: 'tl-5',

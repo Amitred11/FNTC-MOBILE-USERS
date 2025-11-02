@@ -86,7 +86,7 @@ export default function LoadingScreen() {
             style={styles.systemStatusText}
             useNativeDriver
           >
-            Welcome to FiBear Network Technologies Corp. Montalban
+            Welcome to FiBear Network Technologies Corp. Kasiglahan Branch Montalban
           </Animatable.Text>
         </View>
       </SafeAreaView>

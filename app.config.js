@@ -4,8 +4,9 @@ export default ({ config }) => ({
   ...config,
   name: "FNTC",
   slug: "fibear",
-  scheme: "fibear",
+  scheme: "com.hellopo123.fibear",
   version: "1.0.0",
+  owner: "hellopo123", 
   orientation: "portrait",
   icon: "./src/assets/logo.png",
   userInterfaceStyle: "light",
@@ -15,7 +16,7 @@ export default ({ config }) => ({
     backgroundColor: "#ffffff"
   },
   android: {
-    package: "com.fnas.fibear",
+    package: "com.hellopo123.fibear",
     newArchEnabled: true,
     adaptiveIcon: {
       foregroundImage: "./src/assets/logo.png",
@@ -37,13 +38,13 @@ export default ({ config }) => ({
   },
   extra: {
     eas: {
-        projectId: "a605f001-8f66-460b-9c64-f4f56fbbf12d"
+      projectId: "00ca380e-9fb0-4308-be0b-818a73b0a3c6"
     },
     webClientId: process.env.WEB_CLIENT_ID,
     iosClientId: process.env.IOS_CLIENT_ID,
     androidClientId: process.env.ANDROID_CLIENT_ID,
     API_URL: process.env.API_URL,
-    Config_INTERNAL_API_KEY: process.env.CONFIG_INTERNAL_API_KEY,
+    CONFIG_INTERNAL_API_KEY: process.env.CONFIG_INTERNAL_API_KEY,
   },
   plugins: [
     [
@@ -58,6 +59,12 @@ export default ({ config }) => ({
       {
         cameraPermission:
           "The app needs access to your camera to capture images for proof of payment or for your profile picture."
+      }
+    ],
+    [
+      "expo-notifications",
+      {
+        "sounds": ["./src/assets/sounds/notification.mp3"]
       }
     ]
   ]

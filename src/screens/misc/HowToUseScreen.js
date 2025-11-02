@@ -9,14 +9,13 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Animatable from 'react-native-animatable';
-import { howToUseData } from '../../data/Constants-Data';
+import { howToUseData } from '../../data/Constants-Data'; // Ensure this path is correct
 
 const { width } = Dimensions.get('window');
 
-// This wrapper is necessary for the native driver to work with onScroll animations
 const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
 
-// --- Sub-Components (No changes needed in these) ---
+// --- Sub-Components ---
 
 const ScreenHeader = ({ onBack, onToggleLanguage, title }) => {
     const { theme } = useTheme();
@@ -34,10 +33,7 @@ const ScreenHeader = ({ onBack, onToggleLanguage, title }) => {
     );
 };
 
-const HowToUseCard = ({ item }) => {
-    const { theme } = useTheme();
-    const styles = getStyles(theme);
-    const navigation = useNavigation();
+const HowToUseCard = ({ item, theme, styles, navigation, language }) => {
     const [copied, setCopied] = useState(false);
 
     const handleCopy = () => {
@@ -55,6 +51,22 @@ const HowToUseCard = ({ item }) => {
         } catch (error) {
             console.error("Share failed:", error.message);
         }
+    };
+
+    // Determine the correct screen name based on language
+    const getLocalizedScreenName = (screenName) => {
+        if (!screenName) return null;
+        if (language === 'tl') {
+            switch (screenName) {
+                case 'Home': return 'Home'; // Assuming screen names remain the same
+                case 'Subscription': return 'Plan'; // Adjust if your screen name is different in Tagalog
+                case 'Support': return 'Support';
+                case 'Profile': return 'Profile';
+                case 'Settings': return 'Settings';
+                default: return screenName;
+            }
+        }
+        return screenName;
     };
 
     return (
@@ -83,7 +95,7 @@ const HowToUseCard = ({ item }) => {
 
             <View style={styles.cardActions}>
                 {item.navigateTo && (
-                    <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate(item.navigateTo)}>
+                    <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate(getLocalizedScreenName(item.navigateTo))}>
                         <Ionicons name="arrow-forward-circle-outline" size={22} color={theme.primary} />
                         <Text style={styles.actionButtonText}>Go to Section</Text>
                     </TouchableOpacity>
@@ -103,9 +115,7 @@ const HowToUseCard = ({ item }) => {
     );
 };
 
-const Pagination = ({ data, scrollX }) => {
-    const { theme } = useTheme();
-    const styles = getStyles(theme);
+const Pagination = ({ data, scrollX, theme, styles }) => {
     return (
         <View style={styles.paginationContainer}>
             {data.map((_, idx) => {
@@ -126,14 +136,12 @@ export default function HowToUseScreen() {
     const navigation = useNavigation();
     const styles = getStyles(theme);
     
-    // --- NEW: Refs and State for Arrow Navigation ---
     const scrollX = useRef(new Animated.Value(0)).current;
     const flatListRef = useRef(null);
     const [currentIndex, setCurrentIndex] = useState(0);
 
     const data = howToUseData[language] || howToUseData['en'];
 
-    // --- NEW: Functions to control scrolling ---
     const scrollToNext = () => {
         if (currentIndex < data.length - 1) {
             flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
@@ -146,7 +154,6 @@ export default function HowToUseScreen() {
         }
     };
 
-    // --- NEW: Callback to update index based on scroll position ---
     const onViewableItemsChanged = useCallback(({ viewableItems }) => {
         if (viewableItems.length > 0) {
             setCurrentIndex(viewableItems[0].index);
@@ -176,7 +183,15 @@ export default function HowToUseScreen() {
                 ref={flatListRef}
                 data={data}
                 keyExtractor={(item) => item.id}
-                renderItem={({ item }) => <HowToUseCard item={item} />}
+                renderItem={({ item }) => (
+                    <HowToUseCard
+                        item={item}
+                        theme={theme}
+                        styles={styles}
+                        navigation={navigation}
+                        language={language} // Pass language for localized screen navigation
+                    />
+                )}
                 horizontal
                 pagingEnabled
                 showsHorizontalScrollIndicator={false}
@@ -190,18 +205,17 @@ export default function HowToUseScreen() {
                 viewabilityConfig={viewabilityConfig}
             />
 
-            {/* --- NEW: Footer with Navigation Arrows --- */}
             <View style={styles.footerContainer}>
                 <TouchableOpacity style={styles.arrowButton} onPress={scrollToPrev}>
-                    {currentIndex > 0 && ( // Only show if not the first item
+                    {currentIndex > 0 && (
                         <Ionicons name="arrow-back-circle-outline" size={40} color={theme.primary} />
                     )}
                 </TouchableOpacity>
 
-                <Pagination data={data} scrollX={scrollX} />
+                <Pagination data={data} scrollX={scrollX} theme={theme} styles={styles} />
 
                 <TouchableOpacity style={styles.arrowButton} onPress={scrollToNext}>
-                    {currentIndex < data.length - 1 && ( // Only show if not the last item
+                    {currentIndex < data.length - 1 && (
                         <Ionicons name="arrow-forward-circle-outline" size={40} color={theme.primary} />
                     )}
                 </TouchableOpacity>
@@ -227,22 +241,25 @@ const getStyles = (theme) => StyleSheet.create({
     bulletItem: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
     bulletPoint: { fontSize: 16, color: theme.textSecondary, marginRight: 12, lineHeight: 25 },
     bulletText: { flex: 1, fontSize: 16, color: theme.textSecondary, lineHeight: 25 },
-    cardActions: { width: '100%', paddingHorizontal: 20, paddingTop: 10, gap: 12 },
+    cardActions: { width: '100%', paddingHorizontal: 20, paddingTop: 10, gap: 12, marginBottom: 15 },
     actionButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: theme.surface, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1, borderColor: theme.border },
     actionButtonText: { color: theme.primary, fontSize: 15, fontWeight: '600', marginLeft: 10 },
     
-    // --- NEW: Footer and Arrow Styles ---
     footerContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 20,
-        height: 60,
+        height: 70, // Increased height for better spacing
+        borderTopWidth: 1,
+        borderTopColor: theme.border,
+        backgroundColor: theme.background // Ensure footer has background color
     },
     arrowButton: {
-        width: 60, // A fixed width ensures pagination stays centered
+        width: 60, 
         padding: 10,
         alignItems: 'center',
+        justifyContent: 'center'
     },
     paginationContainer: {
         flexDirection: 'row',

@@ -10,13 +10,11 @@ import {
   ScrollView,
   BackHandler,
   RefreshControl,
-  // Modal, // Removed as it's now in its own component
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTheme, useAuth } from '../../contexts';
 
-// Import the separated components
 import InfoRowComponent from './components/InfoRowComponent.js';
 import ProfileImageModalComponent from './components/ProfileImageModalComponent.js';
 
@@ -28,8 +26,6 @@ const formatDate = (dateString) => {
     day: 'numeric',
   });
 };
-
-// InfoRow component definition removed from here
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
@@ -69,7 +65,6 @@ export default function ProfileScreen() {
     return () => backHandler.remove();
   }, [navigation, isImageModalVisible]);
 
-  // 1. Initial Loading State
   if (isLoading && !userProfile) {
     return (
       <SafeAreaView style={styles.centered}>
@@ -79,7 +74,6 @@ export default function ProfileScreen() {
     );
   }
 
-  // 2. Handle Error/Empty State
   if (!userProfile) {
     return (
       <SafeAreaView style={styles.centered}>
@@ -109,7 +103,6 @@ export default function ProfileScreen() {
     ? { uri: userProfile.photoUrl }
     : require('../../assets/images/avatars/profilepic.jpg');
 
-  // 3. Successful Data Render State
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -123,7 +116,6 @@ export default function ProfileScreen() {
           <Ionicons name="create-outline" size={28} color={theme.textOnPrimary} />
         </TouchableOpacity>
 
-        {/* Make profile image clickable */}
         <TouchableOpacity onPress={() => setImageModalVisible(true)} style={styles.profileImageContainer}>
           <Image
             source={profileImageSource}
@@ -162,7 +154,6 @@ export default function ProfileScreen() {
             icon="male-female-outline"
             label="Gender"
             value={userProfile.profile?.gender}
-            // theme={theme}
           />
         </View>
 
@@ -172,19 +163,16 @@ export default function ProfileScreen() {
             icon="mail-outline"
             label="Email Address"
             value={userProfile.email}
-            // theme={theme}
           />
           <InfoRowComponent
             icon="call-outline"
             label="Mobile Number"
             value={userProfile.profile?.mobileNumber}
-            // theme={theme}
           />
           <InfoRowComponent
             icon="location-outline"
             label="Address"
             value={fullAddress}
-            // theme={theme}
           />
         </View>
       </ScrollView>
@@ -198,7 +186,6 @@ export default function ProfileScreen() {
   );
 }
 
-// --- Styles (Removed InfoRow and Modal specific styles) ---
 const getStyles = (theme) =>
   StyleSheet.create({
     backButton: { left: 20, padding: 5, position: 'absolute', top: 50, zIndex: 10 },

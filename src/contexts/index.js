@@ -5,3 +5,5 @@ export * from './ThemeContext';
 export * from './MessageContext';
 export * from './AlertContext';
 export * from './LanguageContext';
+export * from './BannerContext';
+

@@ -4,13 +4,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../contexts/ThemeContext';
 import * as Animatable from 'react-native-animatable';
 
-// --- THE FIX: Add `title` to the props, with a default value ---
 const PhotoSourceSheet = ({ 
   isVisible, 
   onChooseCamera, 
   onChooseGallery, 
   onClose, 
-  title = "Select Photo Source" // Default title
+  title = "Select Photo Source" 
 }) => {
   const { theme } = useTheme();
   const styles = getStyles(theme);
@@ -20,14 +19,12 @@ const PhotoSourceSheet = ({
       <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose}>
         <Animatable.View animation="slideInUp" duration={300} style={styles.container}>
           <View style={styles.header}>
-            {/* --- THE FIX: Use the `title` prop here --- */}
             <Text style={styles.title}>{title}</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={28} color={theme.textSecondary} />
             </TouchableOpacity>
           </View>
 
-          {/* ... rest of the component is unchanged ... */}
           <TouchableOpacity style={styles.option} onPress={onChooseCamera}>
             <Ionicons name="camera-outline" size={24} color={theme.primary} style={styles.optionIcon} />
             <Text style={styles.optionText}>Take Photo</Text>
@@ -51,7 +48,7 @@ const getStyles = (theme) =>
       alignItems: 'center',
       marginTop: 10,
       paddingVertical: 15,
-      width: '100%', // Space above the cancel button
+      width: '100%',
     },
     cancelText: {
       color: theme.textSecondary,
@@ -59,20 +56,20 @@ const getStyles = (theme) =>
       fontWeight: '600',
     },
     closeButton: {
-      padding: 5, // Make the touchable area larger
+      padding: 5, 
     },
     container: {
       backgroundColor: theme.surface,
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
       paddingHorizontal: 20,
-      paddingBottom: 0, // Compensate for iOS safe area
+      paddingBottom: 0, 
       alignItems: 'center',
       shadowColor: '#000',
       shadowOffset: { width: 0, height: -5 },
       shadowOpacity: 0.1,
       shadowRadius: 10,
-      elevation: 15, // Android shadow
+      elevation: 15, 
     },
     header: {
       alignItems: 'center',
@@ -102,7 +99,7 @@ const getStyles = (theme) =>
     overlay: {
       backgroundColor: 'rgba(0, 0, 0, 0.6)',
       flex: 1,
-      justifyContent: 'flex-end', // Aligns the modal content to the bottom
+      justifyContent: 'flex-end',
     },
     title: {
       color: theme.text,

@@ -19,7 +19,7 @@ import StatusDisplay from '../../components/StatusDisplay';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Animatable from 'react-native-animatable';
 import { EMPTY_STATES_CONFIG } from '../../data/Constants-Data';
-import * as Linking from 'expo-linking';
+import { initiatePayment } from '../../services/paymentService';
 
 const PAYMENT_METHOD_LOGOS = {
   CASH: require('../../assets/images/payments/cod.png'),
@@ -149,65 +149,66 @@ export default function PayBillsScreen() {
 
     setIsSubmitting(true);
     try {
-        const successRedirectUrl = 'https://websitecapstone.vercel.app/payment-success';
-        const failureRedirectUrl = 'https://websitecapstone.vercel.app/payment-failure'; 
+        const profileData = user.profile || {};
+            let givenNames = '';
+            let surname = '';
 
-        const fullName = user.displayName || 'Customer User';
-        const sanitizedFullName = fullName.trim().replace(/[^a-zA-Z\s-]/g, '');
-        
-        const nameParts = sanitizedFullName.split(' ').filter(part => part);
+            if (profileData.firstName && profileData.lastName) {
+                givenNames = profileData.firstName;
+                surname = profileData.lastName;
+            } else {
+                const SUFFIXES = ['Jr.', 'Sr.', 'I', 'II', 'III', 'IV', 'V'];
+                let nameParts = (user.displayName || 'Customer User').split(' ').filter(Boolean);
 
-        let givenNames;
-        let surname;
+                if (nameParts.length > 1) {
+                    const lastPart = nameParts[nameParts.length - 1];
+                    if (SUFFIXES.includes(lastPart)) {
+                        nameParts.pop();
+                    }
+                }
+                
+                if (nameParts.length > 0) {
+                    surname = nameParts.pop(); 
+                    givenNames = nameParts.join(' ');
+                }
+            }
 
-        if (nameParts.length > 0) {
-            givenNames = nameParts[0];
-            surname = nameParts.slice(1).join(' ');
-        }
-        
-        if (!surname) {
-            surname = 'User'; 
-        }
-        if (!givenNames) {
-           givenNames = 'Customer';
-        }
+            if (!givenNames) givenNames = 'Customer';
+            if (!surname) surname = 'User';
 
-        const payload = {
-            billId: dueBill.id,
-            paymentMethod: selectedMethod.channel_code,
-            customer: {
-                given_names: givenNames,
-                surname: surname,
-                email: user.email,
-                mobile_number: user.profile?.mobileNumber || '+639000000000'
-            },
-            successRedirectUrl,
-            failureRedirectUrl
+            const customerDetails = {
+            given_names: givenNames,
+            surname: surname,
+            email: user.email,
+            mobile_number: user.profile?.mobileNumber || '+639000000000'
         };
 
-        const response = await api.post('/billing/initiate-payment', payload);
+        const response = await initiatePayment(
+            api,
+            dueBill.id,
+            selectedMethod.channel_code,
+            customerDetails 
+        );
 
-        if (selectedMethod.channel_code === 'CASH') {
-            showAlert('Success', response.data.message);
-            await refreshSubscription(); 
-            navigation.goBack();
-        } else if (response.data.redirectUrl) {
-            await Linking.openURL(response.data.redirectUrl);
-        } else {
-            showAlert('Payment Initiated', response.data.message);
-        }
+      if (selectedMethod.channel_code === 'CASH') {
+        showAlert('Success', response.message);
+        await refreshSubscription();
+        navigation.goBack();
+      } else if (!response.redirectUrl) {
+        showAlert('Payment Initiated', response.message);
+      }
 
     } catch (error) {
-        if (error.response?.status === 401) {
-            showAlert('Session Expired', 'Your session has timed out. Please log in again.');
-            signOut(); 
-        } else {
-            showAlert('Payment Error', error.response?.data?.message || 'An unexpected error occurred.');
-        }
+      if (error.response?.status === 401) {
+        showAlert('Session Expired', 'Your session has timed out. Please log in again.');
+        signOut();
+      } else {
+        showAlert('Payment Error', error.response?.data?.message || 'An unexpected error occurred.');
+      }
     } finally {
-        setIsSubmitting(false);
+      setIsSubmitting(false);
     }
-  }, [selectedMethod, dueBill, user, api, showAlert, navigation, refreshSubscription, signOut]); 
+  }, [selectedMethod, dueBill, user, api, showAlert, navigation, refreshSubscription, signOut]);
 
   const renderPaymentFlow = () => (
     <>

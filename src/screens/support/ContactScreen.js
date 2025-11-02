@@ -15,15 +15,14 @@ import { useNavigation } from '@react-navigation/native';
 import * as Animatable from 'react-native-animatable';
 import { SvgXml } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useTheme } from '../../contexts'; // Adjust path if needed
+import { useTheme } from '../../contexts'; 
 
 // --- Configuration ---
 const CONTACT_EMAIL = 'fntc@gmail.com';
 const CONTACT_PHONE = '+639154283220';
 const FACEBOOK_URL = 'https://www.facebook.com/fntc.kasiglahanvillage2023';
 
-// --- DYNAMIC SVG Illustration ---
-// This function generates an SVG string with a theme-aware color.
+
 const getContactIllustrationSvg = (color) => `
 <svg width="200" height="150" viewBox="0 0 200 150" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M60 80 C40 120, 160 120, 140 80" stroke="${color}" stroke-opacity="0.7" stroke-width="2" fill="none" />
@@ -37,10 +36,9 @@ const ContactOptionCard = ({ icon, title, subtitle, onPress, delay }) => {
   const { theme } = useTheme();
   const styles = getStyles(theme);
 
-  // Define card gradient colors based on the theme
   const cardGradientColors = theme.isDarkMode
-    ? ['rgba(50, 50, 50, 0.6)', 'rgba(30, 30, 30, 0.5)'] // Dark, translucent glass
-    : ['rgba(255, 255, 255, 0.8)', 'rgba(255, 255, 255, 0.6)']; // Light, frosted glass
+    ? ['rgba(50, 50, 50, 0.6)', 'rgba(30, 30, 30, 0.5)'] 
+    : ['rgba(255, 255, 255, 0.8)', 'rgba(255, 255, 255, 0.6)']; 
 
   return (
     <Animatable.View animation="fadeInUp" duration={600} delay={delay}>
@@ -71,7 +69,6 @@ export default function ContactScreen() {
   const { theme } = useTheme();
   const styles = getStyles(theme);
 
-  // Make the SVG theme-aware by passing in the theme's text color
   const contactIllustrationSvg = getContactIllustrationSvg(theme.text);
 
   const handleLinkPress = async (url, fallbackMessage) => {
@@ -83,7 +80,6 @@ export default function ContactScreen() {
     }
   };
 
-  // Define background gradient colors based on the theme
   const backgroundGradient = theme.isDarkMode
     ? [theme.background, theme.surface]
     : [theme.surface, theme.background];
