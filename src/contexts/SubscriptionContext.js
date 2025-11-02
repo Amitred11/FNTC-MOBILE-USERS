@@ -61,10 +61,9 @@ export const SubscriptionProvider = ({ children }) => {
   const initiatePayment = useCallback(async (payload) => {
     if (!api) throw new Error('Not authenticated');
     try {
-      // The payload should be { billId, paymentMethod, customer }
       const { data } = await api.post('/billing/initiate-payment', payload);
       await refreshSubscription();
-      return data; // Return the response to the screen (contains mobileRedirectUrl)
+      return data; 
     } catch (error) {
       console.error("Failed to initiate payment:", error.response?.data?.message || error.message);
       throw error;
@@ -158,7 +157,6 @@ export const SubscriptionProvider = ({ children }) => {
     cancelSubscription, 
     reactivateSubscription,
     clearSubscription,
-    // ✅ FIX: Added initiatePayment to the dependency array
     initiatePayment
   ]);
 

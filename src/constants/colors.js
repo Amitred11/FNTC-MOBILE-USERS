@@ -1,6 +1,5 @@
 // constants/colors.js
 
-// A professional, modern, and accessible blue-centric palette.
 export const lightTheme = {
   // --- Core Colors ---
   primary: '#007AFF', 

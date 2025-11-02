@@ -2,11 +2,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import * as Animatable from 'react-native-animatable';
-import Ionicons from '@expo/vector-icons/Ionicons'; // <--- Import Ionicons
+import Ionicons from '@expo/vector-icons/Ionicons'; 
 import { useTheme } from '../contexts/ThemeContext';
 
-// This is the full component, now in its own file.
-// Modified to accept 'icon' and 'color' props alongside 'illustration'
 const StatusDisplay = ({ illustration, icon, color, title, text, buttonText, action }) => {
   const { theme } = useTheme();
   const styles = getStyles(theme);
@@ -59,26 +57,20 @@ const getStyles = (theme) =>
     container: {
       alignItems: 'center',
       backgroundColor: theme.background,
-      flex: 1, // Ensure it fills the space for centering
+      flex: 1, 
       justifyContent: 'center',
       padding: 30,
     },
-    // Style for the illustration
     illustration: {
       height: 200,
       width: 200,
       resizeMode: 'contain',
       marginBottom: 30,
     },
-    // Style for the Ionicons container
     iconContainer: {
-        marginBottom: 30, // Consistent spacing with illustration
+        marginBottom: 30, 
         alignItems: 'center',
         justifyContent: 'center',
-        // Optional: Add a circular background for the icon
-        // backgroundColor: `${theme.primary}10`,
-        // borderRadius: 50, // Half of size + padding * 2
-        // padding: 10,
     },
     title: {
       color: theme.text,
@@ -91,11 +83,11 @@ const getStyles = (theme) =>
       color: theme.textSecondary,
       fontSize: 16,
       lineHeight: 24,
-      marginBottom: 30, // Consistent spacing
+      marginBottom: 30, 
       textAlign: 'center',
-      paddingHorizontal: 10, // Added padding for better readability on long texts
+      paddingHorizontal: 10,
     },
-    buttonWrapper: { // Wrapper to center the button
+    buttonWrapper: { 
       width: '100%',
       alignItems: 'center',
     },
@@ -105,8 +97,8 @@ const getStyles = (theme) =>
       borderRadius: 12,
       paddingHorizontal: 30,
       paddingVertical: 14,
-      width: 'auto', // Allow button to size based on content, but max 300
-      minWidth: 180, // Ensure a minimum width
+      width: 'auto', 
+      minWidth: 180, 
       maxWidth: 300,
     },
     buttonText: {

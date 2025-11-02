@@ -12,7 +12,7 @@ import Constants from 'expo-constants';
 import { useAlert } from './AlertContext';
 import { useBanner } from './BannerContext';
 import * as Notifications from 'expo-notifications';
-import { makeRedirectUri, useAuthRequest } from 'expo-auth-session';// <--- IMPORT THIS
+import { makeRedirectUri, useAuthRequest } from 'expo-auth-session';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -45,7 +45,7 @@ export const AuthProvider = ({ children }) => {
   const { showAlert } = useAlert();
   const [user, setUser] = useState(null);
   const [accessToken, setAccessToken] = useState(null);
-  const [isBootstrapping, setIsBootstrapping] = useState(true); // Renamed from isLoading
+  const [isBootstrapping, setIsBootstrapping] = useState(true); 
   const [isLoading, setIsLoading] = useState(false);
   const [authAction, setAuthAction] = useState(null);
   const [pendingRecoveryCode, setPendingRecoveryCode] = useState(null);
@@ -222,14 +222,14 @@ export const AuthProvider = ({ children }) => {
       } catch (err) {
         await signOut({ apiCall: false });
       } finally {
-        setIsBootstrapping(false); // Use the bootstrapping state
+        setIsBootstrapping(false); 
       }
     };
     bootstrapApp();
   }, []);
 
   const signIn = useCallback(async (email, password, rememberMe) => {
-    setIsLoading(true); // Use action loading state
+    setIsLoading(true);
     setAuthAction('PENDING_LOGIN');
     try {
       const response = await api.post('/auth/login', { email, password, rememberMe });
@@ -249,13 +249,13 @@ export const AuthProvider = ({ children }) => {
       await signOut({ apiCall: false });
       throw new Error(errorMessage);
     } finally {
-        setIsLoading(false); // Use action loading state
+        setIsLoading(false); 
         setAuthAction(null);
     }
   }, [updateAccessToken, updateUserStateAndCache, showBanner, signOut, registerAndSendPushToken]);
 
   const register = useCallback(async (credentials) => {
-    setIsLoading(true); // Use action loading state
+    setIsLoading(true);
     try {
       await api.post('/auth/register', credentials);
       return true;
@@ -265,12 +265,12 @@ export const AuthProvider = ({ children }) => {
       showBanner('error', 'Registration Failed', errorMessage);
       return false;
     } finally {
-      setIsLoading(false); // Use action loading state
+      setIsLoading(false); 
     }
   }, [showBanner]);
 
   const verifyOtpAndLogin = useCallback(async (email, otp) => {
-    setIsLoading(true); // Use action loading state
+    setIsLoading(true);
     try {
       const { data } = await api.post('/auth/verify-otp', { email, otp });
       const { accessToken: newAccessToken, refreshToken: newRefreshToken, user: backendUser, recoveryCode } = data;
@@ -287,7 +287,7 @@ export const AuthProvider = ({ children }) => {
       console.error('OTP Verification Failed:', error.response?.data?.message || error.message);
       throw error;
     } finally {
-      setIsLoading(false); // Use action loading state
+      setIsLoading(false); 
     }
   }, [updateAccessToken, updateUserStateAndCache, showMessage, registerAndSendPushToken]);
 
@@ -332,10 +332,9 @@ export const AuthProvider = ({ children }) => {
     } else if (response && response.type !== 'success') {
       if (response.type === 'cancel' || response.type === 'dismiss') {
        showBanner('warning', 'Google Sign-In Cancelled');
-       console.log('Google Sign-In was cancelled or dismissed by the user.'); // Added console log
+       console.log('Google Sign-In was cancelled or dismissed by the user.'); 
       } else {
-        // Handle other non-success scenarios (e.g., error, access blocked by user/policy)
-        console.warn('Google Sign-In access blocked or failed for another reason:', response); // Added console log for general non-success
+        console.warn('Google Sign-In access blocked or failed for another reason:', response);
         showBanner('error', 'Google Sign-In Failed', 'Access blocked or an unexpected error occurred.');
       }
       setIsLoading(false);

@@ -149,7 +149,6 @@ export default function HomePage() {
       <body><iframe id="map" src="https://www.google.com/maps?q=${officeLocation.latitude},${officeLocation.longitude}&output=embed" frameborder="0" style="border:0" allowfullscreen="" aria-hidden="false" tabindex="0"></iframe></body></html>
     `;
 
-    // --- FIX: Added 'upcoming' status for new users ---
     const statusConfig = useMemo(() => ({
         'active': { text: 'Active', color: theme.success },
         'pending_change': { text: 'Active (Change Pending)', color: theme.success },
@@ -158,7 +157,7 @@ export default function HomePage() {
         'suspended': { text: 'Suspended', color: theme.danger },
         'declined': { text: 'Declined', color: theme.danger },
         'cancelled': { text: 'Cancelled', color: theme.textSecondary },
-        'upcoming': { text: 'Upcoming', color: theme.info }, // New status
+        'upcoming': { text: 'Upcoming', color: theme.info },
     }), [theme]);
 
     const hasDueOrOverdueBills = useMemo(() =>

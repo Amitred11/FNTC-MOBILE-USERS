@@ -97,7 +97,6 @@ const styles = StyleSheet.create({
     width: '100%',
     marginVertical: 10,
   },
-  // --- Formatted Text Styles ---
   h2: {
     fontSize: 18,
     fontWeight: 'bold',
