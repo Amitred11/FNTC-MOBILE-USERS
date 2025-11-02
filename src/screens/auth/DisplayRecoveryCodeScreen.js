@@ -10,7 +10,7 @@ import {
   ScrollView,
   BackHandler,
 } from 'react-native';
-import Clipboard from '@react-native-community/clipboard';
+import Clipboard from '@react-native-clipboard/clipboard';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { lightTheme } from '../../constants/colors';
